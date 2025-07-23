@@ -40,9 +40,9 @@ pub fn setup_menu(
             MenuUI,
             CoverImage2,
             CoverFadeState { 
-                alpha: 1.0, // 从1.0开始，与第一张相反
-                fade_direction: -1.0, // 相反方向
-                fade_speed: 0.2, // 更慢的渐变速度
+                alpha: 0.0, // 从0.0开始
+                fade_direction: -1.0, // 负方向表示第二张图片
+                fade_speed: 0.3, // 渐变速度
             },
         ));
     } else {
@@ -72,7 +72,7 @@ pub fn setup_menu(
     )).with_children(|parent| {
         // 游戏标题
         parent.spawn((
-            Text::new("Fate/stay night Heaven's Feel\nShirou Runner"),
+            Text::new("命运之夜 天之杯\n士郎跑酷"),
             TextFont {
                 font_size: 48.0,
                 ..default()
@@ -109,9 +109,9 @@ pub fn setup_menu(
                 StartButton,
             )).with_children(|parent| {
                 parent.spawn((
-                    Text::new("开始"),
+                    Text::new("开始游戏"),
                     TextFont {
-                        font_size: 28.0,
+                        font_size: 24.0,
                         ..default()
                     },
                     TextColor(Color::WHITE),
@@ -135,9 +135,9 @@ pub fn setup_menu(
                 SaveButton,
             )).with_children(|parent| {
                 parent.spawn((
-                    Text::new("存档"),
+                    Text::new("读取存档"),
                     TextFont {
-                        font_size: 20.0,
+                        font_size: 18.0,
                         ..default()
                     },
                     TextColor(Color::WHITE),
@@ -289,46 +289,37 @@ pub fn handle_character_select(
     }
 }
 
-/// 封面渐变动画系统
+/// 封面渐变动画系统 - 缓慢自然的渐变效果
 pub fn cover_fade_animation(
-    mut cover1_query: Query<(&mut Sprite, &mut CoverFadeState), (With<CoverImage1>, Without<CoverImage2>)>,
-    mut cover2_query: Query<(&mut Sprite, &mut CoverFadeState), (With<CoverImage2>, Without<CoverImage1>)>,
+    mut cover_query: Query<(&mut Sprite, &mut CoverFadeState), Or<(With<CoverImage1>, With<CoverImage2>)>>,
     time: Res<Time>,
 ) {
-    // 处理第一张封面
-    if let Ok((mut sprite1, mut fade_state1)) = cover1_query.single_mut() {
-        // 更新透明度 - 使用平滑的正弦函数
-        fade_state1.alpha += fade_state1.fade_direction * fade_state1.fade_speed * time.delta_secs();
-        
-        // 限制透明度范围并使用平滑过渡
-        if fade_state1.alpha <= 0.0 {
-            fade_state1.alpha = 0.0;
-            fade_state1.fade_direction = 1.0;
-        } else if fade_state1.alpha >= 1.0 {
-            fade_state1.alpha = 1.0;
-            fade_state1.fade_direction = -1.0;
-        }
-        
-        // 使用平滑的渐变曲线
-        let smooth_alpha = (fade_state1.alpha * std::f32::consts::PI / 2.0).sin();
-        sprite1.color.set_alpha(smooth_alpha);
-    }
+    // 使用更长的循环时间，让渐变更缓慢
+    let elapsed_time = time.elapsed_secs();
+    let cycle_duration = 15.0; // 15秒一个完整循环，更慢更稳定
+    let cycle_progress = (elapsed_time % cycle_duration) / cycle_duration;
     
-    // 处理第二张封面 - 与第一张相反的节奏
-    if let Ok((mut sprite2, mut fade_state2)) = cover2_query.single_mut() {
-        fade_state2.alpha += fade_state2.fade_direction * fade_state2.fade_speed * time.delta_secs();
+    for (mut sprite, mut fade_state) in cover_query.iter_mut() {
+        // 使用更平滑的渐变函数
+        let base_alpha = (cycle_progress * 2.0 * std::f32::consts::PI).sin();
         
-        if fade_state2.alpha <= 0.0 {
-            fade_state2.alpha = 0.0;
-            fade_state2.fade_direction = 1.0;
-        } else if fade_state2.alpha >= 1.0 {
-            fade_state2.alpha = 1.0;
-            fade_state2.fade_direction = -1.0;
-        }
+        // 根据图片类型调整透明度
+        let final_alpha = if fade_state.fade_direction > 0.0 {
+            // 第一张图片：缓慢淡入淡出
+            (base_alpha + 1.0) * 0.5
+        } else {
+            // 第二张图片：与第一张相反
+            ((-base_alpha) + 1.0) * 0.5
+        };
         
-        // 第二张图片使用相反的透明度，创造交替效果
-        let smooth_alpha = (fade_state2.alpha * std::f32::consts::PI / 2.0).sin();
-        sprite2.color.set_alpha(1.0 - smooth_alpha);
+        // 使用更平滑的缓动函数，减少突兀感
+        let eased_alpha = final_alpha * final_alpha * (3.0 - 2.0 * final_alpha); // smoothstep函数
+        
+        // 限制透明度变化范围，避免完全透明
+        let clamped_alpha = eased_alpha.clamp(0.1, 0.9);
+        
+        sprite.color.set_alpha(clamped_alpha);
+        fade_state.alpha = clamped_alpha;
     }
 }
 

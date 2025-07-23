@@ -61,14 +61,29 @@ pub fn setup_game(
     }
 }
 
-/// 处理游戏输入（返回菜单）
+/// 处理游戏输入（暂停和返回菜单）
 pub fn handle_game_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
+    current_state: Res<State<GameState>>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::Escape) {
-        next_state.set(GameState::Menu);
-        println!("返回主菜单");
+    match current_state.get() {
+        GameState::Playing => {
+            if keyboard_input.just_pressed(KeyCode::Escape) {
+                next_state.set(GameState::Paused);
+                println!("游戏暂停");
+            }
+        }
+        GameState::Paused => {
+            if keyboard_input.just_pressed(KeyCode::Escape) {
+                next_state.set(GameState::Playing);
+                println!("继续游戏");
+            } else if keyboard_input.just_pressed(KeyCode::KeyQ) {
+                next_state.set(GameState::Menu);
+                println!("返回主菜单");
+            }
+        }
+        _ => {}
     }
 }
 
