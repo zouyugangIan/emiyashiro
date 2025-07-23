@@ -39,15 +39,15 @@ pub struct MenuUI;
 #[derive(Component)]
 pub struct StartButton;
 
+/// 存档按钮组件
+#[derive(Component)]
+pub struct SaveButton;
+
 /// 角色选择按钮组件
 #[derive(Component)]
 pub struct CharacterSelectButton {
     pub character_type: crate::states::CharacterType,
 }
-
-/// 存档按钮组件
-#[derive(Component)]
-pub struct SaveButton;
 
 /// 封面图片1组件
 #[derive(Component)]
@@ -73,4 +73,58 @@ impl Default for CoverFadeState {
             fade_speed: 0.5,
         }
     }
+}
+
+/// 角色动画组件
+#[derive(Component)]
+pub struct CharacterAnimation {
+    pub current_animation: AnimationType,
+    pub frame_timer: Timer,
+    pub current_frame: usize,
+}
+
+impl Default for CharacterAnimation {
+    fn default() -> Self {
+        Self {
+            current_animation: AnimationType::Idle,
+            frame_timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+            current_frame: 0,
+        }
+    }
+}
+
+/// 动画类型枚举
+#[derive(Debug, Clone, PartialEq)]
+pub enum AnimationType {
+    Idle,
+    Running,
+    Jumping,
+    Crouching,
+    Landing,
+}
+
+/// 动画资源组件
+#[derive(Component)]
+pub struct AnimationFrames {
+    pub idle_frames: Vec<Handle<Image>>,
+    pub running_frames: Vec<Handle<Image>>,
+    pub jumping_frames: Vec<Handle<Image>>,
+    pub crouching_frames: Vec<Handle<Image>>,
+}
+
+/// 音效触发组件
+#[derive(Component)]
+pub struct AudioTrigger {
+    pub sound_type: SoundType,
+    pub should_play: bool,
+}
+
+/// 音效类型枚举
+#[derive(Debug, Clone, PartialEq)]
+pub enum SoundType {
+    Jump,
+    Land,
+    Footstep,
+    Collect,
+    Hit,
 }

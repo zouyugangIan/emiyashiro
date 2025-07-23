@@ -31,18 +31,28 @@ pub fn player_movement(
 
 /// 玩家跳跃系统
 pub fn player_jump(
+    mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &PlayerState), With<Player>>,
     time: Res<Time>,
     mut game_stats: ResMut<GameStats>,
 ) {
     if let Ok((mut transform, mut velocity, player_state)) = player_query.single_mut() {
+        let was_grounded = player_state.is_grounded;
+        
         // 跳跃输入（趴下时不能跳跃）
         if (keyboard_input.just_pressed(KeyCode::KeyW) || keyboard_input.just_pressed(KeyCode::ArrowUp))
             && player_state.is_grounded 
             && !player_state.is_crouching {
             velocity.y = GameConfig::JUMP_VELOCITY;
             game_stats.jump_count += 1;
+            
+            // 触发跳跃音效
+            commands.spawn(AudioTrigger {
+                sound_type: SoundType::Jump,
+                should_play: true,
+            });
+            
             println!("士郎跳跃！(第{}次)", game_stats.jump_count);
         }
         
@@ -55,6 +65,15 @@ pub fn player_jump(
         // 地面碰撞检测
         if transform.translation.y < GameConfig::GROUND_LEVEL {
             transform.translation.y = GameConfig::GROUND_LEVEL;
+            
+            // 如果刚着地，触发着地音效
+            if !was_grounded && velocity.y < 0.0 {
+                commands.spawn(AudioTrigger {
+                    sound_type: SoundType::Land,
+                    should_play: true,
+                });
+            }
+            
             velocity.y = 0.0;
         }
     }
