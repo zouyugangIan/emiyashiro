@@ -30,11 +30,11 @@ assets/sounds/
    - 特点: 广播级音效，分类详细
    - 推荐: 游戏音效分类
 
-3. **BBC Sound Effects Library**
-   - 网址: https://sound-effects.bbcrewind.co.uk/
+3. **Myinstants**
+   - 网址: https://www.myinstants.com/en/instant/heavy-footsteps-7421/
    - 许可: 免费使用
-   - 特点: BBC 专业音效库
-   - 推荐: 环境音效
+   - 特点: 游戏音效全面，方便简单
+   - 推荐: 按钮提示音效
 
 ### 免费背景音乐
 1. **Kevin MacLeod (incompetech.com)**
