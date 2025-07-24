@@ -18,7 +18,7 @@ pub struct DistanceDisplay;
 /// 设置游戏内 HUD
 pub fn setup_game_hud(
     mut commands: Commands,
-    _game_assets: Res<GameAssets>,
+    game_assets: Option<Res<GameAssets>>,
 ) {
     // 创建 HUD 根节点
     commands.spawn((
@@ -36,19 +36,36 @@ pub fn setup_game_hud(
         GameHUD,
     )).with_children(|parent| {
         // 分数显示
-        parent.spawn((
-            Text::new("分数: 0"),
-            TextFont {
-                font_size: 24.0,
-                ..default()
-            },
-            TextColor(Color::WHITE),
-            Node {
-                margin: UiRect::all(Val::Px(10.0)),
-                ..default()
-            },
-            ScoreDisplay,
-        ));
+        if let Some(assets) = &game_assets {
+            parent.spawn((
+                Text::new("Score: 0"),
+                TextFont {
+                    font: assets.font.clone(),
+                    font_size: 24.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Node {
+                    margin: UiRect::all(Val::Px(10.0)),
+                    ..default()
+                },
+                ScoreDisplay,
+            ));
+        } else {
+            parent.spawn((
+                Text::new("Score: 0"),
+                TextFont {
+                    font_size: 24.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Node {
+                    margin: UiRect::all(Val::Px(10.0)),
+                    ..default()
+                },
+                ScoreDisplay,
+            ));
+        }
         
         // 距离显示
         parent.spawn((
@@ -119,6 +136,7 @@ pub struct PauseMenu;
 /// 设置暂停菜单
 pub fn setup_pause_menu(
     mut commands: Commands,
+    game_assets: Option<Res<GameAssets>>,
 ) {
     commands.spawn((
         Node {
@@ -147,31 +165,62 @@ pub fn setup_pause_menu(
             BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.9)),
             BorderColor(Color::WHITE),
         )).with_children(|parent| {
-            parent.spawn((
-                Text::new("游戏暂停"),
-                TextFont {
-                    font_size: 32.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-                Node {
-                    margin: UiRect::all(Val::Px(20.0)),
-                    ..default()
-                },
-            ));
-            
-            parent.spawn((
-                Text::new("按 ESC 继续游戏\n按 Q 返回主菜单"),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
-                Node {
-                    margin: UiRect::all(Val::Px(10.0)),
-                    ..default()
-                },
-            ));
+            // 游戏暂停标题
+            if let Some(assets) = &game_assets {
+                parent.spawn((
+                    Text::new("Game Paused"),
+                    TextFont {
+                        font: assets.font.clone(),
+                        font_size: 32.0,
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                    Node {
+                        margin: UiRect::all(Val::Px(20.0)),
+                        ..default()
+                    },
+                ));
+                
+                parent.spawn((
+                    Text::new("ESC: Continue\nQ: Main Menu"),
+                    TextFont {
+                        font: assets.font.clone(),
+                        font_size: 18.0,
+                        ..default()
+                    },
+                    TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
+                    Node {
+                        margin: UiRect::all(Val::Px(10.0)),
+                        ..default()
+                    },
+                ));
+            } else {
+                parent.spawn((
+                    Text::new("Game Paused"),
+                    TextFont {
+                        font_size: 32.0,
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                    Node {
+                        margin: UiRect::all(Val::Px(20.0)),
+                        ..default()
+                    },
+                ));
+                
+                parent.spawn((
+                    Text::new("ESC: Continue\nQ: Main Menu"),
+                    TextFont {
+                        font_size: 18.0,
+                        ..default()
+                    },
+                    TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
+                    Node {
+                        margin: UiRect::all(Val::Px(10.0)),
+                        ..default()
+                    },
+                ));
+            }
         });
     });
 }

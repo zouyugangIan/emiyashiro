@@ -111,7 +111,6 @@ pub fn trigger_audio_effects(
                 SoundType::Jump => game_assets.jump_sound.clone(),
                 SoundType::Land => game_assets.land_sound.clone(),
                 SoundType::Footstep => game_assets.footstep_sound.clone(),
-                _ => continue,
             };
             
             // 播放音效

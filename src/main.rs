@@ -5,6 +5,10 @@ mod resources;
 mod states;
 mod systems;
 mod database;
+mod tools;
+
+#[cfg(test)]
+mod tests;
 
 // use components::*;
 use resources::*;
@@ -26,7 +30,10 @@ fn main() {
         .init_resource::<GameStats>()
         .init_resource::<AudioSettings>()
         .init_resource::<systems::audio::AudioManager>()
-        .add_systems(Startup, setup_game_resources)
+        .init_resource::<SaveManager>()
+        .init_resource::<systems::database_service::DatabaseService>()
+        .init_resource::<systems::input::GameInput>()
+        .add_systems(Startup, (setup_game_resources, systems::save::load_game))
         .add_systems(OnEnter(GameState::Menu), menu::setup_menu)
         .add_systems(Update, systems::audio::play_menu_music.run_if(in_state(GameState::Menu)))
         .add_systems(
@@ -34,14 +41,12 @@ fn main() {
             (
                 menu::handle_start_button,
                 menu::handle_character_select,
-                menu::handle_save_button,
+                systems::save::handle_save_button_click,
                 menu::cover_fade_animation,
             ).run_if(in_state(GameState::Menu))
         )
         .add_systems(OnExit(GameState::Menu), (menu::cleanup_menu, systems::audio::stop_menu_music))
-        .add_systems(OnEnter(GameState::Playing), (game::setup_game, ui::setup_game_hud))
-        .add_systems(Update, systems::audio::play_game_music.run_if(in_state(GameState::Playing)))
-        .add_systems(Update, systems::audio::stop_menu_music.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::Playing), (game::setup_game, ui::setup_game_hud, systems::audio::play_game_music_and_stop_menu))
         .add_systems(
             Update,
             (
@@ -56,6 +61,22 @@ fn main() {
                 animation::trigger_audio_effects,
                 animation::manage_background_music,
                 ui::update_game_hud,
+                systems::save::auto_save_system,
+                systems::database_service::database_stats_system,
+                systems::database_service::cleanup_old_sessions,
+                systems::frame_animation::update_frame_animations,
+                systems::frame_animation::update_character_animations,
+                systems::frame_animation::setup_player_animation,
+                systems::frame_animation::debug_animations,
+            ).run_if(in_state(GameState::Playing))
+        )
+        .add_systems(
+            Update,
+            (
+                systems::input::update_game_input,
+                systems::sprite_animation::update_sprite_animations,
+                systems::sprite_animation::update_character_animation_state,
+                systems::input::debug_input_system,
             ).run_if(in_state(GameState::Playing))
         )
         .add_systems(
@@ -78,8 +99,13 @@ fn setup_game_resources(
         cover_texture: asset_server.load("images/ui/cover1.jpg"),
         cover2_texture: asset_server.load("images/ui/cover2.jpg"),
         shirou1_texture: asset_server.load("images/characters/shirou_idle1.jpg"),
-        shirou2_texture: asset_server.load("images/characters/shirou_idle2.jpg"),
-        font: Handle::default(), // 使用默认字体
+        shirou2_texture: asset_server.load("images/characters/sakura_idle1.jpg"),
+        font: asset_server.load("fonts/FiraSans-Bold.ttf"), // 使用现有字体，暂时不支持中文
+        // 精灵表资源 - 初始化为空，稍后设置
+        shirou_spritesheet: None,
+        sakura_spritesheet: None,
+        shirou_atlas: None,
+        sakura_atlas: None,
         // 音效资源 - 暂时使用占位符，后续可以替换为实际音效文件
         jump_sound: asset_server.load("sounds/jump.ogg"),
         land_sound: asset_server.load("sounds/land.ogg"),

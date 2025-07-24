@@ -16,7 +16,7 @@ pub struct CharacterSelection {
 }
 
 /// 角色类型
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum CharacterType {
     #[default]
     Shirou1,   // 士郎角色1

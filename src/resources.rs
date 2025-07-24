@@ -34,6 +34,11 @@ pub struct GameAssets {
     pub shirou1_texture: Handle<Image>,
     pub shirou2_texture: Handle<Image>,
     pub font: Handle<Font>,
+    // 精灵表资源
+    pub shirou_spritesheet: Option<Handle<Image>>,
+    pub sakura_spritesheet: Option<Handle<Image>>,
+    pub shirou_atlas: Option<Handle<TextureAtlasLayout>>,
+    pub sakura_atlas: Option<Handle<TextureAtlasLayout>>,
     // 音效资源
     pub jump_sound: Handle<AudioSource>,
     pub land_sound: Handle<AudioSource>,
@@ -89,4 +94,44 @@ impl Default for DatabaseResource {
 pub struct CurrentSession {
     pub session_id: Option<uuid::Uuid>,
     pub player_id: Option<uuid::Uuid>,
+}
+
+/// 存档数据结构
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct SaveData {
+    pub player_name: String,
+    pub selected_character: crate::states::CharacterType,
+    pub best_distance: f32,
+    pub total_jumps: u32,
+    pub total_play_time: f32,
+    pub save_time: chrono::DateTime<chrono::Utc>,
+}
+
+impl Default for SaveData {
+    fn default() -> Self {
+        Self {
+            player_name: "士郎".to_string(),
+            selected_character: crate::states::CharacterType::Shirou1,
+            best_distance: 0.0,
+            total_jumps: 0,
+            total_play_time: 0.0,
+            save_time: chrono::Utc::now(),
+        }
+    }
+}
+
+/// 存档管理资源
+#[derive(Resource, Default)]
+pub struct SaveManager {
+    pub current_save: Option<SaveData>,
+    pub save_file_path: String,
+}
+
+impl SaveManager {
+    pub fn new() -> Self {
+        Self {
+            current_save: None,
+            save_file_path: "save_data.json".to_string(),
+        }
+    }
 }
