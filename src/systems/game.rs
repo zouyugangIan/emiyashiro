@@ -1,3 +1,7 @@
+//! 核心游戏系统
+//! 
+//! 包含游戏场景的设置、清理和核心游戏逻辑管理。
+
 use bevy::prelude::*;
 use crate::{
     components::*,
@@ -6,6 +10,17 @@ use crate::{
 };
 
 /// 设置游戏场景
+/// 
+/// 初始化游戏世界，包括摄像机、地面、玩家等基本实体。
+/// 根据角色选择创建对应的玩家角色。
+/// 
+/// # 参数
+/// * `commands` - 用于生成实体的命令缓冲区
+/// * `character_selection` - 当前选择的角色
+/// * `game_assets` - 游戏资源句柄
+/// * `camera_query` - 摄像机查询
+/// * `player_query` - 玩家查询
+/// * `ground_query` - 地面查询
 pub fn setup_game(
     mut commands: Commands,
     character_selection: Res<CharacterSelection>,
@@ -30,6 +45,7 @@ pub fn setup_game(
             },
             Transform::from_translation(GameConfig::GROUND_POS),
             Ground,
+            crate::systems::collision::CollisionBox::new(GameConfig::GROUND_SIZE),
         ));
     }
     
@@ -41,6 +57,11 @@ pub fn setup_game(
             CharacterType::Shirou2 => game_assets.shirou2_texture.clone(),
         };
         
+        println!("🎭 选择的角色: {:?}", character_selection.selected_character);
+        
+        // 创建带动画的角色
+        let sprite_animation = crate::systems::sprite_animation::create_character_animation(&character_selection.selected_character);
+        
         commands.spawn((
             Sprite::from_image(texture),
             Transform::from_translation(GameConfig::PLAYER_START_POS)
@@ -48,6 +69,8 @@ pub fn setup_game(
             Player,
             Velocity { x: 0.0, y: 0.0 },
             PlayerState::default(),
+            sprite_animation,
+            crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
         ));
         
         println!("🗡️ 卫宫士郎登场！");
@@ -62,23 +85,26 @@ pub fn setup_game(
 }
 
 /// 处理游戏输入（暂停和返回菜单）
+/// 
+/// 使用统一的 GameInput 接口处理游戏状态切换。
+/// 支持 ESC 键暂停/恢复游戏，Q 键返回主菜单。
 pub fn handle_game_input(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
+    game_input: Res<crate::systems::input::GameInput>,
     mut next_state: ResMut<NextState<GameState>>,
     current_state: Res<State<GameState>>,
 ) {
     match current_state.get() {
         GameState::Playing => {
-            if keyboard_input.just_pressed(KeyCode::Escape) {
+            if game_input.pause {
                 next_state.set(GameState::Paused);
                 println!("游戏暂停");
             }
         }
         GameState::Paused => {
-            if keyboard_input.just_pressed(KeyCode::Escape) {
+            if game_input.pause {
                 next_state.set(GameState::Playing);
                 println!("继续游戏");
-            } else if keyboard_input.just_pressed(KeyCode::KeyQ) {
+            } else if game_input.cancel {
                 next_state.set(GameState::Menu);
                 println!("返回主菜单");
             }

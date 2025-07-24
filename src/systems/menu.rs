@@ -1,3 +1,7 @@
+//! 主菜单系统
+//! 
+//! 包含主菜单界面的创建、交互处理和动画效果。
+
 use bevy::prelude::*;
 use crate::{
     components::*,
@@ -6,15 +10,26 @@ use crate::{
 };
 
 /// 设置主菜单界面
+/// 
+/// 创建主菜单的UI元素，包括标题、按钮、背景图片等。
+/// 支持角色选择和封面图片渐变动画。
+/// 
+/// # 参数
+/// * `commands` - 用于生成实体的命令缓冲区
+/// * `game_assets` - 游戏资源句柄（可选）
+/// * `camera_query` - 摄像机查询
 pub fn setup_menu(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
+    camera_query: Query<Entity, With<Camera2d>>,
 ) {
-    // 创建摄像机（如果还没有的话）
-    commands.spawn(Camera2d);
+    // 只有在没有摄像机时才创建
+    if camera_query.is_empty() {
+        commands.spawn(Camera2d);
+    }
     
     // 如果资源已加载，创建封面背景渐变效果
-    if let Some(assets) = game_assets {
+    if let Some(ref assets) = game_assets {
         // 第一张封面图片 - 调整到游戏界面大小
         commands.spawn((
             Sprite {
@@ -42,7 +57,6 @@ pub fn setup_menu(
             CoverFadeState { 
                 alpha: 0.0, // 从0.0开始
                 fade_direction: -1.0, // 负方向表示第二张图片
-                fade_speed: 0.3, // 渐变速度
             },
         ));
     } else {
@@ -70,19 +84,35 @@ pub fn setup_menu(
         },
         MenuUI,
     )).with_children(|parent| {
-        // 游戏标题
-        parent.spawn((
-            Text::new("命运之夜 天之杯\n士郎跑酷"),
-            TextFont {
-                font_size: 48.0,
-                ..default()
-            },
-            TextColor(Color::WHITE),
-            Node {
-                margin: UiRect::all(Val::Px(20.0)),
-                ..default()
-            },
-        ));
+        // 游戏标题 - 使用英文避免字体问题
+        if let Some(assets) = &game_assets {
+            parent.spawn((
+                Text::new("Fate/stay night Heaven's Feel\nShirou Runner"),
+                TextFont {
+                    font: assets.font.clone(),
+                    font_size: 48.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Node {
+                    margin: UiRect::all(Val::Px(20.0)),
+                    ..default()
+                },
+            ));
+        } else {
+            parent.spawn((
+                Text::new("Fate/stay night Heaven's Feel\nShirou Runner"),
+                TextFont {
+                    font_size: 48.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Node {
+                    margin: UiRect::all(Val::Px(20.0)),
+                    ..default()
+                },
+            ));
+        }
         
         // 按钮容器
         parent.spawn((
@@ -108,14 +138,26 @@ pub fn setup_menu(
                 BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8)),
                 StartButton,
             )).with_children(|parent| {
-                parent.spawn((
-                    Text::new("开始游戏"),
-                    TextFont {
-                        font_size: 24.0,
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                ));
+                if let Some(assets) = &game_assets {
+                    parent.spawn((
+                        Text::new("Start Game"),
+                        TextFont {
+                            font: assets.font.clone(),
+                            font_size: 24.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                } else {
+                    parent.spawn((
+                        Text::new("Start Game"),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                }
             });
             
             // 存档按钮
@@ -134,14 +176,26 @@ pub fn setup_menu(
                 BackgroundColor(Color::srgba(0.1, 0.2, 0.1, 0.8)),
                 SaveButton,
             )).with_children(|parent| {
-                parent.spawn((
-                    Text::new("读取存档"),
-                    TextFont {
-                        font_size: 18.0,
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                ));
+                if let Some(assets) = &game_assets {
+                    parent.spawn((
+                        Text::new("Load Save"),
+                        TextFont {
+                            font: assets.font.clone(),
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                } else {
+                    parent.spawn((
+                        Text::new("Load Save"),
+                        TextFont {
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                }
             });
         });
         
@@ -171,14 +225,26 @@ pub fn setup_menu(
                     character_type: CharacterType::Shirou1,
                 },
             )).with_children(|parent| {
-                parent.spawn((
-                    Text::new("士郎 1P"),
-                    TextFont {
-                        font_size: 18.0,
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                ));
+                if let Some(assets) = &game_assets {
+                    parent.spawn((
+                        Text::new("Shirou 1P"),
+                        TextFont {
+                            font: assets.font.clone(),
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                } else {
+                    parent.spawn((
+                        Text::new("Shirou 1P"),
+                        TextFont {
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                }
             });
             
             // 角色2按钮
@@ -199,14 +265,26 @@ pub fn setup_menu(
                     character_type: CharacterType::Shirou2,
                 },
             )).with_children(|parent| {
-                parent.spawn((
-                    Text::new("士郎 2P"),
-                    TextFont {
-                        font_size: 18.0,
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                ));
+                if let Some(assets) = &game_assets {
+                    parent.spawn((
+                        Text::new("Sakura 2P"),
+                        TextFont {
+                            font: assets.font.clone(),
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                } else {
+                    parent.spawn((
+                        Text::new("Sakura 2P"),
+                        TextFont {
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                }
             });
         });
     });
@@ -323,29 +401,7 @@ pub fn cover_fade_animation(
     }
 }
 
-/// 处理存档按钮点击
-pub fn handle_save_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<SaveButton>)
-    >,
-) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = BackgroundColor(Color::srgba(0.05, 0.1, 0.05, 0.8));
-                println!("💾 存档功能 - 暂未实现");
-                // TODO: 实现存档功能
-            }
-            Interaction::Hovered => {
-                *color = BackgroundColor(Color::srgba(0.15, 0.3, 0.15, 0.8));
-            }
-            Interaction::None => {
-                *color = BackgroundColor(Color::srgba(0.1, 0.2, 0.1, 0.8));
-            }
-        }
-    }
-}
+
 
 /// 清理菜单界面
 pub fn cleanup_menu(
