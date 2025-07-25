@@ -13,6 +13,7 @@ use crate::{
 /// 
 /// 初始化游戏世界，包括摄像机、地面、玩家等基本实体。
 /// 根据角色选择创建对应的玩家角色。
+/// 如果有加载的游戏状态，则恢复该状态。
 /// 
 /// # 参数
 /// * `commands` - 用于生成实体的命令缓冲区
@@ -21,13 +22,17 @@ use crate::{
 /// * `camera_query` - 摄像机查询
 /// * `player_query` - 玩家查询
 /// * `ground_query` - 地面查询
+/// * `loaded_game_state` - 加载的游戏状态
+/// * `game_stats` - 游戏统计
 pub fn setup_game(
     mut commands: Commands,
-    character_selection: Res<CharacterSelection>,
+    mut character_selection: ResMut<CharacterSelection>,
     game_assets: Res<GameAssets>,
     camera_query: Query<Entity, With<Camera>>,
     player_query: Query<Entity, With<Player>>,
     ground_query: Query<Entity, With<Ground>>,
+    mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
+    mut game_stats: ResMut<GameStats>,
 ) {
     // 确保有摄像机存在
     if camera_query.is_empty() {
@@ -73,14 +78,37 @@ pub fn setup_game(
             crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
         ));
         
-        println!("🗡️ 卫宫士郎登场！");
-        println!("操作说明：");
-        println!("  A/D 或 ←/→ : 左右移动");
-        println!("  W 或 ↑     : 跳跃");
-        println!("  S 或 ↓     : 趴下");
-        println!("  ESC        : 返回菜单");
+        println!("🗡️ Shirou Emiya enters the battle!");
+        println!("Controls:");
+        println!("  A/D or ←/→ : Move left/right");
+        println!("  W or ↑     : Jump");
+        println!("  S or ↓     : Crouch");
+        println!("  ESC        : Pause game");
     } else {
-        println!("玩家已存在，继续游戏");
+        println!("Player already exists, continuing game");
+    }
+    
+    // 检查是否需要恢复加载的游戏状态
+    if loaded_game_state.should_restore {
+        if let Some(state) = &loaded_game_state.state {
+            println!("🔄 恢复加载的游戏状态");
+            
+            // 恢复角色选择
+            character_selection.selected_character = state.selected_character.clone();
+            
+            // 恢复游戏统计
+            game_stats.distance_traveled = state.distance_traveled;
+            game_stats.jump_count = state.jump_count;
+            game_stats.play_time = state.play_time;
+            
+            println!("   角色: {:?}", state.selected_character);
+            println!("   分数: {}", state.score);
+            println!("   距离: {:.1}m", state.distance_traveled);
+            println!("   时间: {:.1}s", state.play_time);
+            
+            // 标记状态已恢复
+            loaded_game_state.should_restore = false;
+        }
     }
 }
 
@@ -110,6 +138,33 @@ pub fn handle_game_input(
             }
         }
         _ => {}
+    }
+}
+
+/// 恢复加载的游戏状态中的实体位置
+pub fn restore_loaded_game_entities(
+    mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
+    mut player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
+    mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+) {
+    if loaded_game_state.should_restore {
+        if let Some(state) = &loaded_game_state.state {
+            // 恢复玩家状态
+            if let Ok((mut player_transform, mut player_velocity, mut player_state)) = player_query.single_mut() {
+                player_transform.translation = state.player_position;
+                *player_velocity = state.player_velocity.clone();
+                player_state.is_grounded = state.player_grounded;
+                player_state.is_crouching = state.player_crouching;
+                
+                println!("🔄 恢复玩家位置: ({:.1}, {:.1})", state.player_position.x, state.player_position.y);
+            }
+            
+            // 恢复摄像机状态
+            if let Ok(mut camera_transform) = camera_query.single_mut() {
+                camera_transform.translation = state.camera_position;
+                println!("🔄 恢复摄像机位置: ({:.1}, {:.1})", state.camera_position.x, state.camera_position.y);
+            }
+        }
     }
 }
 

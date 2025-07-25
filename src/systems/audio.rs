@@ -106,6 +106,7 @@ pub fn play_game_music_and_stop_menu(
     game_assets: Option<Res<GameAssets>>,
     audio_settings: Res<AudioSettings>,
     mut audio_manager: ResMut<AudioManager>,
+    mut audio_state_manager: ResMut<AudioStateManager>,
     audio_query: Query<Entity, With<AudioPlayer>>,
 ) {
     // 先停止菜单音乐
@@ -125,7 +126,31 @@ pub fn play_game_music_and_stop_menu(
                 PlaybackSettings::LOOP,
             ));
             audio_manager.game_music_playing = true;
+            audio_state_manager.music_playing = true;
+            audio_state_manager.music_volume = audio_settings.music_volume;
             println!("🎵 开始播放游戏音乐");
         }
+    }
+}
+
+/// 暂停时保持音乐播放
+pub fn maintain_audio_during_pause(
+    audio_state_manager: Res<AudioStateManager>,
+) {
+    // 在暂停状态下，音乐继续播放
+    // 这个系统确保音频状态在暂停时不被改变
+    if audio_state_manager.music_playing {
+        // 音乐继续播放，不做任何操作
+        // Bevy的音频系统会自动处理播放状态
+    }
+}
+
+/// 恢复游戏时的音频处理
+pub fn resume_audio_after_pause(
+    mut audio_state_manager: ResMut<AudioStateManager>,
+) {
+    // 从暂停恢复时，确保音频状态正确
+    if audio_state_manager.music_playing {
+        println!("🎵 音乐继续播放");
     }
 }

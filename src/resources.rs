@@ -135,3 +135,129 @@ impl SaveManager {
         }
     }
 }
+
+/// 完整游戏状态 - 用于暂停存档系统
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct CompleteGameState {
+    // Player state
+    pub player_position: Vec3,
+    pub player_velocity: crate::components::Velocity,
+    pub player_grounded: bool,
+    pub player_crouching: bool,
+    
+    // Camera state
+    pub camera_position: Vec3,
+    
+    // Game metrics
+    pub score: u32,
+    pub distance_traveled: f32,
+    pub jump_count: u32,
+    pub play_time: f32,
+    
+    // Character selection
+    pub selected_character: crate::states::CharacterType,
+    
+    // Timestamp
+    pub save_timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+impl Default for CompleteGameState {
+    fn default() -> Self {
+        Self {
+            player_position: Vec3::ZERO,
+            player_velocity: crate::components::Velocity { x: 0.0, y: 0.0 },
+            player_grounded: true,
+            player_crouching: false,
+            camera_position: Vec3::ZERO,
+            score: 0,
+            distance_traveled: 0.0,
+            jump_count: 0,
+            play_time: 0.0,
+            selected_character: crate::states::CharacterType::Shirou1,
+            save_timestamp: chrono::Utc::now(),
+        }
+    }
+}
+
+/// 存档文件管理器
+#[derive(Resource)]
+pub struct SaveFileManager {
+    pub save_directory: String,
+    pub save_files: Vec<SaveFileMetadata>,
+    pub current_save_name: Option<String>,
+}
+
+impl SaveFileManager {
+    pub fn new() -> Self {
+        Self {
+            save_directory: "saves".to_string(),
+            save_files: Vec::new(),
+            current_save_name: None,
+        }
+    }
+}
+
+impl Default for SaveFileManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// 存档文件元数据
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct SaveFileMetadata {
+    pub name: String,
+    pub score: u32,
+    pub distance: f32,
+    pub play_time: f32,
+    pub save_timestamp: chrono::DateTime<chrono::Utc>,
+    pub file_path: String,
+}
+
+/// 暂停管理器
+#[derive(Resource, Default)]
+pub struct PauseManager {
+    pub is_paused: bool,
+    pub preserved_state: Option<CompleteGameState>,
+    pub pause_timestamp: Option<std::time::Instant>,
+}
+
+impl PauseManager {
+    pub fn new() -> Self {
+        Self {
+            is_paused: false,
+            preserved_state: None,
+            pause_timestamp: None,
+        }
+    }
+    
+    pub fn pause_game(&mut self, state: CompleteGameState) {
+        self.is_paused = true;
+        self.preserved_state = Some(state);
+        self.pause_timestamp = Some(std::time::Instant::now());
+    }
+    
+    pub fn resume_game(&mut self) -> Option<CompleteGameState> {
+        self.is_paused = false;
+        self.pause_timestamp = None;
+        self.preserved_state.take()
+    }
+}
+
+/// 音频状态管理器
+#[derive(Resource, Default)]
+pub struct AudioStateManager {
+    pub music_playing: bool,
+    pub music_volume: f32,
+    pub sfx_enabled: bool,
+}
+
+impl AudioStateManager {
+    pub fn new() -> Self {
+        Self {
+            music_playing: false,
+            music_volume: 0.5,
+            sfx_enabled: true,
+        }
+    }
+}

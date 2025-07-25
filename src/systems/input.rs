@@ -108,7 +108,7 @@ pub fn update_game_input(
     
     // 更新菜单输入
     let new_confirm = keyboard_input.pressed(KeyCode::Enter) || keyboard_input.pressed(KeyCode::Space);
-    let new_cancel = keyboard_input.pressed(KeyCode::Escape) || keyboard_input.pressed(KeyCode::Backspace);
+    let new_cancel = keyboard_input.pressed(KeyCode::KeyQ) || keyboard_input.pressed(KeyCode::Backspace);
     let new_pause = keyboard_input.just_pressed(KeyCode::Escape);
     
     // 记录输入变化到历史（先保存旧值）
