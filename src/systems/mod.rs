@@ -32,20 +32,13 @@ pub mod audio;
 // 数据持久化系统
 pub mod save;
 pub mod database_service;
+pub mod pause_save;
 
 // 资源生成系统
 pub mod procedural_assets;
 
+// 视觉效果系统
+pub mod visual_effects;
+
 // 重新导出常用系统，保持向后兼容性
-pub use interfaces::*;
-pub use game::*;
-pub use setup::*;
-pub use player::*;
-pub use input::*;
-pub use camera::*;
-pub use animation::*;
-pub use collision::*;
-pub use menu::*;
-pub use ui::*;
-pub use audio::*;
-pub use save::*;
+// 注意：只导出实际使用的模块，避免编译警告

@@ -7,6 +7,7 @@ use crate::{
     components::*,
     states::*,
     resources::*,
+    systems::ui::LoadButton,
 };
 
 /// 设置主菜单界面
@@ -160,7 +161,7 @@ pub fn setup_menu(
                 }
             });
             
-            // 存档按钮
+            // 加载存档按钮
             parent.spawn((
                 Button,
                 Node {
@@ -174,11 +175,11 @@ pub fn setup_menu(
                 },
                 BorderColor(Color::WHITE),
                 BackgroundColor(Color::srgba(0.1, 0.2, 0.1, 0.8)),
-                SaveButton,
+                LoadButton,
             )).with_children(|parent| {
                 if let Some(assets) = &game_assets {
                     parent.spawn((
-                        Text::new("Load Save"),
+                        Text::new("Load Game"),
                         TextFont {
                             font: assets.font.clone(),
                             font_size: 18.0,
@@ -188,7 +189,7 @@ pub fn setup_menu(
                     ));
                 } else {
                     parent.spawn((
-                        Text::new("Load Save"),
+                        Text::new("Load Game"),
                         TextFont {
                             font_size: 18.0,
                             ..default()
@@ -290,8 +291,8 @@ pub fn setup_menu(
     });
     
     println!("=== Fate/stay night Heaven's Feel ===");
-    println!("Shirou Runner 游戏启动成功！");
-    println!("点击开始按钮进入游戏");
+    println!("Shirou Runner game started successfully!");
+    println!("Click Start Game button to begin");
 }
 
 /// 处理开始按钮点击
@@ -307,13 +308,38 @@ pub fn handle_start_button(
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
                 next_state.set(GameState::Playing);
-                println!("🎮 开始游戏！");
+                println!("🎮 Starting game!");
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
             }
             Interaction::None => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+            }
+        }
+    }
+}
+
+/// 处理加载按钮点击
+pub fn handle_load_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<LoadButton>)
+    >,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = BackgroundColor(Color::srgba(0.05, 0.1, 0.05, 0.8));
+                next_state.set(GameState::LoadTable);
+                println!("📂 Opening load interface!");
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(Color::srgba(0.2, 0.3, 0.2, 0.8));
+            }
+            Interaction::None => {
+                *color = BackgroundColor(Color::srgba(0.1, 0.2, 0.1, 0.8));
             }
         }
     }

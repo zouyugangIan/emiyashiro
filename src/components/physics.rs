@@ -21,7 +21,7 @@ use bevy::prelude::*;
 /// let speed = velocity.length();
 /// println!("速度大小: {}", speed);
 /// ```
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Velocity {
     pub x: f32,
     pub y: f32,
