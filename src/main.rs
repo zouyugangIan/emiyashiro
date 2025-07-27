@@ -38,6 +38,7 @@ fn main() {
         .init_resource::<systems::input::GameInput>()
         .init_resource::<ui::SaveNameInput>()
         .init_resource::<ui::LoadedGameState>()
+        .init_resource::<ui::RenameInput>()
         .add_systems(Startup, (setup_game_resources, systems::save::load_game))
         .add_systems(OnEnter(GameState::Menu), menu::setup_menu)
         .add_systems(Update, systems::audio::play_menu_music.run_if(in_state(GameState::Menu)))
@@ -136,6 +137,7 @@ fn main() {
             (
                 ui::handle_save_name_input,
                 ui::handle_save_dialog_interactions,
+                ui::update_text_cursor,
             ).run_if(in_state(GameState::SaveDialog))
         )
         .add_systems(OnExit(GameState::SaveDialog), ui::cleanup_save_dialog)
@@ -145,6 +147,15 @@ fn main() {
             ui::handle_load_table_interactions.run_if(in_state(GameState::LoadTable))
         )
         .add_systems(OnExit(GameState::LoadTable), ui::cleanup_load_table)
+        .add_systems(OnEnter(GameState::RenameDialog), ui::setup_rename_dialog)
+        .add_systems(
+            Update,
+            (
+                ui::handle_rename_input,
+                ui::handle_rename_dialog_interactions,
+            ).run_if(in_state(GameState::RenameDialog))
+        )
+        .add_systems(OnExit(GameState::RenameDialog), ui::cleanup_rename_dialog)
         .run();
 }
 

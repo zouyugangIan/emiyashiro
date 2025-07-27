@@ -66,6 +66,12 @@ pub struct CancelSaveButton;
 #[derive(Component)]
 pub struct SaveNameInputBox;
 
+#[derive(Component)]
+pub struct TextCursor {
+    pub blink_timer: f32,
+    pub visible: bool,
+}
+
 // Load Table Components
 #[derive(Component)]
 pub struct LoadTableRoot;
@@ -80,6 +86,30 @@ pub struct LoadButton;
 
 #[derive(Component)]
 pub struct DeleteButton;
+
+#[derive(Component)]
+pub struct RenameButton;
+
+#[derive(Component)]
+pub struct RenameDialog;
+
+#[derive(Component)]
+pub struct RenameInputBox;
+
+#[derive(Component)]
+pub struct ConfirmRenameButton;
+
+#[derive(Component)]
+pub struct CancelRenameButton;
+
+// 重命名输入资源
+#[derive(Resource, Default)]
+pub struct RenameInput {
+    pub current_name: String,
+    pub original_name: String,
+    pub save_index: usize,
+    pub is_editing: bool,
+}
 
 /// 设置游戏内 HUD
 pub fn setup_game_hud(
@@ -416,9 +446,12 @@ pub fn setup_save_dialog(
     game_assets: Option<Res<GameAssets>>,
     mut save_name_input: ResMut<SaveNameInput>,
 ) {
+    use crate::systems::text_constants::SaveLoadText;
+    
     // 重置输入状态 - 清空输入框
     save_name_input.current_name.clear();
     save_name_input.is_editing = true;
+    
     commands.spawn((
         Node {
             width: Val::Percent(100.0),
@@ -435,8 +468,8 @@ pub fn setup_save_dialog(
     )).with_children(|parent| {
         parent.spawn((
             Node {
-                width: Val::Px(400.0),
-                height: Val::Px(250.0),
+                width: Val::Px(450.0),
+                height: Val::Px(280.0),
                 border: UiRect::all(Val::Px(2.0)),
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
@@ -451,7 +484,7 @@ pub fn setup_save_dialog(
             
             // 标题
             parent.spawn((
-                Text::new("Save Game"),
+                Text::new(SaveLoadText::SAVE_DIALOG_TITLE),
                 TextFont {
                     font: font_handle.clone(),
                     font_size: 28.0,
@@ -462,7 +495,7 @@ pub fn setup_save_dialog(
             
             // 输入提示
             parent.spawn((
-                Text::new("Enter save name:"),
+                Text::new(SaveLoadText::ENTER_SAVE_NAME),
                 TextFont {
                     font: font_handle.clone(),
                     font_size: 18.0,
@@ -474,36 +507,60 @@ pub fn setup_save_dialog(
             // 输入框 (显示当前输入的名称)
             parent.spawn((
                 Node {
-                    width: Val::Px(300.0),
-                    height: Val::Px(40.0),
+                    width: Val::Px(350.0),
+                    height: Val::Px(45.0),
                     border: UiRect::all(Val::Px(2.0)),
-                    justify_content: JustifyContent::Center,
+                    justify_content: JustifyContent::FlexStart,
                     align_items: AlignItems::Center,
                     padding: UiRect::all(Val::Px(10.0)),
                     ..default()
                 },
                 BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.9)),
-                BorderColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),
-                SaveNameInputBox,
+                BorderColor(Color::srgba(0.5, 0.8, 1.0, 1.0)), // Blue border to indicate active input
             )).with_children(|parent| {
+                // 输入文本
                 parent.spawn((
-                    Text::new(if save_name_input.current_name.is_empty() {
-                        "Enter name...".to_string()
-                    } else {
-                        save_name_input.current_name.clone()
-                    }),
+                    Text::new(SaveLoadText::NAME_PLACEHOLDER),
                     TextFont {
                         font: font_handle.clone(),
                         font_size: 16.0,
                         ..default()
                     },
-                    TextColor(if save_name_input.current_name.is_empty() {
-                        Color::srgba(0.7, 0.7, 0.7, 1.0) // 占位符颜色
-                    } else {
-                        Color::WHITE
-                    }),
+                    TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)), // Placeholder color
+                    SaveNameInputBox, // 将标记添加到文本组件上
+                ));
+                
+                // 光标
+                parent.spawn((
+                    Text::new("|"),
+                    TextFont {
+                        font: font_handle.clone(),
+                        font_size: 16.0,
+                        ..default()
+                    },
+                    TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
+                    TextCursor {
+                        blink_timer: 0.0,
+                        visible: true,
+                    },
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(15.0), // 初始位置，会根据文本长度动态调整
+                        ..default()
+                    },
                 ));
             });
+            
+            // 输入提示信息
+            parent.spawn((
+                Text::new("Use A-Z, 0-9, space, and hyphen. Max 25 characters."),
+                TextFont {
+                    font: font_handle.clone(),
+                    font_size: 12.0,
+                    ..default()
+                },
+                TextColor(Color::srgba(0.8, 0.8, 0.8, 0.6)),
+            ));
             
             // 按钮容器
             parent.spawn((
@@ -532,7 +589,7 @@ pub fn setup_save_dialog(
                     ConfirmSaveButton,
                 )).with_children(|parent| {
                     parent.spawn((
-                        Text::new("Save"),
+                        Text::new(SaveLoadText::SAVE_BUTTON),
                         TextFont {
                             font: font_handle.clone(),
                             font_size: 18.0,
@@ -558,7 +615,7 @@ pub fn setup_save_dialog(
                     CancelSaveButton,
                 )).with_children(|parent| {
                     parent.spawn((
-                        Text::new("Cancel"),
+                        Text::new(SaveLoadText::CANCEL_BUTTON),
                         TextFont {
                             font: font_handle.clone(),
                             font_size: 18.0,
@@ -582,84 +639,160 @@ pub fn cleanup_save_dialog(
     }
 }
 
-/// 处理存档名称输入
+/// Text cursor blinking system
+pub fn update_text_cursor(
+    time: Res<Time>,
+    mut cursor_query: Query<(&mut TextCursor, &mut Visibility, &mut Node)>,
+    save_name_input: Res<SaveNameInput>,
+) {
+    for (mut cursor, mut visibility, mut node) in cursor_query.iter_mut() {
+        cursor.blink_timer += time.delta_secs();
+        
+        if cursor.blink_timer >= 0.5 {
+            cursor.blink_timer = 0.0;
+            cursor.visible = !cursor.visible;
+            *visibility = if cursor.visible {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            };
+        }
+        
+        // 更新光标位置基于当前文本长度
+        // 每个字符大约8像素宽度（16号字体的估算）
+        let text_width = save_name_input.current_name.len() as f32 * 8.0;
+        node.left = Val::Px(15.0 + text_width);
+    }
+}
+
+/// Enhanced text input handler for save names
 pub fn handle_save_name_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut save_name_input: ResMut<SaveNameInput>,
     mut text_query: Query<&mut Text, With<SaveNameInputBox>>,
 ) {
+    // Always print debug info when keys are pressed
+    if keyboard_input.get_just_pressed().len() > 0 {
+        println!("🔤 Keys pressed: {:?}", keyboard_input.get_just_pressed().collect::<Vec<_>>());
+        println!("🔤 is_editing: {}, current_name: '{}'", save_name_input.is_editing, save_name_input.current_name);
+    }
+    
     if !save_name_input.is_editing {
+        println!("🔤 Not editing, returning early");
         return;
     }
     
     let mut name_changed = false;
     
-    // 处理字母和数字输入
+    // Handle special keys first
     for key in keyboard_input.get_just_pressed() {
+        println!("🔤 Processing key: {:?}", key);
         match key {
-            KeyCode::KeyA => { save_name_input.current_name.push('A'); name_changed = true; }
-            KeyCode::KeyB => { save_name_input.current_name.push('B'); name_changed = true; }
-            KeyCode::KeyC => { save_name_input.current_name.push('C'); name_changed = true; }
-            KeyCode::KeyD => { save_name_input.current_name.push('D'); name_changed = true; }
-            KeyCode::KeyE => { save_name_input.current_name.push('E'); name_changed = true; }
-            KeyCode::KeyF => { save_name_input.current_name.push('F'); name_changed = true; }
-            KeyCode::KeyG => { save_name_input.current_name.push('G'); name_changed = true; }
-            KeyCode::KeyH => { save_name_input.current_name.push('H'); name_changed = true; }
-            KeyCode::KeyI => { save_name_input.current_name.push('I'); name_changed = true; }
-            KeyCode::KeyJ => { save_name_input.current_name.push('J'); name_changed = true; }
-            KeyCode::KeyK => { save_name_input.current_name.push('K'); name_changed = true; }
-            KeyCode::KeyL => { save_name_input.current_name.push('L'); name_changed = true; }
-            KeyCode::KeyM => { save_name_input.current_name.push('M'); name_changed = true; }
-            KeyCode::KeyN => { save_name_input.current_name.push('N'); name_changed = true; }
-            KeyCode::KeyO => { save_name_input.current_name.push('O'); name_changed = true; }
-            KeyCode::KeyP => { save_name_input.current_name.push('P'); name_changed = true; }
-            KeyCode::KeyQ => { save_name_input.current_name.push('Q'); name_changed = true; }
-            KeyCode::KeyR => { save_name_input.current_name.push('R'); name_changed = true; }
-            KeyCode::KeyS => { save_name_input.current_name.push('S'); name_changed = true; }
-            KeyCode::KeyT => { save_name_input.current_name.push('T'); name_changed = true; }
-            KeyCode::KeyU => { save_name_input.current_name.push('U'); name_changed = true; }
-            KeyCode::KeyV => { save_name_input.current_name.push('V'); name_changed = true; }
-            KeyCode::KeyW => { save_name_input.current_name.push('W'); name_changed = true; }
-            KeyCode::KeyX => { save_name_input.current_name.push('X'); name_changed = true; }
-            KeyCode::KeyY => { save_name_input.current_name.push('Y'); name_changed = true; }
-            KeyCode::KeyZ => { save_name_input.current_name.push('Z'); name_changed = true; }
-            KeyCode::Digit0 => { save_name_input.current_name.push('0'); name_changed = true; }
-            KeyCode::Digit1 => { save_name_input.current_name.push('1'); name_changed = true; }
-            KeyCode::Digit2 => { save_name_input.current_name.push('2'); name_changed = true; }
-            KeyCode::Digit3 => { save_name_input.current_name.push('3'); name_changed = true; }
-            KeyCode::Digit4 => { save_name_input.current_name.push('4'); name_changed = true; }
-            KeyCode::Digit5 => { save_name_input.current_name.push('5'); name_changed = true; }
-            KeyCode::Digit6 => { save_name_input.current_name.push('6'); name_changed = true; }
-            KeyCode::Digit7 => { save_name_input.current_name.push('7'); name_changed = true; }
-            KeyCode::Digit8 => { save_name_input.current_name.push('8'); name_changed = true; }
-            KeyCode::Digit9 => { save_name_input.current_name.push('9'); name_changed = true; }
-            KeyCode::Space => { save_name_input.current_name.push('_'); name_changed = true; }
-            KeyCode::Minus => { save_name_input.current_name.push('-'); name_changed = true; }
+            KeyCode::Enter => {
+                println!("🔤 Enter pressed - confirming input");
+                return;
+            }
+            KeyCode::Escape => {
+                println!("🔤 Escape pressed - canceling input");
+                return;
+            }
             KeyCode::Backspace => {
                 if !save_name_input.current_name.is_empty() {
                     save_name_input.current_name.pop();
                     name_changed = true;
+                    println!("🔤 Backspace - removed character, current: '{}'", save_name_input.current_name);
                 }
             }
-            _ => {}
+            _ => {
+                // Process character input
+                if let Some(character) = map_keycode_to_char(key) {
+                    if save_name_input.current_name.len() < 25 {
+                        save_name_input.current_name.push(character);
+                        name_changed = true;
+                        println!("🔤 Added character '{}', current: '{}'", character, save_name_input.current_name);
+                    }
+                } else {
+                    println!("🔤 Key {:?} not mapped to character", key);
+                }
+            }
         }
     }
     
-    // 限制名称长度
-    if save_name_input.current_name.len() > 20 {
-        save_name_input.current_name.truncate(20);
-        name_changed = true;
-    }
-    
-    // 更新显示的文本
+    // Update display text if changed
     if name_changed {
+        use crate::systems::text_constants::SaveLoadText;
+        println!("🔤 Updating display text...");
         for mut text in text_query.iter_mut() {
-            **text = if save_name_input.current_name.is_empty() {
-                "Enter name...".to_string()
+            text.0 = if save_name_input.current_name.is_empty() {
+                SaveLoadText::NAME_PLACEHOLDER.to_string()
             } else {
-                save_name_input.current_name.clone()
+                format!("{}|", save_name_input.current_name)
             };
+            println!("🔤 Display text updated to: '{}'", text.0);
         }
+    }
+}
+
+/// Map keyboard input to characters
+fn map_keycode_to_char(keycode: &KeyCode) -> Option<char> {
+    match keycode {
+        // Letters - convert to uppercase
+        KeyCode::KeyA => Some('A'),
+        KeyCode::KeyB => Some('B'),
+        KeyCode::KeyC => Some('C'),
+        KeyCode::KeyD => Some('D'),
+        KeyCode::KeyE => Some('E'),
+        KeyCode::KeyF => Some('F'),
+        KeyCode::KeyG => Some('G'),
+        KeyCode::KeyH => Some('H'),
+        KeyCode::KeyI => Some('I'),
+        KeyCode::KeyJ => Some('J'),
+        KeyCode::KeyK => Some('K'),
+        KeyCode::KeyL => Some('L'),
+        KeyCode::KeyM => Some('M'),
+        KeyCode::KeyN => Some('N'),
+        KeyCode::KeyO => Some('O'),
+        KeyCode::KeyP => Some('P'),
+        KeyCode::KeyQ => Some('Q'),
+        KeyCode::KeyR => Some('R'),
+        KeyCode::KeyS => Some('S'),
+        KeyCode::KeyT => Some('T'),
+        KeyCode::KeyU => Some('U'),
+        KeyCode::KeyV => Some('V'),
+        KeyCode::KeyW => Some('W'),
+        KeyCode::KeyX => Some('X'),
+        KeyCode::KeyY => Some('Y'),
+        KeyCode::KeyZ => Some('Z'),
+        // Numbers
+        KeyCode::Digit0 => Some('0'),
+        KeyCode::Digit1 => Some('1'),
+        KeyCode::Digit2 => Some('2'),
+        KeyCode::Digit3 => Some('3'),
+        KeyCode::Digit4 => Some('4'),
+        KeyCode::Digit5 => Some('5'),
+        KeyCode::Digit6 => Some('6'),
+        KeyCode::Digit7 => Some('7'),
+        KeyCode::Digit8 => Some('8'),
+        KeyCode::Digit9 => Some('9'),
+        // Special characters
+        KeyCode::Space => Some('_'),
+        KeyCode::Minus => Some('-'),
+        _ => None,
+    }
+}
+
+/// Update the input display text
+fn update_input_display(
+    save_name_input: &SaveNameInput,
+    mut text_query: Query<&mut Text, With<SaveNameInputBox>>,
+) {
+    use crate::systems::text_constants::SaveLoadText;
+    for mut text in text_query.iter_mut() {
+        text.0 = if save_name_input.current_name.is_empty() {
+            SaveLoadText::NAME_PLACEHOLDER.to_string()
+        } else {
+            format!("{}|", save_name_input.current_name) // Add cursor indicator
+        };
     }
 }
 
@@ -674,6 +807,8 @@ pub fn handle_save_dialog_interactions(
     mut save_file_manager: ResMut<SaveFileManager>,
     mut save_name_input: ResMut<SaveNameInput>,
 ) {
+    use crate::systems::text_constants::SaveLoadText;
+    
     let mut should_save = false;
     let mut should_cancel = false;
     
@@ -681,7 +816,796 @@ pub fn handle_save_dialog_interactions(
         match *interaction {
             Interaction::Pressed => {
                 if confirm_btn.is_some() {
+                    println!("💾 Save button pressed!");
                     should_save = true;
+                } else if cancel_btn.is_some() {
+                    println!("❌ Cancel button pressed!");
+                    should_cancel = true;
+                } else {
+                    println!("🔘 Unknown button pressed!");
+                }
+                *color = BackgroundColor(Color::srgba(0.05, 0.05, 0.05, 0.9));
+            }
+            Interaction::Hovered => {
+                if confirm_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.25, 0.5, 0.25, 0.9));
+                } else if cancel_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.5, 0.25, 0.25, 0.9));
+                }
+            }
+            Interaction::None => {
+                if confirm_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.15, 0.3, 0.15, 0.8));
+                } else if cancel_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8));
+                }
+            }
+        }
+    }
+    
+    if should_save {
+        println!("💾 Attempting to save game...");
+        // 执行保存操作
+        if let Some(state) = &pause_manager.preserved_state {
+            let save_name = if save_name_input.current_name.is_empty() {
+                SaveLoadText::DEFAULT_SAVE_NAME.to_string()
+            } else {
+                save_name_input.current_name.clone()
+            };
+            
+            println!("💾 Saving with name: '{}'", save_name);
+            
+            match crate::systems::pause_save::save_game_to_file(
+                save_name.clone(),
+                state.clone(),
+                save_file_manager,
+            ) {
+                Ok(_) => {
+                    println!("✅ {}: {}", SaveLoadText::SAVE_SUCCESS, save_name);
+                    save_name_input.is_editing = false;
+                    // 保存成功后跳转到Load界面查看存档
+                    next_state.set(GameState::LoadTable);
+                }
+                Err(e) => {
+                    println!("❌ {}: {}", SaveLoadText::SAVE_ERROR, e);
+                    save_name_input.is_editing = false;
+                    next_state.set(GameState::Paused);
+                }
+            }
+        } else {
+            println!("❌ No game state to save!");
+            save_name_input.is_editing = false;
+            next_state.set(GameState::Paused);
+        }
+    } else if should_cancel {
+        // 取消保存，返回暂停菜单
+        save_name_input.is_editing = false;
+        next_state.set(GameState::Paused);
+        println!("❌ Save cancelled");
+    }
+}
+
+/// 设置增强的加载表格界面
+pub fn setup_load_table(
+    mut commands: Commands,
+    game_assets: Option<Res<GameAssets>>,
+    save_file_manager: Res<SaveFileManager>,
+) {
+    commands.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0),
+            left: Val::Px(0.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+        LoadTableRoot,
+    )).with_children(|parent| {
+        parent.spawn((
+            Node {
+                width: Val::Px(700.0),
+                height: Val::Px(550.0),
+                border: UiRect::all(Val::Px(2.0)),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                padding: UiRect::all(Val::Px(20.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.95)),
+            BorderColor(Color::WHITE),
+        )).with_children(|parent| {
+            let font_handle = game_assets.as_ref().map(|a| a.font.clone()).unwrap_or_default();
+            
+            // 标题
+            parent.spawn((
+                Text::new(crate::systems::text_constants::SaveLoadText::LOAD_DIALOG_TITLE),
+                TextFont {
+                    font: font_handle.clone(),
+                    font_size: 28.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Node {
+                    margin: UiRect::bottom(Val::Px(20.0)),
+                    ..default()
+                },
+            ));
+            
+            // 操作提示
+            parent.spawn((
+                Text::new(crate::systems::text_constants::SaveLoadText::CLICK_TO_LOAD),
+                TextFont {
+                    font: font_handle.clone(),
+                    font_size: 14.0,
+                    ..default()
+                },
+                TextColor(Color::srgba(1.0, 1.0, 1.0, 0.7)),
+                Node {
+                    margin: UiRect::bottom(Val::Px(10.0)),
+                    ..default()
+                },
+            ));
+            
+            // 表格头部
+            parent.spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(40.0),
+                    flex_direction: FlexDirection::Row,
+                    border: UiRect::all(Val::Px(1.0)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8)),
+                BorderColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),
+            )).with_children(|parent| {
+                use crate::systems::text_constants::SaveLoadText;
+                let headers = [SaveLoadText::COL_NAME, SaveLoadText::COL_SCORE, SaveLoadText::COL_DISTANCE, SaveLoadText::COL_TIME, SaveLoadText::COL_DATE, SaveLoadText::COL_ACTIONS];
+                let widths = [20.0, 12.0, 15.0, 12.0, 20.0, 21.0];
+                
+                for (header, width) in headers.iter().zip(widths.iter()) {
+                    parent.spawn((
+                        Node {
+                            width: Val::Percent(*width),
+                            height: Val::Percent(100.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            border: UiRect::right(Val::Px(1.0)),
+                            ..default()
+                        },
+                        BorderColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            Text::new(*header),
+                            TextFont {
+                                font: font_handle.clone(),
+                                font_size: 14.0,
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                        ));
+                    });
+                }
+            });
+            
+            // 滚动区域
+            parent.spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(320.0),
+                    flex_direction: FlexDirection::Column,
+                    overflow: Overflow::clip_y(),
+                    ..default()
+                },
+            )).with_children(|parent| {
+                // 显示存档文件
+                if save_file_manager.save_files.is_empty() {
+                    parent.spawn((
+                        Node {
+                            width: Val::Percent(100.0),
+                            height: Val::Px(60.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                    )).with_children(|parent| {
+                        parent.spawn((
+                            Text::new(crate::systems::text_constants::SaveLoadText::NO_SAVES_FOUND),
+                            TextFont {
+                                font: font_handle.clone(),
+                                font_size: 18.0,
+                                ..default()
+                            },
+                            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.6)),
+                        ));
+                    });
+                } else {
+                    for (index, save_file) in save_file_manager.save_files.iter().enumerate() {
+                        parent.spawn((
+                            Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Px(45.0),
+                                flex_direction: FlexDirection::Row,
+                                border: UiRect::all(Val::Px(1.0)),
+                                ..default()
+                            },
+                            BackgroundColor(if index % 2 == 0 {
+                                Color::srgba(0.25, 0.25, 0.25, 0.8)
+                            } else {
+                                Color::srgba(0.2, 0.2, 0.2, 0.8)
+                            }),
+                            BorderColor(Color::srgba(0.4, 0.4, 0.4, 1.0)),
+                        )).with_children(|parent| {
+                            let widths = [20.0, 12.0, 15.0, 12.0, 20.0, 21.0];
+                            let values = [
+                                save_file.name.clone(),
+                                save_file.score.to_string(),
+                                format!("{:.1}m", save_file.distance),
+                                format!("{:.1}s", save_file.play_time),
+                                save_file.save_timestamp.format("%m/%d %H:%M").to_string(),
+                            ];
+                            
+                            // 显示存档信息
+                            for (i, (value, width)) in values.iter().zip(widths.iter()).enumerate() {
+                                if i < 5 { // 前5列显示数据
+                                    parent.spawn((
+                                        Button,
+                                        Node {
+                                            width: Val::Percent(*width),
+                                            height: Val::Percent(100.0),
+                                            justify_content: JustifyContent::Center,
+                                            align_items: AlignItems::Center,
+                                            border: UiRect::right(Val::Px(1.0)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(Color::NONE),
+                                        BorderColor(Color::srgba(0.4, 0.4, 0.4, 1.0)),
+                                        SaveFileRow { save_index: index },
+                                    )).with_children(|parent| {
+                                        parent.spawn((
+                                            Text::new(value.clone()),
+                                            TextFont {
+                                                font: font_handle.clone(),
+                                                font_size: 13.0,
+                                                ..default()
+                                            },
+                                            TextColor(Color::WHITE),
+                                        ));
+                                    });
+                                }
+                            }
+                            
+                            // 操作按钮列
+                            parent.spawn((
+                                Node {
+                                    width: Val::Percent(21.0),
+                                    height: Val::Percent(100.0),
+                                    flex_direction: FlexDirection::Row,
+                                    justify_content: JustifyContent::SpaceEvenly,
+                                    align_items: AlignItems::Center,
+                                    padding: UiRect::all(Val::Px(2.0)),
+                                    ..default()
+                                },
+                            )).with_children(|parent| {
+                                // 重命名按钮
+                                parent.spawn((
+                                    Button,
+                                    Node {
+                                        width: Val::Px(45.0),
+                                        height: Val::Px(25.0),
+                                        border: UiRect::all(Val::Px(1.0)),
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    BackgroundColor(Color::srgba(0.2, 0.3, 0.4, 0.8)),
+                                    BorderColor(Color::srgba(0.4, 0.6, 0.8, 1.0)),
+                                    RenameButton,
+                                    SaveFileRow { save_index: index },
+                                )).with_children(|parent| {
+                                    parent.spawn((
+                                        Text::new(crate::systems::text_constants::SaveLoadText::RENAME_BUTTON),
+                                        TextFont {
+                                            font: font_handle.clone(),
+                                            font_size: 10.0,
+                                            ..default()
+                                        },
+                                        TextColor(Color::WHITE),
+                                    ));
+                                });
+                                
+                                // 删除按钮
+                                parent.spawn((
+                                    Button,
+                                    Node {
+                                        width: Val::Px(45.0),
+                                        height: Val::Px(25.0),
+                                        border: UiRect::all(Val::Px(1.0)),
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    BackgroundColor(Color::srgba(0.4, 0.2, 0.2, 0.8)),
+                                    BorderColor(Color::srgba(0.8, 0.4, 0.4, 1.0)),
+                                    DeleteButton,
+                                    SaveFileRow { save_index: index },
+                                )).with_children(|parent| {
+                                    parent.spawn((
+                                        Text::new(crate::systems::text_constants::SaveLoadText::DELETE_BUTTON),
+                                        TextFont {
+                                            font: font_handle.clone(),
+                                            font_size: 10.0,
+                                            ..default()
+                                        },
+                                        TextColor(Color::WHITE),
+                                    ));
+                                });
+                            });
+                        });
+                    }
+                }
+            });
+            
+            // 底部按钮
+            parent.spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(60.0),
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceEvenly,
+                    align_items: AlignItems::Center,
+                    margin: UiRect::top(Val::Px(20.0)),
+                    ..default()
+                },
+            )).with_children(|parent| {
+                // 刷新按钮
+                parent.spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(100.0),
+                        height: Val::Px(40.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.15, 0.25, 0.35, 0.8)),
+                    BorderColor(Color::srgba(0.3, 0.5, 0.7, 1.0)),
+                    LoadButton, // 重用加载按钮组件作为刷新
+                )).with_children(|parent| {
+                    parent.spawn((
+                        Text::new(crate::systems::text_constants::SaveLoadText::REFRESH_BUTTON),
+                        TextFont {
+                            font: font_handle.clone(),
+                            font_size: 16.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                });
+                
+                // 返回按钮
+                parent.spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(100.0),
+                        height: Val::Px(40.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8)),
+                    BorderColor(Color::srgba(0.6, 0.3, 0.3, 1.0)),
+                    CancelSaveButton, // 重用取消按钮组件
+                )).with_children(|parent| {
+                    parent.spawn((
+                        Text::new(crate::systems::text_constants::SaveLoadText::BACK_BUTTON),
+                        TextFont {
+                            font: font_handle.clone(),
+                            font_size: 16.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                });
+            });
+        });
+    });
+}
+
+/// 清理加载表格
+pub fn cleanup_load_table(
+    mut commands: Commands,
+    table_query: Query<Entity, With<LoadTableRoot>>,
+) {
+    for entity in table_query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+/// 设置重命名对话框
+pub fn setup_rename_dialog(
+    mut commands: Commands,
+    game_assets: Option<Res<GameAssets>>,
+    mut rename_input: ResMut<RenameInput>,
+) {
+    // 重置输入状态，使用原始名称作为默认值
+    rename_input.current_name = rename_input.original_name.clone();
+    rename_input.is_editing = true;
+    
+    commands.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0),
+            left: Val::Px(0.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+        RenameDialog,
+    )).with_children(|parent| {
+        parent.spawn((
+            Node {
+                width: Val::Px(450.0),
+                height: Val::Px(280.0),
+                border: UiRect::all(Val::Px(2.0)),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::SpaceEvenly,
+                padding: UiRect::all(Val::Px(20.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.95)),
+            BorderColor(Color::WHITE),
+        )).with_children(|parent| {
+            let font_handle = game_assets.as_ref().map(|a| a.font.clone()).unwrap_or_default();
+            
+            // 标题
+            parent.spawn((
+                Text::new(crate::systems::text_constants::SaveLoadText::RENAME_DIALOG_TITLE),
+                TextFont {
+                    font: font_handle.clone(),
+                    font_size: 24.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+            ));
+            
+            // 原始名称显示
+            parent.spawn((
+                Text::new(format!("Current name: {}", rename_input.original_name)),
+                TextFont {
+                    font: font_handle.clone(),
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextColor(Color::srgba(1.0, 1.0, 1.0, 0.7)),
+            ));
+            
+            // 输入提示
+            parent.spawn((
+                Text::new(crate::systems::text_constants::SaveLoadText::ENTER_NEW_NAME),
+                TextFont {
+                    font: font_handle.clone(),
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
+            ));
+            
+            // 输入框
+            parent.spawn((
+                Node {
+                    width: Val::Px(350.0),
+                    height: Val::Px(40.0),
+                    border: UiRect::all(Val::Px(2.0)),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::all(Val::Px(10.0)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.9)),
+                BorderColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),
+                RenameInputBox,
+            )).with_children(|parent| {
+                parent.spawn((
+                    Text::new(rename_input.current_name.clone()),
+                    TextFont {
+                        font: font_handle.clone(),
+                        font_size: 16.0,
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                ));
+            });
+            
+            // 按钮容器
+            parent.spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(60.0),
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceEvenly,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+            )).with_children(|parent| {
+                // 确认按钮
+                parent.spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(120.0),
+                        height: Val::Px(40.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.15, 0.3, 0.15, 0.8)),
+                    BorderColor(Color::srgba(0.3, 0.6, 0.3, 1.0)),
+                    ConfirmRenameButton,
+                )).with_children(|parent| {
+                    parent.spawn((
+                        Text::new(crate::systems::text_constants::SaveLoadText::CONFIRM_BUTTON),
+                        TextFont {
+                            font: font_handle.clone(),
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                });
+                
+                // 取消按钮
+                parent.spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(120.0),
+                        height: Val::Px(40.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8)),
+                    BorderColor(Color::srgba(0.6, 0.3, 0.3, 1.0)),
+                    CancelRenameButton,
+                )).with_children(|parent| {
+                    parent.spawn((
+                        Text::new(crate::systems::text_constants::SaveLoadText::CANCEL_BUTTON),
+                        TextFont {
+                            font: font_handle.clone(),
+                            font_size: 18.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                });
+            });
+        });
+    });
+}
+
+/// 清理重命名对话框
+pub fn cleanup_rename_dialog(
+    mut commands: Commands,
+    dialog_query: Query<Entity, With<RenameDialog>>,
+) {
+    for entity in dialog_query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+/// 处理增强的加载表格交互
+pub fn handle_load_table_interactions(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor, Option<&SaveFileRow>, Option<&CancelSaveButton>, Option<&LoadButton>, Option<&RenameButton>, Option<&DeleteButton>),
+        (Changed<Interaction>, With<Button>)
+    >,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut save_file_manager: ResMut<SaveFileManager>,
+    mut loaded_game_state: ResMut<LoadedGameState>,
+    mut rename_input: ResMut<RenameInput>,
+) {
+    let mut selected_save_index: Option<usize> = None;
+    let mut should_cancel = false;
+    let mut should_refresh = false;
+    let mut rename_index: Option<usize> = None;
+    let mut delete_index: Option<usize> = None;
+    
+    for (interaction, mut color, save_row, cancel_btn, load_btn, rename_btn, delete_btn) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                if let Some(row) = save_row {
+                    if rename_btn.is_some() {
+                        rename_index = Some(row.save_index);
+                    } else if delete_btn.is_some() {
+                        delete_index = Some(row.save_index);
+                    } else {
+                        selected_save_index = Some(row.save_index);
+                    }
+                } else if cancel_btn.is_some() {
+                    should_cancel = true;
+                } else if load_btn.is_some() {
+                    should_refresh = true;
+                }
+                *color = BackgroundColor(Color::srgba(0.05, 0.05, 0.05, 0.9));
+            }
+            Interaction::Hovered => {
+                if save_row.is_some() {
+                    if rename_btn.is_some() {
+                        *color = BackgroundColor(Color::srgba(0.3, 0.45, 0.6, 0.9));
+                    } else if delete_btn.is_some() {
+                        *color = BackgroundColor(Color::srgba(0.6, 0.3, 0.3, 0.9));
+                    } else {
+                        *color = BackgroundColor(Color::srgba(0.4, 0.4, 0.4, 0.9));
+                    }
+                } else if cancel_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.5, 0.25, 0.25, 0.9));
+                } else if load_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.25, 0.4, 0.55, 0.9));
+                }
+            }
+            Interaction::None => {
+                if let Some(row) = save_row {
+                    if rename_btn.is_some() {
+                        *color = BackgroundColor(Color::srgba(0.2, 0.3, 0.4, 0.8));
+                    } else if delete_btn.is_some() {
+                        *color = BackgroundColor(Color::srgba(0.4, 0.2, 0.2, 0.8));
+                    } else {
+                        *color = BackgroundColor(Color::NONE);
+                    }
+                } else if cancel_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8));
+                } else if load_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.15, 0.25, 0.35, 0.8));
+                }
+            }
+        }
+    }
+    
+    // 处理加载存档
+    if let Some(index) = selected_save_index {
+        if index < save_file_manager.save_files.len() {
+            let save_file = &save_file_manager.save_files[index];
+            match crate::systems::pause_save::load_game_from_file(&save_file.file_path) {
+                Ok(game_state) => {
+                    println!("📂 {}: {}", crate::systems::text_constants::SaveLoadText::LOAD_SUCCESS, save_file.name);
+                    loaded_game_state.state = Some(game_state);
+                    loaded_game_state.should_restore = true;
+                    next_state.set(GameState::Playing);
+                }
+                Err(e) => {
+                    println!("❌ {}: {}", crate::systems::text_constants::SaveLoadText::LOAD_ERROR, e);
+                }
+            }
+        }
+    }
+    // 处理重命名
+    else if let Some(index) = rename_index {
+        if index < save_file_manager.save_files.len() {
+            let save_file = &save_file_manager.save_files[index];
+            rename_input.original_name = save_file.name.clone();
+            rename_input.save_index = index;
+            next_state.set(GameState::RenameDialog);
+            println!("✏️ Renaming save: {}", save_file.name);
+        }
+    }
+    // 处理删除
+    else if let Some(index) = delete_index {
+        if index < save_file_manager.save_files.len() {
+            let save_name = save_file_manager.save_files[index].name.clone();
+            match crate::systems::pause_save::delete_save_file(&save_name, &mut save_file_manager) {
+                Ok(_) => {
+                    println!("🗑️ {}: {}", crate::systems::text_constants::SaveLoadText::DELETE_SUCCESS, save_name);
+                    // 刷新存档列表
+                    should_refresh = true;
+                }
+                Err(e) => {
+                    println!("❌ {}: {}", crate::systems::text_constants::SaveLoadText::DELETE_ERROR, e);
+                }
+            }
+        }
+    }
+    // 处理刷新
+    else if should_refresh {
+        // 触发存档文件扫描
+        println!("🔄 Refreshing save list");
+    }
+    // 处理返回
+    else if should_cancel {
+        next_state.set(GameState::Menu);
+        println!("🏠 Back to main menu");
+    }
+}
+
+/// Enhanced text input handler for rename operations
+pub fn handle_rename_input(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut rename_input: ResMut<RenameInput>,
+    mut text_query: Query<&mut Text, With<RenameInputBox>>,
+    time: Res<Time>,
+) {
+    if !rename_input.is_editing {
+        return;
+    }
+    
+    let mut name_changed = false;
+    
+    // Handle special keys first
+    for key in keyboard_input.get_just_pressed() {
+        match key {
+            KeyCode::Enter => {
+                // Confirm input (handled by dialog interaction system)
+                return;
+            }
+            KeyCode::Escape => {
+                // Cancel input (handled by dialog interaction system)
+                return;
+            }
+            KeyCode::Backspace => {
+                if !rename_input.current_name.is_empty() {
+                    rename_input.current_name.pop();
+                    name_changed = true;
+                }
+            }
+            _ => {
+                // Process character input
+                if let Some(character) = map_keycode_to_char(key) {
+                    if rename_input.current_name.len() < 25 {
+                        rename_input.current_name.push(character);
+                        name_changed = true;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Update display text if changed
+    if name_changed {
+        update_rename_display(&rename_input, text_query);
+    }
+}
+
+/// Update the rename input display text
+fn update_rename_display(
+    rename_input: &RenameInput,
+    mut text_query: Query<&mut Text, With<RenameInputBox>>,
+) {
+    for mut text in text_query.iter_mut() {
+        text.0 = if rename_input.current_name.is_empty() {
+            "Enter name...".to_string()
+        } else {
+            format!("{}|", rename_input.current_name) // Add cursor indicator
+        };
+    }
+}
+
+/// 处理重命名对话框交互
+pub fn handle_rename_dialog_interactions(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor, Option<&ConfirmRenameButton>, Option<&CancelRenameButton>),
+        (Changed<Interaction>, With<Button>)
+    >,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut save_file_manager: ResMut<SaveFileManager>,
+    mut rename_input: ResMut<RenameInput>,
+) {
+    let mut should_confirm = false;
+    let mut should_cancel = false;
+    
+    for (interaction, mut color, confirm_btn, cancel_btn) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                if confirm_btn.is_some() {
+                    should_confirm = true;
                 } else if cancel_btn.is_some() {
                     should_cancel = true;
                 }
@@ -704,331 +1628,73 @@ pub fn handle_save_dialog_interactions(
         }
     }
     
-    if should_save {
-        // 执行保存操作
-        if let Some(state) = &pause_manager.preserved_state {
-            let save_name = if save_name_input.current_name.is_empty() {
-                "DefaultSave".to_string()
-            } else {
-                save_name_input.current_name.clone()
-            };
-            
-            match crate::systems::pause_save::save_game_to_file(
-                save_name.clone(),
-                state.clone(),
-                save_file_manager,
+    if should_confirm {
+        // 执行重命名操作
+        let new_name = if rename_input.current_name.is_empty() {
+            rename_input.original_name.clone()
+        } else {
+            rename_input.current_name.clone()
+        };
+        
+        if rename_input.save_index < save_file_manager.save_files.len() {
+            match rename_save_file(
+                &rename_input.original_name,
+                &new_name,
+                save_file_manager.as_mut(),
             ) {
                 Ok(_) => {
-                    println!("✅ 保存成功: {}", save_name);
-                    save_name_input.is_editing = false;
-                    next_state.set(GameState::Paused);
+                    println!("✅ {}: {} -> {}", crate::systems::text_constants::SaveLoadText::RENAME_SUCCESS, rename_input.original_name, new_name);
+                    rename_input.is_editing = false;
+                    next_state.set(GameState::LoadTable);
                 }
                 Err(e) => {
-                    println!("❌ 保存失败: {}", e);
-                    next_state.set(GameState::Paused);
+                    println!("❌ {}: {}", crate::systems::text_constants::SaveLoadText::RENAME_ERROR, e);
+                    next_state.set(GameState::LoadTable);
                 }
             }
         }
     } else if should_cancel {
-        // 取消保存，返回暂停菜单
-        save_name_input.is_editing = false;
-        next_state.set(GameState::Paused);
-        println!("❌ 取消保存");
+        // 取消重命名，返回加载表格
+        rename_input.is_editing = false;
+        next_state.set(GameState::LoadTable);
+        println!("❌ Rename cancelled");
     }
 }
 
-/// 设置加载表格界面
-pub fn setup_load_table(
-    mut commands: Commands,
-    game_assets: Option<Res<GameAssets>>,
-    save_file_manager: Res<SaveFileManager>,
-) {
-    commands.spawn((
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            position_type: PositionType::Absolute,
-            top: Val::Px(0.0),
-            left: Val::Px(0.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            ..default()
-        },
-        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
-        LoadTableRoot,
-    )).with_children(|parent| {
-        parent.spawn((
-            Node {
-                width: Val::Px(600.0),
-                height: Val::Px(500.0),
-                border: UiRect::all(Val::Px(2.0)),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                padding: UiRect::all(Val::Px(20.0)),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.95)),
-            BorderColor(Color::WHITE),
-        )).with_children(|parent| {
-            let font_handle = game_assets.as_ref().map(|a| a.font.clone()).unwrap_or_default();
-            
-            // 标题
-            parent.spawn((
-                Text::new("Load Game"),
-                TextFont {
-                    font: font_handle.clone(),
-                    font_size: 32.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-                Node {
-                    margin: UiRect::bottom(Val::Px(20.0)),
-                    ..default()
-                },
-            ));
-            
-            // 表格头部
-            parent.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(40.0),
-                    flex_direction: FlexDirection::Row,
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8)),
-                BorderColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),
-            )).with_children(|parent| {
-                let headers = ["Name", "Score", "Distance", "Time", "Date"];
-                let widths = [25.0, 15.0, 20.0, 15.0, 25.0];
-                
-                for (header, width) in headers.iter().zip(widths.iter()) {
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(*width),
-                            height: Val::Percent(100.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            border: UiRect::right(Val::Px(1.0)),
-                            ..default()
-                        },
-                        BorderColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),
-                    )).with_children(|parent| {
-                        parent.spawn((
-                            Text::new(*header),
-                            TextFont {
-                                font: font_handle.clone(),
-                                font_size: 16.0,
-                                ..default()
-                            },
-                            TextColor(Color::WHITE),
-                        ));
-                    });
-                }
-            });
-            
-            // 滚动区域
-            parent.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(300.0),
-                    flex_direction: FlexDirection::Column,
-                    overflow: Overflow::clip_y(),
-                    ..default()
-                },
-            )).with_children(|parent| {
-                // 显示存档文件
-                if save_file_manager.save_files.is_empty() {
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(100.0),
-                            height: Val::Px(60.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                    )).with_children(|parent| {
-                        parent.spawn((
-                            Text::new("No save files found"),
-                            TextFont {
-                                font: font_handle.clone(),
-                                font_size: 18.0,
-                                ..default()
-                            },
-                            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.6)),
-                        ));
-                    });
-                } else {
-                    for (index, save_file) in save_file_manager.save_files.iter().enumerate() {
-                        parent.spawn((
-                            Button,
-                            Node {
-                                width: Val::Percent(100.0),
-                                height: Val::Px(40.0),
-                                flex_direction: FlexDirection::Row,
-                                border: UiRect::all(Val::Px(1.0)),
-                                ..default()
-                            },
-                            BackgroundColor(if index % 2 == 0 {
-                                Color::srgba(0.25, 0.25, 0.25, 0.8)
-                            } else {
-                                Color::srgba(0.2, 0.2, 0.2, 0.8)
-                            }),
-                            BorderColor(Color::srgba(0.4, 0.4, 0.4, 1.0)),
-                            SaveFileRow { save_index: index },
-                        )).with_children(|parent| {
-                            let widths = [25.0, 15.0, 20.0, 15.0, 25.0];
-                            let values = [
-                                save_file.name.clone(),
-                                save_file.score.to_string(),
-                                format!("{:.1}m", save_file.distance),
-                                format!("{:.1}s", save_file.play_time),
-                                save_file.save_timestamp.format("%m/%d %H:%M").to_string(),
-                            ];
-                            
-                            for (value, width) in values.iter().zip(widths.iter()) {
-                                parent.spawn((
-                                    Node {
-                                        width: Val::Percent(*width),
-                                        height: Val::Percent(100.0),
-                                        justify_content: JustifyContent::Center,
-                                        align_items: AlignItems::Center,
-                                        border: UiRect::right(Val::Px(1.0)),
-                                        ..default()
-                                    },
-                                    BorderColor(Color::srgba(0.4, 0.4, 0.4, 1.0)),
-                                )).with_children(|parent| {
-                                    parent.spawn((
-                                        Text::new(value.clone()),
-                                        TextFont {
-                                            font: font_handle.clone(),
-                                            font_size: 14.0,
-                                            ..default()
-                                        },
-                                        TextColor(Color::WHITE),
-                                    ));
-                                });
-                            }
-                        });
-                    }
-                }
-            });
-            
-            // 底部按钮
-            parent.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(60.0),
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceEvenly,
-                    align_items: AlignItems::Center,
-                    margin: UiRect::top(Val::Px(20.0)),
-                    ..default()
-                },
-            )).with_children(|parent| {
-                // 返回按钮
-                parent.spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(120.0),
-                        height: Val::Px(40.0),
-                        border: UiRect::all(Val::Px(2.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8)),
-                    BorderColor(Color::srgba(0.6, 0.3, 0.3, 1.0)),
-                    CancelSaveButton, // 重用取消按钮组件
-                )).with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Back"),
-                        TextFont {
-                            font: font_handle.clone(),
-                            font_size: 18.0,
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                    ));
-                });
-            });
-        });
-    });
-}
-
-/// 清理加载表格
-pub fn cleanup_load_table(
-    mut commands: Commands,
-    table_query: Query<Entity, With<LoadTableRoot>>,
-) {
-    for entity in table_query.iter() {
-        commands.entity(entity).despawn();
-    }
-}
-
-/// 处理加载表格交互
-pub fn handle_load_table_interactions(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor, Option<&SaveFileRow>, Option<&CancelSaveButton>),
-        (Changed<Interaction>, With<Button>)
-    >,
-    mut next_state: ResMut<NextState<GameState>>,
-    save_file_manager: Res<SaveFileManager>,
-    mut loaded_game_state: ResMut<LoadedGameState>,
-) {
-    let mut selected_save_index: Option<usize> = None;
-    let mut should_cancel = false;
+/// 重命名存档文件
+fn rename_save_file(
+    old_name: &str,
+    new_name: &str,
+    save_file_manager: &mut SaveFileManager,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs;
+    use std::path::Path;
     
-    for (interaction, mut color, save_row, cancel_btn) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                if let Some(row) = save_row {
-                    selected_save_index = Some(row.save_index);
-                } else if cancel_btn.is_some() {
-                    should_cancel = true;
-                }
-                *color = BackgroundColor(Color::srgba(0.05, 0.05, 0.05, 0.9));
-            }
-            Interaction::Hovered => {
-                if save_row.is_some() {
-                    *color = BackgroundColor(Color::srgba(0.4, 0.4, 0.4, 0.9));
-                } else if cancel_btn.is_some() {
-                    *color = BackgroundColor(Color::srgba(0.5, 0.25, 0.25, 0.9));
-                }
-            }
-            Interaction::None => {
-                if let Some(row) = save_row {
-                    *color = BackgroundColor(if row.save_index % 2 == 0 {
-                        Color::srgba(0.25, 0.25, 0.25, 0.8)
-                    } else {
-                        Color::srgba(0.2, 0.2, 0.2, 0.8)
-                    });
-                } else if cancel_btn.is_some() {
-                    *color = BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8));
-                }
-            }
-        }
+    if old_name == new_name {
+        return Ok(()); // 名称没有变化
     }
     
-    if let Some(index) = selected_save_index {
-        if index < save_file_manager.save_files.len() {
-            let save_file = &save_file_manager.save_files[index];
-            match crate::systems::pause_save::load_game_from_file(&save_file.file_path) {
-                Ok(game_state) => {
-                    println!("📂 加载存档: {}", save_file.name);
-                    loaded_game_state.state = Some(game_state);
-                    loaded_game_state.should_restore = true;
-                    next_state.set(GameState::Playing);
-                }
-                Err(e) => {
-                    println!("❌ 加载失败: {}", e);
-                }
-            }
-        }
-    } else if should_cancel {
-        // 返回主菜单
-        next_state.set(GameState::Menu);
-        println!("🏠 返回主菜单");
+    // 检查新名称是否已存在
+    if save_file_manager.save_files.iter().any(|s| s.name == new_name) {
+        return Err(crate::systems::text_constants::SaveLoadText::NAME_EXISTS_ERROR.into());
+    }
+    
+    // 找到要重命名的存档
+    if let Some(save_file) = save_file_manager.save_files.iter_mut().find(|s| s.name == old_name) {
+        let old_path = Path::new(&save_file.file_path);
+        let new_file_name = format!("{}.json", new_name);
+        let new_path = old_path.parent().unwrap().join(&new_file_name);
+        
+        // 重命名文件
+        fs::rename(&old_path, &new_path)?;
+        
+        // 更新元数据
+        save_file.name = new_name.to_string();
+        save_file.file_path = new_path.to_string_lossy().to_string();
+        
+        Ok(())
+    } else {
+        Err("Save file not found".into())
     }
 }
 

@@ -40,5 +40,8 @@ pub mod procedural_assets;
 // 视觉效果系统
 pub mod visual_effects;
 
+// 文本常量系统
+pub mod text_constants;
+
 // 重新导出常用系统，保持向后兼容性
 // 注意：只导出实际使用的模块，避免编译警告
