@@ -9,6 +9,7 @@ pub enum GameState {
     Paused,      // 暂停
     SaveDialog,  // 存档对话框
     LoadTable,   // 加载表格
+    RenameDialog, // 重命名对话框
 }
 
 /// 角色选择状态

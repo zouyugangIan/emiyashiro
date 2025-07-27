@@ -259,7 +259,7 @@ pub fn scan_save_files(
 /// 删除存档文件
 pub fn delete_save_file(
     save_name: &str,
-    mut save_file_manager: ResMut<SaveFileManager>,
+    save_file_manager: &mut SaveFileManager,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(index) = save_file_manager.save_files.iter().position(|s| s.name == save_name) {
         let metadata = &save_file_manager.save_files[index];
