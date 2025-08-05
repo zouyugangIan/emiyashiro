@@ -16,8 +16,9 @@ use states::*;
 use systems::*;
 
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+    let mut app = App::new();
+    
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Fate/stay night Heaven's Feel - Shirou Runner".into(),
                 resolution: (1024.0, 768.0).into(),
@@ -39,6 +40,11 @@ fn main() {
         .init_resource::<ui::SaveNameInput>()
         .init_resource::<ui::LoadedGameState>()
         .init_resource::<ui::RenameInput>()
+        .insert_resource(systems::text_input::TextInputState::new(25))
+        .init_resource::<systems::text_input::KeyboardInputHandler>()
+        .init_resource::<systems::error_handling::ErrorRecoveryManager>()
+        .init_resource::<systems::async_file_ops::AsyncFileManager>()
+        .init_resource::<systems::async_file_ops::OperationProgress>()
         .add_systems(Startup, (setup_game_resources, systems::save::load_game))
         .add_systems(OnEnter(GameState::Menu), menu::setup_menu)
         .add_systems(Update, systems::audio::play_menu_music.run_if(in_state(GameState::Menu)))
@@ -105,6 +111,9 @@ fn main() {
                 systems::save::auto_save_system,
                 systems::database_service::database_stats_system,
                 systems::database_service::cleanup_old_sessions,
+                // 异步文件操作和进度显示
+                systems::async_file_ops::update_operation_progress,
+                systems::async_file_ops::display_progress_indicator,
             ).run_if(in_state(GameState::Playing))
         )
         .add_systems(
@@ -121,7 +130,10 @@ fn main() {
             systems::pause_save::handle_pause_input.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused)))
         )
         .add_systems(OnExit(GameState::Playing), (game::cleanup_game, ui::cleanup_game_hud, systems::audio::stop_game_music))
-        .add_systems(OnEnter(GameState::Paused), (ui::setup_pause_menu, systems::pause_save::scan_save_files))
+        .add_systems(OnEnter(GameState::Paused), (
+            systems::pause_save::scan_save_files,
+            ui::setup_pause_menu,
+        ).chain())
         .add_systems(
             Update,
             (
@@ -135,13 +147,17 @@ fn main() {
         .add_systems(
             Update,
             (
+                systems::text_input::handle_keyboard_input,
                 ui::handle_save_name_input,
                 ui::handle_save_dialog_interactions,
                 ui::update_text_cursor,
             ).run_if(in_state(GameState::SaveDialog))
         )
         .add_systems(OnExit(GameState::SaveDialog), ui::cleanup_save_dialog)
-        .add_systems(OnEnter(GameState::LoadTable), (ui::setup_load_table, systems::pause_save::scan_save_files))
+        .add_systems(OnEnter(GameState::LoadTable), (
+            systems::pause_save::scan_save_files,
+            ui::setup_load_table,
+        ).chain())
         .add_systems(
             Update,
             ui::handle_load_table_interactions.run_if(in_state(GameState::LoadTable))
@@ -151,12 +167,17 @@ fn main() {
         .add_systems(
             Update,
             (
+                systems::text_input::handle_keyboard_input,
                 ui::handle_rename_input,
                 ui::handle_rename_dialog_interactions,
             ).run_if(in_state(GameState::RenameDialog))
         )
-        .add_systems(OnExit(GameState::RenameDialog), ui::cleanup_rename_dialog)
-        .run();
+        .add_systems(OnExit(GameState::RenameDialog), ui::cleanup_rename_dialog);
+    
+    // 配置最终集成
+    systems::final_integration::configure_final_integration(&mut app);
+    
+    app.run();
 }
 
 /// 加载游戏资源

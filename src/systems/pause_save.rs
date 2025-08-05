@@ -9,7 +9,6 @@ use crate::{
     components::*,
     resources::*,
     states::*,
-    systems::ui::*,
 };
 
 /// 捕获完整游戏状态
@@ -18,6 +17,7 @@ pub fn capture_game_state(
     camera_query: Query<&Transform, (With<Camera>, Without<Player>)>,
     game_stats: Res<GameStats>,
     character_selection: Res<CharacterSelection>,
+    audio_state_manager: Res<AudioStateManager>,
 ) -> CompleteGameState {
     let mut state = CompleteGameState::default();
     
@@ -27,11 +27,24 @@ pub fn capture_game_state(
         state.player_velocity = player_velocity.clone();
         state.player_grounded = player_state.is_grounded;
         state.player_crouching = player_state.is_crouching;
+        
+        // 根据玩家状态确定动画状态
+        state.player_animation_state = if player_state.is_crouching {
+            "crouch".to_string()
+        } else if !player_state.is_grounded {
+            "jump".to_string()
+        } else if player_velocity.x.abs() > 0.1 {
+            "run".to_string()
+        } else {
+            "idle".to_string()
+        };
     }
     
     // 捕获摄像机状态
     if let Ok(camera_transform) = camera_query.single() {
         state.camera_position = camera_transform.translation;
+        // 摄像机目标通常是玩家位置加偏移
+        state.camera_target = state.player_position + Vec3::new(crate::resources::GameConfig::CAMERA_OFFSET, 0.0, 0.0);
     }
     
     // 捕获游戏统计
@@ -40,23 +53,41 @@ pub fn capture_game_state(
     state.jump_count = game_stats.jump_count;
     state.play_time = game_stats.play_time;
     
-    // 捕获角色选择
+    // 捕获角色选择和玩家数量
     state.selected_character = character_selection.selected_character.clone();
+    state.player_count = PlayerCount::Single; // 目前只支持单人游戏
+    
+    // 捕获音频状态
+    state.music_playing = audio_state_manager.music_playing;
+    state.audio_volume = audio_state_manager.music_volume;
+    state.music_position = 0.0; // TODO: 实现音频位置跟踪
+    
+    // 捕获实体快照（目前为空，未来可扩展）
+    state.entities_snapshot = Vec::new();
     
     // 设置时间戳
     state.save_timestamp = chrono::Utc::now();
+    
+    println!("🎮 游戏状态已捕获:");
+    println!("   玩家位置: ({:.1}, {:.1})", state.player_position.x, state.player_position.y);
+    println!("   动画状态: {}", state.player_animation_state);
+    println!("   分数: {}", state.score);
+    println!("   距离: {:.1}m", state.distance_traveled);
+    println!("   时间: {:.1}s", state.play_time);
+    println!("   音乐播放: {}", state.music_playing);
     
     state
 }
 
 /// 恢复完整游戏状态
 pub fn restore_game_state(
-    mut commands: Commands,
+    _commands: Commands,
     state: CompleteGameState,
     mut player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     mut game_stats: ResMut<GameStats>,
     mut character_selection: ResMut<CharacterSelection>,
+    mut audio_state_manager: ResMut<AudioStateManager>,
 ) {
     // 恢复玩家状态
     if let Ok((mut player_transform, mut player_velocity, mut player_state)) = player_query.single_mut() {
@@ -64,11 +95,15 @@ pub fn restore_game_state(
         *player_velocity = state.player_velocity;
         player_state.is_grounded = state.player_grounded;
         player_state.is_crouching = state.player_crouching;
+        
+        println!("🔄 恢复玩家状态: 位置({:.1}, {:.1}), 动画: {}", 
+                 state.player_position.x, state.player_position.y, state.player_animation_state);
     }
     
     // 恢复摄像机状态
     if let Ok(mut camera_transform) = camera_query.single_mut() {
         camera_transform.translation = state.camera_position;
+        println!("🔄 恢复摄像机位置: ({:.1}, {:.1})", state.camera_position.x, state.camera_position.y);
     }
     
     // 恢复游戏统计
@@ -79,11 +114,17 @@ pub fn restore_game_state(
     // 恢复角色选择
     character_selection.selected_character = state.selected_character;
     
-    println!("🔄 游戏状态已恢复:");
+    // 恢复音频状态
+    audio_state_manager.music_playing = state.music_playing;
+    audio_state_manager.music_volume = state.audio_volume;
+    
+    println!("🔄 游戏状态已完全恢复:");
     println!("   位置: ({:.1}, {:.1})", state.player_position.x, state.player_position.y);
+    println!("   动画状态: {}", state.player_animation_state);
     println!("   分数: {}", state.score);
     println!("   距离: {:.1}m", state.distance_traveled);
     println!("   时间: {:.1}s", state.play_time);
+    println!("   音乐播放: {}", state.music_playing);
 }
 
 /// 处理暂停/恢复输入
@@ -96,6 +137,7 @@ pub fn handle_pause_input(
     camera_query: Query<&Transform, (With<Camera>, Without<Player>)>,
     game_stats: Res<GameStats>,
     character_selection: Res<CharacterSelection>,
+    audio_state_manager: Res<AudioStateManager>,
     mut last_esc_state: Local<bool>,
 ) {
     let esc_pressed = keyboard_input.pressed(KeyCode::Escape);
@@ -113,10 +155,11 @@ pub fn handle_pause_input(
                     camera_query,
                     game_stats,
                     character_selection,
+                    audio_state_manager,
                 );
                 pause_manager.pause_game(state);
                 next_state.set(GameState::Paused);
-                println!("⏸️ Game Paused");
+                println!("⏸️ Game Paused with enhanced state capture");
             }
         }
         GameState::Paused => {
@@ -137,12 +180,13 @@ pub fn handle_pause_input(
 
 /// 恢复暂停的游戏状态
 pub fn restore_paused_state(
-    mut commands: Commands,
+    commands: Commands,
     mut pause_manager: ResMut<PauseManager>,
     player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
     camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     game_stats: ResMut<GameStats>,
     character_selection: ResMut<CharacterSelection>,
+    audio_state_manager: ResMut<AudioStateManager>,
 ) {
     if let Some(state) = pause_manager.resume_game() {
         restore_game_state(
@@ -152,6 +196,7 @@ pub fn restore_paused_state(
             camera_query,
             game_stats,
             character_selection,
+            audio_state_manager,
         );
     }
 }
@@ -161,88 +206,175 @@ pub fn save_game_to_file(
     save_name: String,
     state: CompleteGameState,
     mut save_file_manager: ResMut<SaveFileManager>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), crate::systems::error_handling::SaveSystemError> {
+    use crate::systems::text_constants::StatusText;
+    use crate::systems::error_handling::{SaveSystemError, convert_io_error};
+    
+    println!("{}", StatusText::CREATING_DIRECTORY);
+    
     // 确保保存目录存在
     let save_dir = Path::new(&save_file_manager.save_directory);
     if !save_dir.exists() {
-        println!("创建保存目录: {}", save_dir.display());
-        fs::create_dir_all(save_dir)?;
+        println!("📁 Creating save directory: {}", save_dir.display());
+        fs::create_dir_all(save_dir).map_err(|e| {
+            convert_io_error(e, &format!("create directory {}", save_dir.display()))
+        })?;
     }
     
-    // 创建保存文件路径
-    let file_name = format!("{}.json", save_name);
+    // 验证保存名称
+    let validator = crate::systems::text_input::InputValidator::new();
+    let validated_name = validator.validate_save_name(&save_name).map_err(|e| {
+        SaveSystemError::InvalidFileName(e.to_string())
+    })?;
+    
+    // 检查名称是否已存在（用于覆盖确认）
+    let file_name = format!("{}.json", validated_name);
     let file_path = save_dir.join(&file_name);
     
-    // 序列化游戏状态
-    let json_data = serde_json::to_string_pretty(&state)?;
+    println!("{}", StatusText::WRITING_FILE);
     
-    // 写入文件
-    fs::write(&file_path, json_data)?;
-    
-    // 更新元数据
-    let metadata = SaveFileMetadata {
-        name: save_name.clone(),
-        score: state.score,
-        distance: state.distance_traveled,
-        play_time: state.play_time,
-        save_timestamp: state.save_timestamp,
-        file_path: file_path.to_string_lossy().to_string(),
+    // 创建完整的保存文件数据结构
+    let save_file_data = SaveFileData {
+        version: "1.0".to_string(),
+        metadata: SaveFileMetadata {
+            name: validated_name.clone(),
+            score: state.score,
+            distance: state.distance_traveled,
+            play_time: state.play_time,
+            save_timestamp: state.save_timestamp,
+            file_path: file_path.to_string_lossy().to_string(),
+        },
+        game_state: state.clone(),
+        checksum: calculate_checksum(&state),
     };
     
+    // 序列化游戏状态
+    let json_data = serde_json::to_string_pretty(&save_file_data).map_err(|e| {
+        SaveSystemError::SerializationFailed(e.to_string())
+    })?;
+    
+    // 写入文件
+    fs::write(&file_path, &json_data).map_err(|e| {
+        convert_io_error(e, &format!("write file {}", file_path.display()))
+    })?;
+    
+    // 更新元数据
+    let metadata = save_file_data.metadata;
+    
     // 更新或添加到保存文件列表
-    if let Some(existing) = save_file_manager.save_files.iter_mut().find(|s| s.name == save_name) {
+    if let Some(existing) = save_file_manager.save_files.iter_mut().find(|s| s.name == validated_name) {
         *existing = metadata;
     } else {
         save_file_manager.save_files.push(metadata);
     }
     
-    save_file_manager.current_save_name = Some(save_name.clone());
+    save_file_manager.current_save_name = Some(validated_name.clone());
     
-    println!("💾 游戏已保存: {}", save_name);
+    println!("💾 Game saved successfully: {}", validated_name);
+    println!("   File: {}", file_path.display());
+    println!("   Size: {} bytes", json_data.len());
+    
     Ok(())
+}
+
+/// 保存文件数据结构
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SaveFileData {
+    pub version: String,
+    pub metadata: SaveFileMetadata,
+    pub game_state: CompleteGameState,
+    pub checksum: String,
+}
+
+/// 计算游戏状态的校验和
+fn calculate_checksum(state: &CompleteGameState) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    
+    let mut hasher = DefaultHasher::new();
+    
+    // 对关键数据进行哈希
+    state.player_position.x.to_bits().hash(&mut hasher);
+    state.player_position.y.to_bits().hash(&mut hasher);
+    state.score.hash(&mut hasher);
+    state.distance_traveled.to_bits().hash(&mut hasher);
+    state.jump_count.hash(&mut hasher);
+    state.play_time.to_bits().hash(&mut hasher);
+    
+    format!("{:x}", hasher.finish())
 }
 
 /// 从文件加载游戏
 pub fn load_game_from_file(
     file_path: &str,
-) -> Result<CompleteGameState, Box<dyn std::error::Error>> {
-    let json_data = fs::read_to_string(file_path)?;
-    let state: CompleteGameState = serde_json::from_str(&json_data)?;
+) -> Result<CompleteGameState, crate::systems::error_handling::SaveSystemError> {
+    use crate::systems::text_constants::StatusText;
+    use crate::systems::error_handling::{SaveSystemError, convert_io_error};
     
-    println!("📂 游戏已加载: {}", file_path);
-    Ok(state)
+    println!("{}", StatusText::READING_FILE);
+    
+    let json_data = fs::read_to_string(file_path).map_err(|e| {
+        convert_io_error(e, &format!("read file {}", file_path))
+    })?;
+    
+    // 尝试加载新格式的存档文件
+    if let Ok(save_file_data) = serde_json::from_str::<SaveFileData>(&json_data) {
+        // 验证校验和
+        let calculated_checksum = calculate_checksum(&save_file_data.game_state);
+        if calculated_checksum != save_file_data.checksum {
+            println!("⚠️ Warning: Checksum mismatch for save file, but continuing...");
+            // 可以选择返回错误或继续
+            // return Err(SaveSystemError::ChecksumMismatch);
+        }
+        
+        println!("📂 Game loaded successfully: {}", file_path);
+        println!("   Version: {}", save_file_data.version);
+        println!("   Save name: {}", save_file_data.metadata.name);
+        println!("   Score: {}", save_file_data.game_state.score);
+        println!("   Distance: {:.1}m", save_file_data.game_state.distance_traveled);
+        
+        Ok(save_file_data.game_state)
+    } 
+    // 回退到旧格式的存档文件
+    else if let Ok(state) = serde_json::from_str::<CompleteGameState>(&json_data) {
+        println!("📂 Legacy save file loaded: {}", file_path);
+        println!("⚠️ Consider re-saving to upgrade to new format");
+        Ok(state)
+    } 
+    else {
+        Err(SaveSystemError::FileCorrupted(file_path.to_string()))
+    }
 }
 
 /// 扫描保存文件目录
 pub fn scan_save_files(
     mut save_file_manager: ResMut<SaveFileManager>,
 ) {
+    use crate::systems::text_constants::StatusText;
+    
+    println!("{}", StatusText::SCANNING_FILES);
+    
     save_file_manager.save_files.clear();
     
     let save_dir = Path::new(&save_file_manager.save_directory);
     if !save_dir.exists() {
+        println!("📁 Save directory does not exist: {}", save_dir.display());
         return;
     }
+    
+    let mut valid_files = 0;
+    let mut corrupted_files = 0;
     
     if let Ok(entries) = fs::read_dir(save_dir) {
         for entry in entries.flatten() {
             if let Some(extension) = entry.path().extension() {
                 if extension == "json" {
-                    if let Ok(json_data) = fs::read_to_string(entry.path()) {
-                        if let Ok(state) = serde_json::from_str::<CompleteGameState>(&json_data) {
-                            let file_name_owned = entry.file_name().to_string_lossy().to_string();
-                            let save_name = file_name_owned.trim_end_matches(".json").to_string();
-                            
-                            let metadata = SaveFileMetadata {
-                                name: save_name,
-                                score: state.score,
-                                distance: state.distance_traveled,
-                                play_time: state.play_time,
-                                save_timestamp: state.save_timestamp,
-                                file_path: entry.path().to_string_lossy().to_string(),
-                            };
-                            
-                            save_file_manager.save_files.push(metadata);
+                    match process_save_file(&entry, &mut save_file_manager) {
+                        Ok(true) => valid_files += 1,
+                        Ok(false) => corrupted_files += 1,
+                        Err(e) => {
+                            println!("⚠️ Error processing {}: {}", entry.path().display(), e);
+                            corrupted_files += 1;
                         }
                     }
                 }
@@ -253,7 +385,55 @@ pub fn scan_save_files(
     // 按时间排序，最新的在前
     save_file_manager.save_files.sort_by(|a, b| b.save_timestamp.cmp(&a.save_timestamp));
     
-    println!("📁 发现 {} 个存档文件", save_file_manager.save_files.len());
+    println!("📁 Scan complete:");
+    println!("   Valid save files: {}", valid_files);
+    if corrupted_files > 0 {
+        println!("   Corrupted/unreadable files: {}", corrupted_files);
+    }
+    println!("   Total usable saves: {}", save_file_manager.save_files.len());
+}
+
+/// 处理单个存档文件
+fn process_save_file(
+    entry: &std::fs::DirEntry,
+    save_file_manager: &mut SaveFileManager,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let json_data = fs::read_to_string(entry.path())?;
+    
+    // 尝试新格式
+    if let Ok(save_file_data) = serde_json::from_str::<SaveFileData>(&json_data) {
+        // 验证校验和
+        let calculated_checksum = calculate_checksum(&save_file_data.game_state);
+        if calculated_checksum != save_file_data.checksum {
+            println!("⚠️ Checksum mismatch for {}, but loading anyway", entry.path().display());
+        }
+        
+        save_file_manager.save_files.push(save_file_data.metadata);
+        return Ok(true);
+    }
+    
+    // 尝试旧格式
+    if let Ok(state) = serde_json::from_str::<CompleteGameState>(&json_data) {
+        let file_name_owned = entry.file_name().to_string_lossy().to_string();
+        let save_name = file_name_owned.trim_end_matches(".json").to_string();
+        
+        let metadata = SaveFileMetadata {
+            name: save_name,
+            score: state.score,
+            distance: state.distance_traveled,
+            play_time: state.play_time,
+            save_timestamp: state.save_timestamp,
+            file_path: entry.path().to_string_lossy().to_string(),
+        };
+        
+        save_file_manager.save_files.push(metadata);
+        println!("📂 Legacy format detected: {}", entry.path().display());
+        return Ok(true);
+    }
+    
+    // 文件无法解析
+    println!("❌ Corrupted save file: {}", entry.path().display());
+    Ok(false)
 }
 
 /// 删除存档文件
@@ -261,11 +441,77 @@ pub fn delete_save_file(
     save_name: &str,
     save_file_manager: &mut SaveFileManager,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::systems::text_constants::StatusText;
+    
+    println!("{}", StatusText::DELETING_FILE);
+    
     if let Some(index) = save_file_manager.save_files.iter().position(|s| s.name == save_name) {
-        let metadata = &save_file_manager.save_files[index];
-        fs::remove_file(&metadata.file_path)?;
+        // 先获取文件路径的副本
+        let file_path = save_file_manager.save_files[index].file_path.clone();
+        
+        // 检查文件是否存在
+        if !Path::new(&file_path).exists() {
+            return Err(format!("Save file not found: {}", file_path).into());
+        }
+        
+        // 删除文件
+        fs::remove_file(&file_path).map_err(|e| {
+            format!("Failed to delete save file '{}': {}", file_path, e)
+        })?;
+        
+        // 从列表中移除
         save_file_manager.save_files.remove(index);
-        println!("🗑️ 已删除存档: {}", save_name);
+        
+        println!("🗑️ Save file deleted successfully: {}", save_name);
+        println!("   File: {}", file_path);
+        
+        Ok(())
+    } else {
+        Err(format!("Save file '{}' not found in manager", save_name).into())
     }
-    Ok(())
+}
+
+/// 重命名存档文件
+pub fn rename_save_file(
+    old_name: &str,
+    new_name: &str,
+    save_file_manager: &mut SaveFileManager,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // 验证新名称
+    let validator = crate::systems::text_input::InputValidator::new();
+    let validated_new_name = validator.validate_save_name(new_name)?;
+    
+    // 检查新名称是否已存在
+    if save_file_manager.save_files.iter().any(|s| s.name == validated_new_name && s.name != old_name) {
+        return Err("Save name already exists".into());
+    }
+    
+    if let Some(index) = save_file_manager.save_files.iter().position(|s| s.name == old_name) {
+        // 先获取旧文件路径的副本
+        let old_file_path = save_file_manager.save_files[index].file_path.clone();
+        let old_path = Path::new(&old_file_path);
+        
+        // 构建新文件路径
+        let save_dir = old_path.parent().unwrap();
+        let new_file_name = format!("{}.json", validated_new_name);
+        let new_path = save_dir.join(&new_file_name);
+        
+        // 重命名文件
+        fs::rename(&old_path, &new_path).map_err(|e| {
+            format!("Failed to rename save file: {}", e)
+        })?;
+        
+        // 更新元数据
+        let metadata = &mut save_file_manager.save_files[index];
+        metadata.name = validated_new_name.clone();
+        metadata.file_path = new_path.to_string_lossy().to_string();
+        
+        println!("✏️ Save file renamed successfully: {} -> {}", old_name, validated_new_name);
+        println!("   Old file: {}", old_path.display());
+        println!("   New file: {}", new_path.display());
+        
+        Ok(())
+    } else {
+        Err(format!("Save file '{}' not found", old_name).into())
+    }
 }

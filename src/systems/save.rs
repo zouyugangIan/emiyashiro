@@ -88,7 +88,7 @@ pub fn handle_save_button_click(
     >,
     game_stats: Res<GameStats>,
     character_selection: Res<CharacterSelection>,
-    mut save_manager: ResMut<SaveManager>,
+    save_manager: ResMut<SaveManager>,
 ) {
     let mut should_save = false;
     
@@ -119,7 +119,7 @@ pub fn auto_save_system(
     time: Res<Time>,
     game_stats: Res<GameStats>,
     character_selection: Res<CharacterSelection>,
-    mut save_manager: ResMut<SaveManager>,
+    save_manager: ResMut<SaveManager>,
     current_state: Res<State<GameState>>,
 ) {
     // 每30秒自动保存一次

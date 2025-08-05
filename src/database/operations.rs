@@ -1,5 +1,4 @@
 use super::{Database, models::*};
-use chrono::Utc;
 use sqlx::Row;
 use uuid::Uuid;
 

@@ -33,6 +33,7 @@ pub mod audio;
 pub mod save;
 pub mod database_service;
 pub mod pause_save;
+pub mod async_file_ops;
 
 // 资源生成系统
 pub mod procedural_assets;
@@ -42,6 +43,18 @@ pub mod visual_effects;
 
 // 文本常量系统
 pub mod text_constants;
+
+// 文本输入系统
+pub mod text_input;
+
+// 错误处理系统
+pub mod error_handling;
+
+// 系统调度配置
+pub mod system_sets;
+
+// 最终集成
+pub mod final_integration;
 
 // 重新导出常用系统，保持向后兼容性
 // 注意：只导出实际使用的模块，避免编译警告

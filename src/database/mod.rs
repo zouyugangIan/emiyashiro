@@ -1,7 +1,7 @@
 pub mod models;
 pub mod operations;
 
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use std::env;
 
 /// 数据库连接池

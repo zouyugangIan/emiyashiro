@@ -56,9 +56,9 @@ pub enum CharacterAnimationType {
 
 /// 加载角色动画帧
 pub fn load_character_animations(
-    mut commands: Commands,
+    commands: Commands,
     asset_server: Res<AssetServer>,
-    mut game_assets: Option<ResMut<GameAssets>>,
+    game_assets: Option<ResMut<GameAssets>>,
 ) {
     println!("🎬 加载角色动画帧...");
     
@@ -88,7 +88,7 @@ pub fn load_character_animations(
     ];
     
     // 存储到游戏资源中（如果资源存在）
-    if let Some(mut assets) = game_assets {
+    if let Some(assets) = game_assets {
         // 这里可以存储动画帧到资源中，但现在我们先跳过
         println!("✅ 角色动画帧加载完成");
     } else {

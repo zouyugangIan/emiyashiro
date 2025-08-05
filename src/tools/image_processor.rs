@@ -195,7 +195,7 @@ impl ImageProcessor {
 
 /// 程序化生成角色精灵系统
 pub fn generate_character_sprites(
-    mut commands: Commands,
+    commands: Commands,
     mut images: ResMut<Assets<Image>>,
 ) {
     println!("🎨 生成程序化角色精灵...");

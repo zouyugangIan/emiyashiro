@@ -1,5 +1,38 @@
 use bevy::prelude::*;
 
+// Vec3 序列化支持
+mod vec3_serde {
+    use bevy::prelude::Vec3;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize, Deserialize)]
+    struct Vec3Helper {
+        x: f32,
+        y: f32,
+        z: f32,
+    }
+
+    pub fn serialize<S>(vec: &Vec3, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let helper = Vec3Helper {
+            x: vec.x,
+            y: vec.y,
+            z: vec.z,
+        };
+        helper.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec3, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let helper = Vec3Helper::deserialize(deserializer)?;
+        Ok(Vec3::new(helper.x, helper.y, helper.z))
+    }
+}
+
 /// 游戏常量配置
 pub struct GameConfig;
 
@@ -140,13 +173,18 @@ impl SaveManager {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CompleteGameState {
     // Player state
+    #[serde(with = "vec3_serde")]
     pub player_position: Vec3,
     pub player_velocity: crate::components::Velocity,
     pub player_grounded: bool,
     pub player_crouching: bool,
+    pub player_animation_state: String, // 当前动画状态
     
     // Camera state
+    #[serde(with = "vec3_serde")]
     pub camera_position: Vec3,
+    #[serde(with = "vec3_serde")]
+    pub camera_target: Vec3,
     
     // Game metrics
     pub score: u32,
@@ -154,11 +192,57 @@ pub struct CompleteGameState {
     pub jump_count: u32,
     pub play_time: f32,
     
-    // Character selection
+    // Character selection and player count
     pub selected_character: crate::states::CharacterType,
+    pub player_count: PlayerCount,
+    
+    // Audio state
+    pub music_position: f32,
+    pub music_playing: bool,
+    pub audio_volume: f32,
+    
+    // Game entities state (for future expansion)
+    pub entities_snapshot: Vec<EntitySnapshot>,
     
     // Timestamp
     pub save_timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// 玩家数量枚举
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default)]
+pub enum PlayerCount {
+    #[default]
+    Single, // 1P
+    Double, // 2P
+}
+
+impl PlayerCount {
+    pub fn to_display_string(&self) -> &'static str {
+        match self {
+            PlayerCount::Single => "1P",
+            PlayerCount::Double => "2P",
+        }
+    }
+}
+
+/// 实体快照 - 用于保存游戏实体状态
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct EntitySnapshot {
+    pub entity_type: EntityType,
+    pub position: Vec3,
+    pub velocity: Option<crate::components::Velocity>,
+    pub active: bool,
+}
+
+/// 实体类型枚举
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub enum EntityType {
+    Player,
+    Ground,
+    Obstacle,
+    Collectible,
+    Effect,
+    Camera,
 }
 
 impl Default for CompleteGameState {
@@ -168,12 +252,19 @@ impl Default for CompleteGameState {
             player_velocity: crate::components::Velocity { x: 0.0, y: 0.0 },
             player_grounded: true,
             player_crouching: false,
+            player_animation_state: "idle".to_string(),
             camera_position: Vec3::ZERO,
+            camera_target: Vec3::ZERO,
             score: 0,
             distance_traveled: 0.0,
             jump_count: 0,
             play_time: 0.0,
             selected_character: crate::states::CharacterType::Shirou1,
+            player_count: PlayerCount::Single,
+            music_position: 0.0,
+            music_playing: false,
+            audio_volume: 0.5,
+            entities_snapshot: Vec::new(),
             save_timestamp: chrono::Utc::now(),
         }
     }

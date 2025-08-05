@@ -72,7 +72,7 @@ pub async fn initialize_database() -> Result<DatabaseService, Box<dyn std::error
 pub fn save_player_to_database(
     game_stats: Res<GameStats>,
     character_selection: Res<CharacterSelection>,
-    mut database_service: ResMut<DatabaseService>,
+    database_service: ResMut<DatabaseService>,
     mut current_session: ResMut<CurrentSession>,
 ) {
     if !database_service.is_connected {
@@ -97,8 +97,8 @@ pub fn save_player_to_database(
 
 /// 从数据库加载玩家记录
 pub fn load_player_from_database(
-    mut database_service: ResMut<DatabaseService>,
-    mut character_selection: ResMut<CharacterSelection>,
+    database_service: ResMut<DatabaseService>,
+    character_selection: ResMut<CharacterSelection>,
 ) {
     if !database_service.is_connected {
         println!("⚠️ 数据库未连接，跳过加载");

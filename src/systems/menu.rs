@@ -85,10 +85,10 @@ pub fn setup_menu(
         },
         MenuUI,
     )).with_children(|parent| {
-        // 游戏标题 - 使用英文避免字体问题
+        // 游戏标题 - 使用英文文本常量
         if let Some(assets) = &game_assets {
             parent.spawn((
-                Text::new("Fate/stay night Heaven's Feel\nShirou Runner"),
+                Text::new(crate::systems::text_constants::MainMenuText::TITLE),
                 TextFont {
                     font: assets.font.clone(),
                     font_size: 48.0,
@@ -102,7 +102,7 @@ pub fn setup_menu(
             ));
         } else {
             parent.spawn((
-                Text::new("Fate/stay night Heaven's Feel\nShirou Runner"),
+                Text::new(crate::systems::text_constants::MainMenuText::TITLE),
                 TextFont {
                     font_size: 48.0,
                     ..default()
@@ -141,7 +141,7 @@ pub fn setup_menu(
             )).with_children(|parent| {
                 if let Some(assets) = &game_assets {
                     parent.spawn((
-                        Text::new("Start Game"),
+                        Text::new(crate::systems::text_constants::MainMenuText::START_GAME),
                         TextFont {
                             font: assets.font.clone(),
                             font_size: 24.0,
@@ -151,7 +151,7 @@ pub fn setup_menu(
                     ));
                 } else {
                     parent.spawn((
-                        Text::new("Start Game"),
+                        Text::new(crate::systems::text_constants::MainMenuText::START_GAME),
                         TextFont {
                             font_size: 24.0,
                             ..default()
@@ -179,7 +179,7 @@ pub fn setup_menu(
             )).with_children(|parent| {
                 if let Some(assets) = &game_assets {
                     parent.spawn((
-                        Text::new("Load Game"),
+                        Text::new(crate::systems::text_constants::MainMenuText::LOAD_GAME),
                         TextFont {
                             font: assets.font.clone(),
                             font_size: 18.0,
@@ -189,7 +189,7 @@ pub fn setup_menu(
                     ));
                 } else {
                     parent.spawn((
-                        Text::new("Load Game"),
+                        Text::new(crate::systems::text_constants::MainMenuText::LOAD_GAME),
                         TextFont {
                             font_size: 18.0,
                             ..default()
@@ -302,13 +302,31 @@ pub fn handle_start_button(
         (Changed<Interaction>, With<StartButton>)
     >,
     mut next_state: ResMut<NextState<GameState>>,
+    mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
+    mut game_stats: ResMut<GameStats>,
+    mut pause_manager: ResMut<PauseManager>,
 ) {
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+                
+                // 重置所有游戏状态，确保从头开始
+                loaded_game_state.state = None;
+                loaded_game_state.should_restore = false;
+                
+                // 重置游戏统计
+                game_stats.distance_traveled = 0.0;
+                game_stats.jump_count = 0;
+                game_stats.play_time = 0.0;
+                
+                // 清理暂停管理器状态
+                pause_manager.is_paused = false;
+                pause_manager.preserved_state = None;
+                pause_manager.pause_timestamp = None;
+                
                 next_state.set(GameState::Playing);
-                println!("🎮 Starting game!");
+                println!("🎮 Starting NEW game! (All states reset)");
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
@@ -327,13 +345,19 @@ pub fn handle_load_button(
         (Changed<Interaction>, With<LoadButton>)
     >,
     mut next_state: ResMut<NextState<GameState>>,
+    save_file_manager: Res<SaveFileManager>,
 ) {
+    
+    
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.05, 0.1, 0.05, 0.8));
+                
+                println!("📂 Opening load interface from main menu");
+                println!("   Available saves: {}", save_file_manager.save_files.len());
+                
                 next_state.set(GameState::LoadTable);
-                println!("📂 Opening load interface!");
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.3, 0.2, 0.8));

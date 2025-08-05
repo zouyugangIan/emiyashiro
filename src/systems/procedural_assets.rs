@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 /// 程序化生成游戏素材
-pub fn generate_simple_assets(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
+pub fn generate_simple_assets(commands: Commands, mut images: ResMut<Assets<Image>>) {
     // 生成简单的角色纹理
     let character_image = create_character_texture();
     let character_handle = images.add(character_image);

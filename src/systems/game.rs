@@ -146,9 +146,16 @@ pub fn restore_loaded_game_entities(
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    mut game_stats: ResMut<GameStats>,
+    mut character_selection: ResMut<CharacterSelection>,
+    mut audio_state_manager: ResMut<AudioStateManager>,
 ) {
+    use crate::systems::text_constants::{StatusText, SaveLoadText};
+    
     if loaded_game_state.should_restore {
         if let Some(state) = &loaded_game_state.state {
+            println!("{}", StatusText::LOADING_GAME);
+            
             // 恢复玩家状态
             if let Ok((mut player_transform, mut player_velocity, mut player_state)) = player_query.single_mut() {
                 player_transform.translation = state.player_position;
@@ -156,14 +163,45 @@ pub fn restore_loaded_game_entities(
                 player_state.is_grounded = state.player_grounded;
                 player_state.is_crouching = state.player_crouching;
                 
-                println!("🔄 恢复玩家位置: ({:.1}, {:.1})", state.player_position.x, state.player_position.y);
+                println!("🔄 Player state restored:");
+                println!("   Position: ({:.1}, {:.1})", state.player_position.x, state.player_position.y);
+                println!("   Animation: {}", state.player_animation_state);
+                println!("   Grounded: {}", state.player_grounded);
             }
             
             // 恢复摄像机状态
             if let Ok(mut camera_transform) = camera_query.single_mut() {
                 camera_transform.translation = state.camera_position;
-                println!("🔄 恢复摄像机位置: ({:.1}, {:.1})", state.camera_position.x, state.camera_position.y);
+                println!("🔄 Camera position restored: ({:.1}, {:.1})", state.camera_position.x, state.camera_position.y);
             }
+            
+            // 恢复游戏统计
+            game_stats.distance_traveled = state.distance_traveled;
+            game_stats.jump_count = state.jump_count;
+            game_stats.play_time = state.play_time;
+            
+            println!("🔄 Game stats restored:");
+            println!("   Score: {}", state.score);
+            println!("   Distance: {:.1}m", state.distance_traveled);
+            println!("   Jumps: {}", state.jump_count);
+            println!("   Time: {:.1}s", state.play_time);
+            
+            // 恢复角色选择
+            character_selection.selected_character = state.selected_character.clone();
+            println!("🔄 Character selection restored: {:?}", state.selected_character);
+            
+            // 恢复音频状态
+            audio_state_manager.music_playing = state.music_playing;
+            audio_state_manager.music_volume = state.audio_volume;
+            
+            println!("🔄 Audio state restored:");
+            println!("   Music playing: {}", state.music_playing);
+            println!("   Volume: {:.1}", state.audio_volume);
+            
+            println!("✅ {}", SaveLoadText::LOAD_SUCCESS);
+            
+            // 标记恢复完成
+            loaded_game_state.should_restore = false;
         }
     }
 }
