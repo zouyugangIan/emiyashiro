@@ -131,8 +131,8 @@ pub fn advanced_camera_follow(
             let distance_x = target_x - camera_center.x;
             let distance_y = target_y - camera_center.y;
             
-            let mut should_move_x = distance_x.abs() > camera_config.dead_zone_width * 0.5;
-            let mut should_move_y = distance_y.abs() > camera_config.dead_zone_height * 0.5;
+            let should_move_x = distance_x.abs() > camera_config.dead_zone_width * 0.5;
+            let should_move_y = distance_y.abs() > camera_config.dead_zone_height * 0.5;
             
             // 计算移动速度（基于距离的动态速度）
             let dynamic_speed_x = if should_move_x {
@@ -178,40 +178,93 @@ pub fn advanced_camera_follow(
     }
 }
 
-/// 简化的摄像机跟随系统（向后兼容）
+/// 优化的摄像机跟随系统
 /// 
-/// 保持原有的简单跟随行为，用于不需要高级功能的场景。
+/// 实现更平滑的摄像机移动和边界限制，满足需求 3.3 和 3.4。
+/// 包含动态跟随速度、预测性移动和完整的边界限制。
 pub fn camera_follow(
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
-    player_query: Query<&Transform, (With<Player>, Without<Camera>)>,
+    player_query: Query<(&Transform, &Velocity), (With<Player>, Without<Camera>)>,
     time: Res<Time>,
 ) {
     let delta_time = time.delta_secs();
     
     for mut camera_transform in camera_query.iter_mut() {
-        if let Ok(player_transform) = player_query.single() {
-            // 计算目标位置
-            let target_x = player_transform.translation.x + GameConfig::CAMERA_OFFSET;
+        if let Ok((player_transform, player_velocity)) = player_query.single() {
+            // 计算基础目标位置 - 满足需求 3.3：在角色前方保持适当的偏移距离
+            let base_offset = GameConfig::CAMERA_OFFSET;
+            let dynamic_offset = if player_velocity.x > 0.0 {
+                // 向右移动时增加前方偏移
+                base_offset + (player_velocity.x * 0.3).min(100.0)
+            } else if player_velocity.x < 0.0 {
+                // 向左移动时减少偏移
+                base_offset + (player_velocity.x * 0.3).max(-100.0)
+            } else {
+                base_offset
+            };
             
-            // 平滑跟随计算
-            let follow_speed = GameConfig::CAMERA_FOLLOW_SPEED * delta_time;
-            let distance = target_x - camera_transform.translation.x;
-            let movement = distance * follow_speed;
+            let target_x = player_transform.translation.x + dynamic_offset;
             
-            // 应用移动
-            camera_transform.translation.x += movement;
+            // 计算距离和动态跟随速度 - 满足需求 3.4：使用平滑插值减缓移动速度
+            let distance_x = target_x - camera_transform.translation.x;
+            let distance_abs = distance_x.abs();
             
-            // 摄像机边界限制
-            camera_transform.translation.x = camera_transform.translation.x.max(-500.0);
+            // 动态跟随速度：距离越远速度越快，但有上限
+            let base_speed = GameConfig::CAMERA_FOLLOW_SPEED;
+            let dynamic_speed = if distance_abs > 200.0 {
+                // 距离很远时加速跟随
+                base_speed * 2.0
+            } else if distance_abs > 100.0 {
+                // 中等距离时正常速度
+                base_speed * 1.5
+            } else if distance_abs > 50.0 {
+                // 近距离时减速
+                base_speed
+            } else {
+                // 很近时进一步减速，实现平滑效果
+                base_speed * 0.5
+            };
             
-            // 垂直跟随
-            let target_y = (player_transform.translation.y * 0.3).clamp(-100.0, 100.0);
-            camera_transform.translation.y += 
-                (target_y - camera_transform.translation.y) * follow_speed * 0.5;
+            // 应用平滑插值移动
+            let follow_speed = dynamic_speed * delta_time;
+            let movement_x = distance_x * follow_speed;
+            
+            // 限制单帧最大移动距离，防止移动过快
+            let max_movement_per_frame = 300.0 * delta_time;
+            let clamped_movement_x = movement_x.clamp(-max_movement_per_frame, max_movement_per_frame);
+            
+            camera_transform.translation.x += clamped_movement_x;
+            
+            // 垂直跟随 - 更平滑的垂直移动
+            let target_y = (player_transform.translation.y * 0.2).clamp(-80.0, 80.0);
+            let distance_y = target_y - camera_transform.translation.y;
+            let movement_y = distance_y * follow_speed * 0.3;
+            camera_transform.translation.y += movement_y;
+            
+            // 摄像机边界限制 - 扩展边界范围
+            let left_boundary = -800.0;
+            let right_boundary = player_transform.translation.x.max(2000.0);
+            let bottom_boundary = -300.0;
+            let top_boundary = 200.0;
+            
+            camera_transform.translation.x = camera_transform.translation.x
+                .clamp(left_boundary, right_boundary);
+            camera_transform.translation.y = camera_transform.translation.y
+                .clamp(bottom_boundary, top_boundary);
+            
         } else {
-            // 没有玩家时摄像机保持静止或缓慢移动
-            camera_transform.translation.x += GameConfig::CAMERA_IDLE_SPEED * delta_time;
+            // 没有玩家时的摄像机行为 - 更平滑的空闲移动
+            let idle_speed = GameConfig::CAMERA_IDLE_SPEED * delta_time;
+            camera_transform.translation.x += idle_speed;
+            
+            // 空闲状态下的边界限制
             camera_transform.translation.x = camera_transform.translation.x.max(-500.0);
+            
+            // 轻微的垂直摆动效果
+            let time_factor = time.elapsed_secs() * 0.5;
+            let vertical_sway = (time_factor).sin() * 20.0 * delta_time;
+            camera_transform.translation.y += vertical_sway;
+            camera_transform.translation.y = camera_transform.translation.y.clamp(-100.0, 100.0);
         }
     }
 }

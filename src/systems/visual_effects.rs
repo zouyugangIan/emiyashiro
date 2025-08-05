@@ -3,10 +3,7 @@
 //! 提供简单的视觉反馈效果，如跳跃时的缩放、着陆时的震动等
 
 use bevy::prelude::*;
-use crate::{
-    components::*,
-    resources::*,
-};
+use crate::components::*;
 
 /// 视觉效果组件
 #[derive(Component)]

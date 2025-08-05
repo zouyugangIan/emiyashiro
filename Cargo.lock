@@ -4309,6 +4309,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "chrono",
+ "flate2",
  "serde",
  "serde_json",
  "sqlx",

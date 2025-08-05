@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "name": "test_save",
+    "score": 1500,
+    "distance": 150.5,
+    "play_time": 45.2,
+    "save_timestamp": "2025-07-30T01:56:00Z",
+    "file_path": "saves/test_save.json"
+  },
+  "game_state": {
+    "player_position": {
+      "x": 100.0,
+      "y": 50.0,
+      "z": 0.0
+    },
+    "player_velocity": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "player_grounded": true,
+    "player_crouching": false,
+    "player_animation_state": "idle",
+    "camera_position": {
+      "x": 100.0,
+      "y": 50.0,
+      "z": 10.0
+    },
+    "camera_target": {
+      "x": 100.0,
+      "y": 50.0,
+      "z": 0.0
+    },
+    "score": 1500,
+    "distance_traveled": 150.5,
+    "jump_count": 25,
+    "play_time": 45.2,
+    "selected_character": "Shirou1",
+    "player_count": "Single",
+    "music_playing": true,
+    "audio_volume": 0.8,
+    "music_position": 0.0,
+    "entities_snapshot": [],
+    "save_timestamp": "2025-07-30T01:56:00Z"
+  },
+  "checksum": "abc123def456"
+}
