@@ -29,9 +29,10 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         footstep_sound: asset_server.load("sounds/footstep.ogg"),
         
         // 背景音乐
-        menu_music: asset_server.load("sounds/menu_music.ogg"),
-        game_music: asset_server.load("sounds/game_music.ogg"),
-        background_music: asset_server.load("sounds/background_music.ogg"),
+        menu_music: asset_server.load("sounds/menu.ogg"),
+        game_music: asset_server.load("sounds/game.ogg"),
+        game_whyifight_music: asset_server.load("sounds/game-whyIfight.ogg"),
+        background_music: asset_server.load("sounds/background.ogg"),
     };
     
     commands.insert_resource(game_assets);

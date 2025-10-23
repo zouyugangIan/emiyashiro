@@ -94,3 +94,6 @@ cargo run --profile dev
 ---
 
 **注意**: 本项目仅用于学习和技术演示目的，与 TYPE-MOON 公司无关。
+
+## 跑酷动画资源
+https://www.bilibili.com/video/BV1YztTeqENR?spm_id_from=333.788.videopod.sections&vd_source=4de32bc000c4310551cc68e6c62b69f9

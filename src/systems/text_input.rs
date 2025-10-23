@@ -1,5 +1,5 @@
 //! 统一文本输入系统
-//! 
+//!
 //! 提供强大的键盘输入处理和文本验证功能
 
 use bevy::prelude::*;
@@ -18,21 +18,21 @@ pub struct TextInputState {
 impl TextInputState {
     pub fn new(max_length: usize) -> Self {
         let mut allowed_chars = HashSet::new();
-        
+
         // 添加字母
         for c in 'A'..='Z' {
             allowed_chars.insert(c);
         }
-        
+
         // 添加数字
         for c in '0'..='9' {
             allowed_chars.insert(c);
         }
-        
+
         // 添加特殊字符
         allowed_chars.insert('_'); // 空格替换为下划线
         allowed_chars.insert('-'); // 连字符
-        
+
         Self {
             current_text: String::new(),
             is_active: false,
@@ -41,21 +41,21 @@ impl TextInputState {
             allowed_chars,
         }
     }
-    
+
     pub fn activate(&mut self) {
         self.is_active = true;
         self.current_text.clear();
         self.cursor_position = 0;
     }
-    
+
     pub fn deactivate(&mut self) {
         self.is_active = false;
     }
-    
+
     pub fn is_valid_char(&self, c: char) -> bool {
         self.allowed_chars.contains(&c.to_ascii_uppercase())
     }
-    
+
     pub fn add_char(&mut self, c: char) -> bool {
         if self.current_text.len() < self.max_length && self.is_valid_char(c) {
             let uppercase_char = c.to_ascii_uppercase();
@@ -66,7 +66,7 @@ impl TextInputState {
             false
         }
     }
-    
+
     pub fn remove_char(&mut self) -> bool {
         if !self.current_text.is_empty() {
             self.current_text.pop();
@@ -76,30 +76,17 @@ impl TextInputState {
             false
         }
     }
-    
-    pub fn get_display_text(&self) -> String {
-        if self.current_text.is_empty() {
-            "Enter name...".to_string()
-        } else {
-            format!("{}|", self.current_text)
-        }
-    }
 }
-
 /// 键盘输入处理器资源
 #[derive(Resource, Default)]
 pub struct KeyboardInputHandler {
-    pub input_buffer: Vec<KeyCode>,
     pub last_input_time: f32,
-    pub repeat_delay: f32,
 }
 
 impl KeyboardInputHandler {
     pub fn new() -> Self {
         Self {
-            input_buffer: Vec::new(),
             last_input_time: 0.0,
-            repeat_delay: 0.1, // 100ms repeat delay
         }
     }
 }
@@ -114,64 +101,65 @@ pub struct InputValidator {
 impl InputValidator {
     pub fn new() -> Self {
         let mut allowed_chars = HashSet::new();
-        
+
         // 添加字母
         for c in 'A'..='Z' {
             allowed_chars.insert(c);
         }
-        
+
         // 添加数字
         for c in '0'..='9' {
             allowed_chars.insert(c);
         }
-        
+
         // 添加特殊字符
         allowed_chars.insert('_');
         allowed_chars.insert('-');
-        
+
         let mut reserved_names = HashSet::new();
         reserved_names.insert("CON".to_string());
         reserved_names.insert("PRN".to_string());
         reserved_names.insert("AUX".to_string());
         reserved_names.insert("NUL".to_string());
-        
+
         Self {
             max_length: 25,
             allowed_chars,
             reserved_names,
         }
     }
-    
+
     pub fn validate_save_name(&self, name: &str) -> Result<String, ValidationError> {
         if name.is_empty() {
             return Ok("DefaultSave".to_string());
         }
-        
+
         if name.len() > self.max_length {
             return Err(ValidationError::TooLong);
         }
-        
+
         for c in name.chars() {
             if !self.allowed_chars.contains(&c.to_ascii_uppercase()) {
                 return Err(ValidationError::InvalidCharacters);
             }
         }
-        
+
         if self.reserved_names.contains(&name.to_uppercase()) {
             return Err(ValidationError::ReservedName);
         }
-        
+
         Ok(name.to_string())
     }
-    
+
     pub fn sanitize_input(&self, input: &str) -> String {
-        input.chars()
+        input
+            .chars()
             .filter(|c| self.is_valid_char(*c))
             .take(self.max_length)
             .map(|c| c.to_ascii_uppercase())
             .collect()
     }
-    
+
     pub fn is_valid_char(&self, c: char) -> bool {
         self.allowed_chars.contains(&c.to_ascii_uppercase())
     }
@@ -189,7 +177,9 @@ impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ValidationError::TooLong => write!(f, "Name too long (max 25 characters)"),
-            ValidationError::InvalidCharacters => write!(f, "Invalid characters (use A-Z, 0-9, _, -)"),
+            ValidationError::InvalidCharacters => {
+                write!(f, "Invalid characters (use A-Z, 0-9, _, -)")
+            }
             ValidationError::ReservedName => write!(f, "Reserved name not allowed"),
             ValidationError::Empty => write!(f, "Name cannot be empty"),
         }
@@ -208,33 +198,45 @@ pub fn handle_keyboard_input(
     if !text_input_state.is_active {
         return;
     }
-    
+
     keyboard_handler.last_input_time += time.delta_secs();
-    
+
     // 处理特殊键
     if keyboard_input.just_pressed(KeyCode::Backspace) {
         text_input_state.remove_char();
-        println!("🔤 Backspace pressed, current text: '{}'", text_input_state.current_text);
+        println!(
+            "🔤 Backspace pressed, current text: '{}'",
+            text_input_state.current_text
+        );
     }
-    
+
     if keyboard_input.just_pressed(KeyCode::Enter) {
-        println!("🔤 Enter pressed, confirming input: '{}'", text_input_state.current_text);
+        println!(
+            "🔤 Enter pressed, confirming input: '{}'",
+            text_input_state.current_text
+        );
         return;
     }
-    
+
     if keyboard_input.just_pressed(KeyCode::Escape) {
         println!("🔤 Escape pressed, canceling input");
         text_input_state.deactivate();
         return;
     }
-    
+
     // 处理字符输入
     for key in keyboard_input.get_just_pressed() {
         if let Some(character) = map_keycode_to_char(key) {
             if text_input_state.add_char(character) {
-                println!("🔤 Added character '{}', current text: '{}'", character, text_input_state.current_text);
+                println!(
+                    "🔤 Added character '{}', current text: '{}'",
+                    character, text_input_state.current_text
+                );
             } else {
-                println!("🔤 Failed to add character '{}' (max length or invalid)", character);
+                println!(
+                    "🔤 Failed to add character '{}' (max length or invalid)",
+                    character
+                );
             }
         }
     }

@@ -1,9 +1,5 @@
+use crate::{database::*, resources::*, states::*};
 use bevy::prelude::*;
-use crate::{
-    database::*,
-    resources::*,
-    states::*,
-};
 
 /// 数据库服务系统
 #[derive(Resource)]
@@ -50,7 +46,7 @@ pub struct GameSession {
 /// 初始化数据库连接
 pub async fn initialize_database() -> Result<DatabaseService, Box<dyn std::error::Error>> {
     println!("🗄️ 正在连接数据库...");
-    
+
     match Database::new().await {
         Ok(db) => {
             println!("✅ 数据库连接成功！");
@@ -86,7 +82,7 @@ pub fn save_player_to_database(
     println!("   距离: {:.1}m", game_stats.distance_traveled);
     println!("   跳跃: {} 次", game_stats.jump_count);
     println!("   时间: {:.1}s", game_stats.play_time);
-    
+
     // 生成会话ID（如果还没有）
     if current_session.session_id.is_none() {
         current_session.session_id = Some(uuid::Uuid::new_v4());
@@ -98,7 +94,7 @@ pub fn save_player_to_database(
 /// 从数据库加载玩家记录
 pub fn load_player_from_database(
     database_service: ResMut<DatabaseService>,
-    character_selection: ResMut<CharacterSelection>,
+    _character_selection: ResMut<CharacterSelection>,
 ) {
     if !database_service.is_connected {
         println!("⚠️ 数据库未连接，跳过加载");
@@ -111,16 +107,14 @@ pub fn load_player_from_database(
 }
 
 /// 获取排行榜数据
-pub fn get_leaderboard(
-    database_service: Res<DatabaseService>,
-) -> Vec<PlayerRecord> {
+pub fn get_leaderboard(database_service: Res<DatabaseService>) -> Vec<PlayerRecord> {
     if !database_service.is_connected {
         println!("⚠️ 数据库未连接，返回空排行榜");
         return vec![];
     }
 
     println!("🏆 获取排行榜数据...");
-    
+
     // 模拟排行榜数据
     vec![
         PlayerRecord {
@@ -164,7 +158,7 @@ pub fn database_stats_system(
         timer.set_mode(bevy::time::TimerMode::Repeating);
     }
     timer.tick(time.delta());
-    
+
     if timer.just_finished() {
         println!("📊 数据库统计:");
         println!("   总玩家数: 模拟数据");
@@ -189,7 +183,7 @@ pub fn cleanup_old_sessions(
         timer.set_mode(bevy::time::TimerMode::Repeating);
     }
     timer.tick(time.delta());
-    
+
     if timer.just_finished() {
         println!("🧹 清理30天前的游戏会话数据...");
         // 这里应该执行数据库清理操作

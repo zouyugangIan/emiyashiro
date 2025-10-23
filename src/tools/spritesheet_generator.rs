@@ -6,18 +6,19 @@ pub struct SpritesheetGenerator;
 impl SpritesheetGenerator {
     /// 从现有图片生成精灵表
     pub fn create_from_images(
-        images: Vec<Handle<Image>>,
-        frame_size: UVec2,
-        columns: u32,
+        _images: Vec<Handle<Image>>,
+        _frame_size: UVec2,
+        _columns: u32,
     ) -> Result<Handle<Image>, String> {
         // 这里应该实现从多个图片合成精灵表的逻辑
         // 由于需要访问图片数据，这在实际项目中需要异步处理
         Err("需要实现图片合成逻辑".to_string())
     }
-    
+
     /// 生成角色动画配置
     pub fn generate_character_config(character_name: &str) -> String {
-        format!(r#"
+        format!(
+            r#"
 # {character_name} 角色动画配置
 
 ## 精灵表布局
@@ -64,9 +65,11 @@ impl SpritesheetGenerator {
    - 格式: PNG
    - 透明背景
    - 无压缩
-"#, character_name = character_name)
+"#,
+            character_name = character_name
+        )
     }
-    
+
     /// 生成精灵表模板
     pub fn generate_template_guide() -> String {
         r#"
@@ -130,7 +133,8 @@ impl SpritesheetGenerator {
 ## 文件命名规范
 - character_name_spritesheet.png
 - 例如: shirou_spritesheet.png, sakura_spritesheet.png
-"#.to_string()
+"#
+        .to_string()
     }
 }
 
@@ -147,37 +151,34 @@ impl SpritesheetValidator {
         let columns = image_size.x / frame_size.x;
         let rows = image_size.y / frame_size.y;
         let total_frames = columns * rows;
-        
+
         if total_frames < expected_frames {
             return Err(format!(
                 "精灵表帧数不足: 需要{}帧，实际{}帧",
                 expected_frames, total_frames
             ));
         }
-        
+
         if image_size.x % frame_size.x != 0 || image_size.y % frame_size.y != 0 {
             return Err("精灵表尺寸不能被帧尺寸整除".to_string());
         }
-        
+
         Ok(())
     }
-    
+
     /// 生成精灵表信息
     pub fn analyze_spritesheet(image_size: UVec2, frame_size: UVec2) -> String {
         let columns = image_size.x / frame_size.x;
         let rows = image_size.y / frame_size.y;
         let total_frames = columns * rows;
-        
+
         format!(
             "精灵表分析:\n\
             - 总尺寸: {}x{}\n\
             - 帧尺寸: {}x{}\n\
             - 布局: {}列 x {}行\n\
             - 总帧数: {}帧",
-            image_size.x, image_size.y,
-            frame_size.x, frame_size.y,
-            columns, rows,
-            total_frames
+            image_size.x, image_size.y, frame_size.x, frame_size.y, columns, rows, total_frames
         )
     }
 }
@@ -185,24 +186,30 @@ impl SpritesheetValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_spritesheet_validation() {
         // 测试有效的精灵表
-        assert!(SpritesheetValidator::validate_spritesheet(
-            UVec2::new(512, 256),
-            UVec2::new(64, 64),
-            32
-        ).is_ok());
-        
+        assert!(
+            SpritesheetValidator::validate_spritesheet(
+                UVec2::new(512, 256),
+                UVec2::new(64, 64),
+                32
+            )
+            .is_ok()
+        );
+
         // 测试无效的精灵表
-        assert!(SpritesheetValidator::validate_spritesheet(
-            UVec2::new(500, 250),
-            UVec2::new(64, 64),
-            32
-        ).is_err());
+        assert!(
+            SpritesheetValidator::validate_spritesheet(
+                UVec2::new(500, 250),
+                UVec2::new(64, 64),
+                32
+            )
+            .is_err()
+        );
     }
-    
+
     #[test]
     fn test_character_config_generation() {
         let config = SpritesheetGenerator::generate_character_config("TestCharacter");

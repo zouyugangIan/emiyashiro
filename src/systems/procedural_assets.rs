@@ -1,18 +1,18 @@
 use bevy::prelude::*;
 
 /// 程序化生成游戏素材
-pub fn generate_simple_assets(commands: Commands, mut images: ResMut<Assets<Image>>) {
+pub fn generate_simple_assets(_commands: Commands, mut images: ResMut<Assets<Image>>) {
     // 生成简单的角色纹理
     let character_image = create_character_texture();
-    let character_handle = images.add(character_image);
+    let _character_handle = images.add(character_image);
 
     // 生成地面纹理
     let ground_image = create_ground_texture();
-    let ground_handle = images.add(ground_image);
+    let _ground_handle = images.add(ground_image);
 
     // 生成背景纹理
     let background_image = create_background_texture();
-    let background_handle = images.add(background_image);
+    let _background_handle = images.add(background_image);
 
     println!("🎨 程序化素材生成完成！");
 }
@@ -67,7 +67,7 @@ fn create_character_texture() -> Image {
         bevy::render::render_resource::TextureDimension::D2,
         data,
         bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
-        bevy::render::render_asset::RenderAssetUsages::RENDER_WORLD,
+        Default::default(),
     )
 }
 
@@ -99,7 +99,7 @@ fn create_ground_texture() -> Image {
         bevy::render::render_resource::TextureDimension::D2,
         data,
         bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
-        bevy::render::render_asset::RenderAssetUsages::RENDER_WORLD,
+        Default::default(),
     )
 }
 
@@ -131,6 +131,6 @@ fn create_background_texture() -> Image {
         bevy::render::render_resource::TextureDimension::D2,
         data,
         bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
-        bevy::render::render_asset::RenderAssetUsages::RENDER_WORLD,
+        Default::default(),
     )
 }

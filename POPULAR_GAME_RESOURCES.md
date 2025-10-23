@@ -199,6 +199,8 @@ pub struct Particle {
 - **GIMP**: 图像处理 (免费)
 - **Krita**: 数字绘画 (免费)
 
+https://www.bilibili.com/video/BV1YztTeqENR?spm_id_from=333.788.videopod.sections&vd_source=4de32bc000c4310551cc68e6c62b69f9
+
 ### 🎵 音频制作
 - **Audacity**: 音频编辑 (免费)
 - **LMMS**: 音乐制作 (免费)
