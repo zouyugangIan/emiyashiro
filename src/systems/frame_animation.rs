@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::{components::*, resources::*, states::*};
+use bevy::prelude::*;
 
 /// 帧动画组件
 #[derive(Component, Debug)]
@@ -21,15 +21,15 @@ impl FrameAnimation {
             loop_animation,
         }
     }
-    
+
     pub fn play(&mut self) {
         self.is_playing = true;
     }
-    
+
     pub fn pause(&mut self) {
         self.is_playing = false;
     }
-    
+
     pub fn reset(&mut self) {
         self.current_frame = 0;
         self.timer.reset();
@@ -56,39 +56,39 @@ pub enum CharacterAnimationType {
 
 /// 加载角色动画帧
 pub fn load_character_animations(
-    commands: Commands,
+    _commands: Commands,
     asset_server: Res<AssetServer>,
     game_assets: Option<ResMut<GameAssets>>,
 ) {
     println!("🎬 加载角色动画帧...");
-    
+
     // 加载士郎的动画帧
-    let shirou_idle_frames: Vec<Handle<Image>> = vec![
+    let _shirou_idle_frames: Vec<Handle<Image>> = vec![
         asset_server.load("images/characters/shirou_idle1.jpg"),
         asset_server.load("images/characters/shirou_idle2.jpg"),
         asset_server.load("images/characters/shirou_idle3.jpg"),
     ];
-    
-    let shirou_running_frames: Vec<Handle<Image>> = vec![
+
+    let _shirou_running_frames: Vec<Handle<Image>> = vec![
         asset_server.load("images/characters/shirou_idle4.png"),
         asset_server.load("images/characters/shirou_idle5.png"),
         asset_server.load("images/characters/shirou_idle6.png"),
         asset_server.load("images/characters/shirou_idle7.png"),
     ];
-    
-    let shirou_jumping_frames : Vec<Handle<Image>> = vec![
+
+    let _shirou_jumping_frames: Vec<Handle<Image>> = vec![
         asset_server.load("images/characters/shirou_idle8.png"),
         asset_server.load("images/characters/shirou_idle1.jpg"), // 复用作为跳跃帧
     ];
-    
+
     // 加载樱的动画帧
-    let sakura_idle_frames : Vec<Handle<Image>> = vec![
+    let _sakura_idle_frames: Vec<Handle<Image>> = vec![
         asset_server.load("images/characters/sakura_idle1.jpg"),
         asset_server.load("images/characters/teacher_idle.jpg"), // 临时使用
     ];
-    
+
     // 存储到游戏资源中（如果资源存在）
-    if let Some(assets) = game_assets {
+    if let Some(_assets) = game_assets {
         // 这里可以存储动画帧到资源中，但现在我们先跳过
         println!("✅ 角色动画帧加载完成");
     } else {
@@ -105,13 +105,13 @@ pub fn update_frame_animations(
         if !animation.is_playing || animation.frames.is_empty() {
             continue;
         }
-        
+
         animation.timer.tick(time.delta());
-        
+
         if animation.timer.just_finished() {
             // 切换到下一帧
             animation.current_frame += 1;
-            
+
             if animation.current_frame >= animation.frames.len() {
                 if animation.loop_animation {
                     animation.current_frame = 0;
@@ -120,7 +120,7 @@ pub fn update_frame_animations(
                     animation.is_playing = false;
                 }
             }
-            
+
             // 更新精灵图像
             sprite.image = animation.frames[animation.current_frame].clone();
         }
@@ -130,7 +130,7 @@ pub fn update_frame_animations(
 /// 角色动画控制系统
 pub fn update_character_animations(
     mut query: Query<(&mut FrameAnimation, &PlayerState, &CharacterAnimationState), With<Player>>,
-    asset_server: Res<AssetServer>,
+    _asset_server: Res<AssetServer>,
 ) {
     for (mut animation, player_state, anim_state) in query.iter_mut() {
         let target_animation = if !player_state.is_grounded {
@@ -143,7 +143,7 @@ pub fn update_character_animations(
         } else {
             CharacterAnimationType::Idle
         };
-        
+
         // 如果动画类型改变，切换动画帧
         if anim_state.current_animation != target_animation {
             let new_frames = match target_animation {
@@ -152,7 +152,7 @@ pub fn update_character_animations(
                 CharacterAnimationType::Jumping => &anim_state.jumping_frames,
                 CharacterAnimationType::Crouching => &anim_state.crouching_frames,
             };
-            
+
             if !new_frames.is_empty() {
                 animation.frames = new_frames.clone();
                 animation.reset();
@@ -170,42 +170,39 @@ pub fn setup_player_animation(
     character_selection: Res<CharacterSelection>,
 ) {
     for entity in player_query.iter() {
-        let (idle_frames, running_frames, jumping_frames, crouching_frames) = match character_selection.selected_character {
-            CharacterType::Shirou1 => {
-                let idle = vec![
-                    asset_server.load("images/characters/shirou_idle1.jpg"),
-                    asset_server.load("images/characters/shirou_idle2.jpg"),
-                    asset_server.load("images/characters/shirou_idle3.jpg"),
-                ];
-                let running = vec![
-                    asset_server.load("images/characters/shirou_idle4.png"),
-                    asset_server.load("images/characters/shirou_idle5.png"),
-                    asset_server.load("images/characters/shirou_idle6.png"),
-                    asset_server.load("images/characters/shirou_idle7.png"),
-                ];
-                let jumping = vec![
-                    asset_server.load("images/characters/shirou_idle8.png"),
-                ];
-                let crouching = vec![
-                    asset_server.load("images/characters/shirou_idle3.jpg"),
-                ];
-                (idle, running, jumping, crouching)
-            }
-            CharacterType::Shirou2 => {
-                let idle = vec![
-                    asset_server.load("images/characters/sakura_idle1.jpg"),
-                    asset_server.load("images/characters/teacher_idle.jpg"),
-                ];
-                let running = idle.clone();
-                let jumping = idle.clone();
-                let crouching = idle.clone();
-                (idle, running, jumping, crouching)
-            }
-        };
-        
+        let (idle_frames, running_frames, jumping_frames, crouching_frames) =
+            match character_selection.selected_character {
+                CharacterType::Shirou1 => {
+                    let idle = vec![
+                        asset_server.load("images/characters/shirou_idle1.jpg"),
+                        asset_server.load("images/characters/shirou_idle2.jpg"),
+                        asset_server.load("images/characters/shirou_idle3.jpg"),
+                    ];
+                    let running = vec![
+                        asset_server.load("images/characters/shirou_idle4.png"),
+                        asset_server.load("images/characters/shirou_idle5.png"),
+                        asset_server.load("images/characters/shirou_idle6.png"),
+                        asset_server.load("images/characters/shirou_idle7.png"),
+                    ];
+                    let jumping = vec![asset_server.load("images/characters/shirou_idle8.png")];
+                    let crouching = vec![asset_server.load("images/characters/shirou_idle3.jpg")];
+                    (idle, running, jumping, crouching)
+                }
+                CharacterType::Shirou2 => {
+                    let idle = vec![
+                        asset_server.load("images/characters/sakura_idle1.jpg"),
+                        asset_server.load("images/characters/teacher_idle.jpg"),
+                    ];
+                    let running = idle.clone();
+                    let jumping = idle.clone();
+                    let crouching = idle.clone();
+                    (idle, running, jumping, crouching)
+                }
+            };
+
         // 添加帧动画组件
         let frame_animation = FrameAnimation::new(idle_frames.clone(), 0.3, true);
-        
+
         // 添加角色动画状态
         let char_anim_state = CharacterAnimationState {
             current_animation: CharacterAnimationType::Idle,
@@ -214,18 +211,20 @@ pub fn setup_player_animation(
             jumping_frames,
             crouching_frames,
         };
-        
-        commands.entity(entity).insert((frame_animation, char_anim_state));
-        
-        println!("🎭 为玩家添加动画组件: {:?}", character_selection.selected_character);
+
+        commands
+            .entity(entity)
+            .insert((frame_animation, char_anim_state));
+
+        println!(
+            "🎭 为玩家添加动画组件: {:?}",
+            character_selection.selected_character
+        );
     }
 }
 
 /// 创建动画背景系统
-pub fn setup_animated_background(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+pub fn setup_animated_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 创建动态背景
     let background_frames = vec![
         asset_server.load("images/ui/cover1.jpg"),
@@ -233,9 +232,9 @@ pub fn setup_animated_background(
         asset_server.load("images/ui/cover3.jpeg"),
         asset_server.load("images/ui/cover4.jpg"),
     ];
-    
+
     let background_animation = FrameAnimation::new(background_frames.clone(), 2.0, true);
-    
+
     commands.spawn((
         Sprite {
             image: background_frames[0].clone(),
@@ -245,7 +244,7 @@ pub fn setup_animated_background(
         Transform::from_translation(Vec3::new(0.0, 0.0, -10.0)), // 放在最后面
         background_animation,
     ));
-    
+
     println!("🌅 创建动态背景");
 }
 
@@ -260,10 +259,11 @@ pub fn debug_animations(
         timer.set_mode(bevy::time::TimerMode::Repeating);
     }
     timer.tick(time.delta());
-    
+
     if timer.just_finished() {
         for (animation, char_state) in query.iter() {
-            println!("🎬 动画状态: {:?}, 当前帧: {}/{}, 播放中: {}", 
+            println!(
+                "🎬 动画状态: {:?}, 当前帧: {}/{}, 播放中: {}",
                 char_state.current_animation,
                 animation.current_frame + 1,
                 animation.frames.len(),

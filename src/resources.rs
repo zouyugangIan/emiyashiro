@@ -79,6 +79,7 @@ pub struct GameAssets {
     // 背景音乐
     pub menu_music: Handle<AudioSource>,
     pub game_music: Handle<AudioSource>,
+    pub game_whyifight_music: Handle<AudioSource>, // 第一首游戏音乐
     pub background_music: Handle<AudioSource>,
 }
 
@@ -276,6 +277,7 @@ pub struct SaveFileManager {
     pub save_directory: String,
     pub save_files: Vec<SaveFileMetadata>,
     pub current_save_name: Option<String>,
+    pub selected_save_index: Option<usize>,
 }
 
 impl SaveFileManager {
@@ -284,6 +286,7 @@ impl SaveFileManager {
             save_directory: "saves".to_string(),
             save_files: Vec::new(),
             current_save_name: None,
+            selected_save_index: None,
         }
     }
 }
@@ -340,6 +343,7 @@ impl PauseManager {
 pub struct AudioStateManager {
     pub music_playing: bool,
     pub music_volume: f32,
+    pub music_position: f32,
     pub sfx_enabled: bool,
 }
 
@@ -348,7 +352,16 @@ impl AudioStateManager {
         Self {
             music_playing: false,
             music_volume: 0.5,
+            music_position: 0.0,
             sfx_enabled: true,
         }
+    }
+    
+    pub fn set_music_playing(&mut self, playing: bool) {
+        self.music_playing = playing;
+    }
+    
+    pub fn set_music_position(&mut self, position: f32) {
+        self.music_position = position;
     }
 }

@@ -1,5 +1,5 @@
 //! 游戏系统模块
-//! 
+//!
 //! 本模块包含游戏中所有的系统定义，按功能分类组织。
 
 // 系统接口和配置
@@ -10,12 +10,12 @@ pub mod game;
 pub mod setup;
 
 // 玩家相关系统
-pub mod player;
 pub mod input;
+pub mod player;
 
 // 渲染和视觉系统
-pub mod camera;
 pub mod animation;
+pub mod camera;
 pub mod frame_animation;
 pub mod sprite_animation;
 
@@ -30,12 +30,14 @@ pub mod ui;
 pub mod audio;
 
 // 数据持久化系统
-pub mod save;
+pub mod async_file_ops;
 pub mod database_service;
 pub mod pause_save;
-pub mod async_file_ops;
+pub mod save;
+pub mod shared_utils;
 
 // 资源生成系统
+pub mod background;
 pub mod procedural_assets;
 
 // 视觉效果系统

@@ -22,6 +22,7 @@ impl PauseMenuText {
     pub const TITLE: &'static str = "Game Paused";
     pub const RESUME_GAME: &'static str = "Resume Game";
     pub const SAVE_GAME: &'static str = "Save Game";
+    pub const LOAD_GAME: &'static str = "Load Game";
     pub const MAIN_MENU: &'static str = "Main Menu";
     pub const ESC_RESUME: &'static str = "ESC: Resume";
     pub const Q_MAIN_MENU: &'static str = "Q: Main Menu";
@@ -36,7 +37,7 @@ impl SaveLoadText {
     pub const SAVE_DIALOG_TITLE: &'static str = "Save Game";
     pub const LOAD_DIALOG_TITLE: &'static str = "Load & Manage Saves";
     pub const RENAME_DIALOG_TITLE: &'static str = "Rename Save";
-    
+
     // 按钮标签
     pub const SAVE_BUTTON: &'static str = "Save";
     pub const LOAD_BUTTON: &'static str = "Load";
@@ -46,7 +47,7 @@ impl SaveLoadText {
     pub const REFRESH_BUTTON: &'static str = "Refresh";
     pub const RENAME_BUTTON: &'static str = "Rename";
     pub const DELETE_BUTTON: &'static str = "Delete";
-    
+
     // 表格列标题
     pub const COL_NAME: &'static str = "Name";
     pub const COL_PLAYERS: &'static str = "Players";
@@ -55,13 +56,13 @@ impl SaveLoadText {
     pub const COL_TIME: &'static str = "Time";
     pub const COL_DATE: &'static str = "Date";
     pub const COL_ACTIONS: &'static str = "Actions";
-    
+
     // 输入提示
     pub const ENTER_SAVE_NAME: &'static str = "Enter save name:";
     pub const ENTER_NEW_NAME: &'static str = "Enter new name:";
     pub const NAME_PLACEHOLDER: &'static str = "Enter name...";
     pub const INPUT_HINT: &'static str = "Use A-Z, 0-9, space, and hyphen. Max 25 characters.";
-    
+
     // 状态消息
     pub const NO_SAVES_FOUND: &'static str = "No save files found";
     pub const SAVE_SUCCESS: &'static str = "Game saved successfully";
@@ -69,7 +70,7 @@ impl SaveLoadText {
     pub const RENAME_SUCCESS: &'static str = "Save renamed successfully";
     pub const DELETE_SUCCESS: &'static str = "Save deleted successfully";
     pub const SCANNING_SAVES: &'static str = "Scanning save files...";
-    
+
     // 错误消息
     pub const SAVE_ERROR: &'static str = "Failed to save game";
     pub const LOAD_ERROR: &'static str = "Failed to load game";
@@ -80,15 +81,15 @@ impl SaveLoadText {
     pub const FILE_NOT_FOUND_ERROR: &'static str = "Save file not found";
     pub const PERMISSION_DENIED_ERROR: &'static str = "Permission denied";
     pub const CORRUPTED_FILE_ERROR: &'static str = "Save file is corrupted";
-    
+
     // 操作指引
     pub const CLICK_TO_LOAD: &'static str = "Click on a save file to load it";
     pub const MANAGE_SAVES_HINT: &'static str = "Use the action buttons to rename or delete saves";
     pub const CONFIRM_DELETE: &'static str = "Are you sure you want to delete this save?";
-    
+
     // 默认名称
     pub const DEFAULT_SAVE_NAME: &'static str = "DefaultSave";
-    
+
     // 玩家数量指示器
     pub const PLAYER_1P: &'static str = "1P";
     pub const PLAYER_2P: &'static str = "2P";
@@ -104,44 +105,4 @@ impl GameHUDText {
     pub const JUMPS_LABEL: &'static str = "Jumps: ";
     pub const METERS_UNIT: &'static str = "m";
     pub const SECONDS_UNIT: &'static str = "s";
-}
-
-/// 错误和状态消息文本常量
-pub struct StatusText;
-
-impl StatusText {
-    // 通用状态
-    pub const LOADING: &'static str = "Loading...";
-    pub const SAVING: &'static str = "Saving...";
-    pub const PROCESSING: &'static str = "Processing...";
-    pub const COMPLETE: &'static str = "Complete";
-    pub const FAILED: &'static str = "Failed";
-    
-    // 文件操作状态
-    pub const CREATING_DIRECTORY: &'static str = "Creating save directory...";
-    pub const SCANNING_FILES: &'static str = "Scanning save files...";
-    pub const READING_FILE: &'static str = "Reading save file...";
-    pub const WRITING_FILE: &'static str = "Writing save file...";
-    pub const DELETING_FILE: &'static str = "Deleting save file...";
-    
-    // 游戏状态
-    pub const GAME_PAUSED: &'static str = "Game Paused";
-    pub const GAME_RESUMED: &'static str = "Game Resumed";
-    pub const RETURNING_TO_MENU: &'static str = "Returning to Main Menu";
-    pub const LOADING_GAME: &'static str = "Loading Game...";
-    pub const SAVING_GAME: &'static str = "Saving Game...";
-}
-
-/// 音频相关文本常量
-pub struct AudioText;
-
-impl AudioText {
-    pub const MUSIC_ON: &'static str = "Music: On";
-    pub const MUSIC_OFF: &'static str = "Music: Off";
-    pub const SFX_ON: &'static str = "SFX: On";
-    pub const SFX_OFF: &'static str = "SFX: Off";
-    pub const VOLUME: &'static str = "Volume";
-    pub const MASTER_VOLUME: &'static str = "Master Volume";
-    pub const MUSIC_VOLUME: &'static str = "Music Volume";
-    pub const SFX_VOLUME: &'static str = "SFX Volume";
 }

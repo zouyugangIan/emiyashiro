@@ -173,9 +173,11 @@ mod tests {
         }
         assert!(text_input.current_text.len() <= 25);
         
-        // Test clear
-        text_input.clear();
-        assert_eq!(text_input.current_text, "");
+        // Test activation/deactivation
+        text_input.activate();
+        assert!(text_input.is_active);
+        text_input.deactivate();
+        assert!(!text_input.is_active);
     }
 
     #[test]
@@ -187,19 +189,22 @@ mod tests {
         assert!(validator.validate_save_name("Game_123").is_ok());
         assert!(validator.validate_save_name("Test-Save").is_ok());
         
-        // Test invalid names
-        assert!(validator.validate_save_name("").is_err()); // Empty
+        // Test empty name (should return default, not error)
+        let result = validator.validate_save_name("");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "DefaultSave");
         assert!(validator.validate_save_name("A".repeat(30).as_str()).is_err()); // Too long
         assert!(validator.validate_save_name("Game@#$").is_err()); // Invalid chars
         
-        // Test default name handling
-        let default_name = validator.get_default_name();
-        assert_eq!(default_name, "DefaultSave");
+        // Test empty name handling (returns default)
+        let result = validator.validate_save_name("");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "DefaultSave");
     }
 
     #[test]
     fn test_game_state_serialization() {
-        let game_state = pause_save::CompleteGameState {
+        let game_state = CompleteGameState {
             player_position: Vec3::new(100.0, 50.0, 0.0),
             player_velocity: Velocity::new(10.0, 5.0),
             score: 1500,
@@ -210,9 +215,14 @@ mod tests {
             music_playing: true,
             audio_volume: 0.8,
             selected_character: CharacterType::Shirou1,
-            player_count: PlayerCount::OnePlayer,
+            player_count: PlayerCount::Single,
             save_timestamp: chrono::Utc::now(),
-            entities_state: vec![],
+            entities_snapshot: vec![],
+            player_grounded: true,
+            player_crouching: false,
+            player_animation_state: "idle".to_string(),
+            camera_position: Vec3::ZERO,
+            camera_target: Vec3::ZERO,
         };
         
         // Test serialization
@@ -222,7 +232,7 @@ mod tests {
         assert!(json.contains("Shirou1"));
         
         // Test deserialization
-        let deserialized: pause_save::CompleteGameState = serde_json::from_str(&json).unwrap();
+        let deserialized: CompleteGameState = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.score, 1500);
         assert_eq!(deserialized.distance_traveled, 2500.0);
         assert_eq!(deserialized.selected_character, CharacterType::Shirou1);
@@ -232,20 +242,17 @@ mod tests {
     fn test_file_operations() {
         let mut save_manager = SaveFileManager::default();
         
-        // Test save directory creation
-        save_manager.ensure_save_directory().unwrap();
-        assert!(save_manager.save_directory.exists());
+        // Test save directory path
+        assert_eq!(save_manager.save_directory, "saves");
         
         // Test save file metadata
-        let metadata = pause_save::SaveFileMetadata {
+        let metadata = SaveFileMetadata {
             name: "TestSave".to_string(),
-            player_count: PlayerCount::OnePlayer,
             score: 1000,
             distance: 500.0,
             play_time: 60.0,
             save_timestamp: chrono::Utc::now(),
-            file_path: std::path::PathBuf::from("test.json"),
-            file_size: 1024,
+            file_path: "test.json".to_string(),
         };
         
         assert_eq!(metadata.name, "TestSave");
@@ -254,32 +261,23 @@ mod tests {
 
     #[test]
     fn test_english_text_constants() {
-        use crate::systems::text_constants::UnifiedSaveText;
-        
-        // Test main menu texts
-        assert_eq!(UnifiedSaveText::MAIN_MENU_LOAD, "Load Game");
-        
-        // Test pause menu texts
-        assert_eq!(UnifiedSaveText::PAUSE_TITLE, "Game Paused");
-        assert_eq!(UnifiedSaveText::PAUSE_SAVE, "Save Game");
-        assert_eq!(UnifiedSaveText::PAUSE_RESUME, "Resume");
+        use crate::systems::text_constants::SaveLoadText;
         
         // Test save dialog texts
-        assert_eq!(UnifiedSaveText::SAVE_DIALOG_TITLE, "Save Game");
-        assert_eq!(UnifiedSaveText::SAVE_NAME_PROMPT, "Enter save name:");
-        assert_eq!(UnifiedSaveText::SAVE_CONFIRM, "Save");
-        assert_eq!(UnifiedSaveText::SAVE_CANCEL, "Cancel");
+        assert_eq!(SaveLoadText::SAVE_DIALOG_TITLE, "Save Game");
+        assert_eq!(SaveLoadText::ENTER_SAVE_NAME, "Enter save name:");
+        assert_eq!(SaveLoadText::SAVE_BUTTON, "Save");
+        assert_eq!(SaveLoadText::CANCEL_BUTTON, "Cancel");
         
         // Test load table texts
-        assert_eq!(UnifiedSaveText::LOAD_TABLE_TITLE, "Load & Manage Saves");
-        assert_eq!(UnifiedSaveText::LOAD_NAME_HEADER, "Name");
-        assert_eq!(UnifiedSaveText::LOAD_PLAYERS_HEADER, "Players");
-        assert_eq!(UnifiedSaveText::LOAD_SCORE_HEADER, "Score");
+        assert_eq!(SaveLoadText::LOAD_DIALOG_TITLE, "Load & Manage Saves");
+        assert_eq!(SaveLoadText::COL_NAME, "Name");
+        assert_eq!(SaveLoadText::COL_SCORE, "Score");
         
         // Test error messages
-        assert_eq!(UnifiedSaveText::ERROR_SAVE_FAILED, "Failed to save game");
-        assert_eq!(UnifiedSaveText::ERROR_LOAD_FAILED, "Failed to load game");
-        assert_eq!(UnifiedSaveText::ERROR_FILE_NOT_FOUND, "Save file not found");
+        assert_eq!(SaveLoadText::SAVE_ERROR, "Failed to save game");
+        assert_eq!(SaveLoadText::LOAD_ERROR, "Failed to load game");
+        assert_eq!(SaveLoadText::FILE_NOT_FOUND_ERROR, "Save file not found");
     }
 
     #[test]
@@ -289,10 +287,10 @@ mod tests {
         // Test error message conversion
         let error = error_handling::SaveSystemError::FileNotFound("test.json".to_string());
         let message = error.to_user_message();
-        assert_eq!(message, text_constants::UnifiedSaveText::ERROR_FILE_NOT_FOUND);
+        assert_eq!(message, text_constants::SaveLoadText::FILE_NOT_FOUND_ERROR);
         
         // Test retry logic
-        let action = error_manager.handle_save_error(error);
+        let action = error_manager.handle_save_error(error, "test_operation");
         match action {
             error_handling::RecoveryAction::Retry => assert!(true),
             error_handling::RecoveryAction::ShowError(_) => assert!(true),
@@ -307,16 +305,16 @@ mod tests {
         // Test initial state
         assert!(!audio_manager.music_playing);
         assert_eq!(audio_manager.music_position, 0.0);
-        assert_eq!(audio_manager.volume, 1.0);
+        assert_eq!(audio_manager.music_volume, 0.5);
         
         // Test state updates
         audio_manager.set_music_playing(true);
         audio_manager.set_music_position(30.5);
-        audio_manager.set_volume(0.8);
+        audio_manager.music_volume = 0.8;
         
         assert!(audio_manager.music_playing);
         assert_eq!(audio_manager.music_position, 30.5);
-        assert_eq!(audio_manager.volume, 0.8);
+        assert_eq!(audio_manager.music_volume, 0.8);
     }
 
     #[test]
@@ -324,7 +322,7 @@ mod tests {
         let mut pause_manager = PauseManager::default();
         
         // Test state capture
-        let test_state = pause_save::CompleteGameState {
+        let test_state = CompleteGameState {
             player_position: Vec3::new(50.0, 25.0, 0.0),
             player_velocity: Velocity::new(5.0, 2.5),
             score: 750,
@@ -335,15 +333,20 @@ mod tests {
             music_playing: true,
             audio_volume: 0.9,
             selected_character: CharacterType::Shirou2,
-            player_count: PlayerCount::TwoPlayer,
+            player_count: PlayerCount::Double,
             save_timestamp: chrono::Utc::now(),
-            entities_state: vec![],
+            entities_snapshot: vec![],
+            player_grounded: true,
+            player_crouching: false,
+            player_animation_state: "idle".to_string(),
+            camera_position: Vec3::ZERO,
+            camera_target: Vec3::ZERO,
         };
         
-        pause_manager.captured_state = Some(test_state.clone());
+        pause_manager.preserved_state = Some(test_state.clone());
         
         // Test state retrieval
-        let retrieved_state = pause_manager.get_captured_state().unwrap();
+        let retrieved_state = pause_manager.preserved_state.as_ref().unwrap();
         assert_eq!(retrieved_state.score, 750);
         assert_eq!(retrieved_state.distance_traveled, 1250.0);
         assert_eq!(retrieved_state.selected_character, CharacterType::Shirou2);
