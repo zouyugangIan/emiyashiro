@@ -1,4 +1,4 @@
-use crate::{components::*, resources::*, states::CharacterType};
+use crate::{asset_paths, components::*, resources::*, states::CharacterType};
 use bevy::prelude::*;
 
 /// 精灵动画组件
@@ -38,7 +38,7 @@ pub fn setup_character_animations(
     mut game_assets: ResMut<GameAssets>,
 ) {
     // 创建士郎的精灵表动画
-    let shirou_texture = asset_server.load("images/characters/shirou_spritesheet.png");
+    let shirou_texture = asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_SPRITESHEET);
     let shirou_atlas_layout = TextureAtlasLayout::from_grid(
         UVec2::new(64, 64), // 每帧大小
         8,
@@ -49,7 +49,7 @@ pub fn setup_character_animations(
     let shirou_atlas_handle = texture_atlases.add(shirou_atlas_layout);
 
     // 创建樱的精灵表动画
-    let sakura_texture = asset_server.load("images/characters/sakura_spritesheet.png");
+    let sakura_texture = asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_SPRITESHEET);
     let sakura_atlas_layout = TextureAtlasLayout::from_grid(
         UVec2::new(64, 64), // 每帧大小
         8,

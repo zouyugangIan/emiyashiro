@@ -260,7 +260,7 @@ pub fn resume_audio_after_pause(
 /// 保存音频状态到游戏状态
 pub fn capture_audio_state(
     audio_manager: Res<AudioManager>,
-    audio_state_manager: Res<AudioStateManager>,
+    _audio_state_manager: Res<AudioStateManager>,
     audio_settings: Res<AudioSettings>,
 ) -> AudioState {
     AudioState {
