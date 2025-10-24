@@ -31,6 +31,7 @@ pub mod audio;
 
 // 数据持久化系统
 pub mod async_file_ops;
+pub mod async_tasks;
 pub mod database_service;
 pub mod pause_save;
 pub mod save;

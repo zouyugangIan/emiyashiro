@@ -13,6 +13,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 flate2 = "1.0"
 rand = "0.8"
+futures-lite = "2.6.1"
 
 # 优化编译速度的配置
 [profile.dev]

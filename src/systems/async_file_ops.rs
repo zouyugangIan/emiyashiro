@@ -6,6 +6,7 @@ use tokio::fs;
 
 use super::shared_utils::*;
 use crate::{
+    asset_paths,
     resources::{CompleteGameState, SaveFileMetadata},
     systems::error_handling::SaveSystemError,
 };
@@ -224,7 +225,7 @@ async fn load_save_metadata_async(save_path: PathBuf) -> Result<SaveFileMetadata
 
 /// 保存文件数据结构
 #[derive(Serialize, Deserialize)]
-struct SaveFileData {
+pub struct SaveFileData {
     pub version: String,
     pub metadata: SaveFileMetadata,
     pub game_state: CompleteGameState,
@@ -257,7 +258,7 @@ pub fn display_progress_indicator(
     }
 
     if progress.is_active {
-        let font = asset_server.load("fonts/FiraSans-Bold.ttf");
+        let font = asset_server.load(asset_paths::FONT_FIRA_SANS);
 
         commands
             .spawn((

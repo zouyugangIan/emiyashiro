@@ -1,3 +1,4 @@
+use crate::{StartLoadGame, StartSaveGame};
 use crate::{components::*, resources::*, states::*};
 use bevy::prelude::*;
 
@@ -840,7 +841,7 @@ pub fn handle_save_dialog_interactions(
     >,
     mut next_state: ResMut<NextState<GameState>>,
     pause_manager: Res<PauseManager>,
-    save_file_manager: ResMut<SaveFileManager>,
+    mut ev_save: MessageWriter<StartSaveGame>,
     text_input_state: Res<crate::systems::text_input::TextInputState>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
@@ -889,8 +890,6 @@ pub fn handle_save_dialog_interactions(
     }
 
     if should_save {
-        println!("💾 Attempting to save game...");
-        // 执行保存操作
         if let Some(state) = &pause_manager.preserved_state {
             let save_name = if text_input_state.current_text.is_empty() {
                 SaveLoadText::DEFAULT_SAVE_NAME.to_string()
@@ -898,27 +897,14 @@ pub fn handle_save_dialog_interactions(
                 text_input_state.current_text.clone()
             };
 
-            println!("💾 Saving with name: '{}', state exists: true", save_name);
-
-            match crate::systems::pause_save::save_game_to_file(
-                save_name.clone(),
-                state.clone(),
-                save_file_manager,
-            ) {
-                Ok(_) => {
-                    println!("✅ {}: {}", SaveLoadText::SAVE_SUCCESS, save_name);
-                    // 保存成功后返回暂停菜单，而不是跳转到加载界面
-                    next_state.set(GameState::Paused);
-                }
-                Err(e) => {
-                    println!("❌ {}: {:?}", SaveLoadText::SAVE_ERROR, e);
-                    next_state.set(GameState::Paused);
-                }
-            }
+            println!("💾 Firing StartSaveGame event with name: '{}'", save_name);
+            ev_save.write(StartSaveGame {
+                save_name,
+                state: state.clone(),
+            });
+            next_state.set(GameState::Paused);
         } else {
             println!("❌ No game state to save! PauseManager preserved_state is None");
-            // 如果没有保存的状态，尝试直接从当前游戏状态创建一个
-            println!("🔄 Attempting to create current game state for saving...");
             next_state.set(GameState::Paused);
         }
     } else if should_cancel {
@@ -1496,6 +1482,7 @@ pub fn handle_load_table_interactions(
     >,
     mut next_state: ResMut<NextState<GameState>>,
     mut save_file_manager: ResMut<SaveFileManager>,
+    mut ev_load: MessageWriter<StartLoadGame>,
     mut loaded_game_state: ResMut<LoadedGameState>,
     mut rename_input: ResMut<RenameInput>,
 ) {
@@ -1562,25 +1549,17 @@ pub fn handle_load_table_interactions(
     if let Some(index) = selected_save_index {
         if index < save_file_manager.save_files.len() {
             let save_file = &save_file_manager.save_files[index];
-            match crate::systems::pause_save::load_game_from_file(&save_file.file_path) {
-                Ok(game_state) => {
-                    println!(
-                        "📂 {}: {}",
-                        crate::systems::text_constants::SaveLoadText::LOAD_SUCCESS,
-                        save_file.name
-                    );
-                    loaded_game_state.state = Some(game_state);
-                    loaded_game_state.should_restore = true;
-                    next_state.set(GameState::Playing);
-                }
-                Err(e) => {
-                    println!(
-                        "❌ {}: {}",
-                        crate::systems::text_constants::SaveLoadText::LOAD_ERROR,
-                        e
-                    );
-                }
-            }
+            println!(
+                "📂 Firing StartLoadGame event for path: '{}'",
+                &save_file.file_path
+            );
+            ev_load.write(StartLoadGame {
+                file_path: save_file.file_path.clone(),
+            });
+            // The UI will now wait for the async task to finish.
+            // We could transition to a "Loading" state here, but for now,
+            // we'll just stay on the load screen. The progress bar from
+            // async_file_ops should appear.
         }
     }
     // 处理重命名

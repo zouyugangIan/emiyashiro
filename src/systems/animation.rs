@@ -1,37 +1,37 @@
-use bevy::prelude::*;
+use crate::{asset_paths, components::*, resources::*};
 use bevy::audio::Volume;
-use crate::{
-    components::*,
-    resources::*,
-};
+use bevy::prelude::*;
 
 /// 角色动画系统
 pub fn animate_character(
-    mut character_query: Query<(
-        &mut CharacterAnimation,
-        &mut Sprite,
-        &PlayerState,
-        &Velocity,
-        &AnimationFrames,
-    ), With<Player>>,
+    mut character_query: Query<
+        (
+            &mut CharacterAnimation,
+            &mut Sprite,
+            &PlayerState,
+            &Velocity,
+            &AnimationFrames,
+        ),
+        With<Player>,
+    >,
     time: Res<Time>,
 ) {
     for (mut animation, mut sprite, player_state, velocity, frames) in character_query.iter_mut() {
         // 根据玩家状态确定应该播放的动画
         let target_animation = determine_animation(player_state, velocity);
-        
+
         // 如果动画类型改变，重置帧计数器
         if animation.current_animation != target_animation {
             animation.current_animation = target_animation;
             animation.current_frame = 0;
             animation.frame_timer.reset();
         }
-        
+
         // 更新动画帧
         animation.frame_timer.tick(time.delta());
         if animation.frame_timer.just_finished() {
             let current_frames = get_animation_frames(&animation.current_animation, frames);
-            
+
             if !current_frames.is_empty() {
                 animation.current_frame = (animation.current_frame + 1) % current_frames.len();
                 sprite.image = current_frames[animation.current_frame].clone();
@@ -58,7 +58,10 @@ fn determine_animation(player_state: &PlayerState, velocity: &Velocity) -> Anima
 }
 
 /// 获取指定动画类型的帧序列
-fn get_animation_frames<'a>(animation_type: &AnimationType, frames: &'a AnimationFrames) -> &'a Vec<Handle<Image>> {
+fn get_animation_frames<'a>(
+    animation_type: &AnimationType,
+    frames: &'a AnimationFrames,
+) -> &'a Vec<Handle<Image>> {
     match animation_type {
         AnimationType::Idle => &frames.idle_frames,
         AnimationType::Running => &frames.running_frames,
@@ -78,23 +81,22 @@ pub fn setup_character_animation(
         // 为现有角色添加动画组件 - 只使用一个角色图片，不要切换
         let animation_frames = AnimationFrames {
             idle_frames: vec![
-                asset_server.load("images/characters/shirou_idle1.jpg"), // 只使用一个图片
+                asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1), // 只使用一个图片
             ],
             running_frames: vec![
-                asset_server.load("images/characters/shirou_idle1.jpg"), // 保持一致
+                asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1), // 保持一致
             ],
             jumping_frames: vec![
-                asset_server.load("images/characters/shirou_idle1.jpg"), // 保持一致
+                asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1), // 保持一致
             ],
             crouching_frames: vec![
-                asset_server.load("images/characters/shirou_idle1.jpg"), // 保持一致
+                asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1), // 保持一致
             ],
         };
-        
-        commands.entity(entity).insert((
-            CharacterAnimation::default(),
-            animation_frames,
-        ));
+
+        commands
+            .entity(entity)
+            .insert((CharacterAnimation::default(), animation_frames));
     }
 }
 
@@ -112,17 +114,17 @@ pub fn trigger_audio_effects(
                 SoundType::Land => game_assets.land_sound.clone(),
                 SoundType::Footstep => game_assets.footstep_sound.clone(),
             };
-            
+
             // 播放音效
             commands.spawn((
                 AudioPlayer::new(audio_source),
-                PlaybackSettings::DESPAWN.with_volume(
-                    Volume::Linear(audio_settings.sfx_volume * audio_settings.master_volume)
-                ),
+                PlaybackSettings::DESPAWN.with_volume(Volume::Linear(
+                    audio_settings.sfx_volume * audio_settings.master_volume,
+                )),
             ));
-            
+
             trigger.should_play = false;
-            
+
             // 移除已处理的音效触发器
             commands.entity(entity).despawn();
         }
@@ -140,9 +142,9 @@ pub fn manage_background_music(
     if audio_settings.music_enabled && !*music_started {
         commands.spawn((
             AudioPlayer::new(game_assets.background_music.clone()),
-            PlaybackSettings::LOOP.with_volume(
-                Volume::Linear(audio_settings.music_volume * audio_settings.master_volume)
-            ),
+            PlaybackSettings::LOOP.with_volume(Volume::Linear(
+                audio_settings.music_volume * audio_settings.master_volume,
+            )),
         ));
         *music_started = true;
     } else if !audio_settings.music_enabled && *music_started {

@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
+mod asset_paths;
 mod components;
 mod database;
+mod events;
 mod resources;
 mod states;
 mod systems;
@@ -11,6 +13,7 @@ mod tools;
 mod tests;
 
 // use components::*;
+use events::*;
 use resources::*;
 use states::*;
 use systems::background::*;
@@ -28,6 +31,8 @@ fn main() {
         ..default()
     }))
     .init_state::<GameState>()
+    .add_message::<StartSaveGame>()
+    .add_message::<StartLoadGame>()
     .init_resource::<CharacterSelection>()
     .init_resource::<GameStats>()
     .init_resource::<AudioSettings>()
@@ -155,6 +160,14 @@ fn main() {
     .add_systems(
         Update,
         (
+            async_tasks::handle_save_requests,
+            async_tasks::handle_load_requests,
+            async_tasks::poll_async_tasks,
+        ),
+    )
+    .add_systems(
+        Update,
+        (
             systems::input::update_game_input,
             systems::sprite_animation::update_sprite_animations,
             systems::sprite_animation::update_character_animation_state,
@@ -232,24 +245,24 @@ fn main() {
 fn setup_game_resources(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 加载游戏资源
     let game_assets = GameAssets {
-        cover_texture: asset_server.load("images/ui/cover1.jpg"),
-        cover2_texture: asset_server.load("images/ui/cover2.jpg"),
-        shirou1_texture: asset_server.load("images/characters/shirou_idle1.jpg"),
-        shirou2_texture: asset_server.load("images/characters/sakura_idle1.jpg"),
-        font: asset_server.load("fonts/FiraSans-Bold.ttf"), // 使用现有字体，暂时不支持中文
+        cover_texture: asset_server.load(asset_paths::IMAGE_UI_COVER1),
+        cover2_texture: asset_server.load(asset_paths::IMAGE_UI_COVER2),
+        shirou1_texture: asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
+        shirou2_texture: asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE1),
+        font: asset_server.load(asset_paths::FONT_FIRA_SANS), // 使用现有字体，暂时不支持中文
         // 精灵表资源 - 初始化为空，稍后设置
         shirou_spritesheet: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
         sakura_atlas: None,
         // 音效资源 - 暂时使用占位符，后续可以替换为实际音效文件
-        jump_sound: asset_server.load("sounds/jump.ogg"),
-        land_sound: asset_server.load("sounds/land.ogg"),
-        menu_music: asset_server.load("sounds/menu.ogg"),
-        game_music: asset_server.load("sounds/game.ogg"),
-        game_whyifight_music: asset_server.load("sounds/game-whyIfight.ogg"),
-        footstep_sound: asset_server.load("sounds/footstep.ogg"),
-        background_music: asset_server.load("sounds/background.ogg"),
+        jump_sound: asset_server.load(asset_paths::SOUND_JUMP),
+        land_sound: asset_server.load(asset_paths::SOUND_LAND),
+        menu_music: asset_server.load(asset_paths::SOUND_MENU_MUSIC),
+        game_music: asset_server.load(asset_paths::SOUND_GAME_MUSIC),
+        game_whyifight_music: asset_server.load(asset_paths::SOUND_GAME_WHY_I_FIGHT_MUSIC),
+        footstep_sound: asset_server.load(asset_paths::SOUND_FOOTSTEP),
+        background_music: asset_server.load(asset_paths::SOUND_BACKGROUND_MUSIC),
     };
 
     commands.insert_resource(game_assets);

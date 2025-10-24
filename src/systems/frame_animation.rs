@@ -1,4 +1,4 @@
-use crate::{components::*, resources::*, states::*};
+use crate::{asset_paths, components::*, resources::*, states::*};
 use bevy::prelude::*;
 
 /// 帧动画组件
@@ -62,29 +62,28 @@ pub fn load_character_animations(
 ) {
     println!("🎬 加载角色动画帧...");
 
-    // 加载士郎的动画帧
     let _shirou_idle_frames: Vec<Handle<Image>> = vec![
-        asset_server.load("images/characters/shirou_idle1.jpg"),
-        asset_server.load("images/characters/shirou_idle2.jpg"),
-        asset_server.load("images/characters/shirou_idle3.jpg"),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE2),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE3),
     ];
 
     let _shirou_running_frames: Vec<Handle<Image>> = vec![
-        asset_server.load("images/characters/shirou_idle4.png"),
-        asset_server.load("images/characters/shirou_idle5.png"),
-        asset_server.load("images/characters/shirou_idle6.png"),
-        asset_server.load("images/characters/shirou_idle7.png"),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE4),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE5),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE6),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE7),
     ];
 
     let _shirou_jumping_frames: Vec<Handle<Image>> = vec![
-        asset_server.load("images/characters/shirou_idle8.png"),
-        asset_server.load("images/characters/shirou_idle1.jpg"), // 复用作为跳跃帧
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE8),
+        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1), // 复用作为跳跃帧
     ];
 
     // 加载樱的动画帧
     let _sakura_idle_frames: Vec<Handle<Image>> = vec![
-        asset_server.load("images/characters/sakura_idle1.jpg"),
-        asset_server.load("images/characters/teacher_idle.jpg"), // 临时使用
+        asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE1),
+        asset_server.load(asset_paths::IMAGE_CHAR_TEACHER_IDLE), // 临时使用
     ];
 
     // 存储到游戏资源中（如果资源存在）
@@ -174,24 +173,24 @@ pub fn setup_player_animation(
             match character_selection.selected_character {
                 CharacterType::Shirou1 => {
                     let idle = vec![
-                        asset_server.load("images/characters/shirou_idle1.jpg"),
-                        asset_server.load("images/characters/shirou_idle2.jpg"),
-                        asset_server.load("images/characters/shirou_idle3.jpg"),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE2),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE3),
                     ];
                     let running = vec![
-                        asset_server.load("images/characters/shirou_idle4.png"),
-                        asset_server.load("images/characters/shirou_idle5.png"),
-                        asset_server.load("images/characters/shirou_idle6.png"),
-                        asset_server.load("images/characters/shirou_idle7.png"),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE4),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE5),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE6),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE7),
                     ];
-                    let jumping = vec![asset_server.load("images/characters/shirou_idle8.png")];
-                    let crouching = vec![asset_server.load("images/characters/shirou_idle3.jpg")];
+                    let jumping = vec![asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE8)];
+                    let crouching = vec![asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE3)];
                     (idle, running, jumping, crouching)
                 }
                 CharacterType::Shirou2 => {
                     let idle = vec![
-                        asset_server.load("images/characters/sakura_idle1.jpg"),
-                        asset_server.load("images/characters/teacher_idle.jpg"),
+                        asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE1),
+                        asset_server.load(asset_paths::IMAGE_CHAR_TEACHER_IDLE),
                     ];
                     let running = idle.clone();
                     let jumping = idle.clone();
@@ -227,10 +226,10 @@ pub fn setup_player_animation(
 pub fn setup_animated_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 创建动态背景
     let background_frames = vec![
-        asset_server.load("images/ui/cover1.jpg"),
-        asset_server.load("images/ui/cover2.jpg"),
-        asset_server.load("images/ui/cover3.jpeg"),
-        asset_server.load("images/ui/cover4.jpg"),
+        asset_server.load(asset_paths::IMAGE_UI_COVER1),
+        asset_server.load(asset_paths::IMAGE_UI_COVER2),
+        asset_server.load(asset_paths::IMAGE_UI_COVER3),
+        asset_server.load(asset_paths::IMAGE_UI_COVER4),
     ];
 
     let background_animation = FrameAnimation::new(background_frames.clone(), 2.0, true);
