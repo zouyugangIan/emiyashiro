@@ -62,6 +62,7 @@ pub fn update_game_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut game_input: ResMut<GameInput>,
     time: Res<Time>,
+    net: Res<crate::systems::network::NetworkResource>,
 ) {
     let current_time = time.elapsed_secs();
     
@@ -152,6 +153,26 @@ pub fn update_game_input(
     
     // 定期清理输入历史（保留最近2秒）
     game_input.cleanup_history(current_time, 2.0);
+
+    // Send actions to server
+    if let Some(tx) = &net.action_tx {
+        // Jump
+        if new_jump && !old_jump {
+            let _ = tx.send(crate::protocol::PlayerAction::Jump);
+        }
+        
+        // Attack
+        if new_action1 && !old_action1 {
+            let _ = tx.send(crate::protocol::PlayerAction::Attack);
+        }
+
+        // Move
+        if (new_move_left != old_move_left) || (new_move_right != old_move_right) || (new_crouch != old_crouch) {
+            let x = if new_move_right { 1.0 } else if new_move_left { -1.0 } else { 0.0 };
+            let y = if new_crouch { -1.0 } else { 0.0 };
+            let _ = tx.send(crate::protocol::PlayerAction::Move { x, y });
+        }
+    }
 }
 
 /// 记录输入变化
@@ -492,7 +513,7 @@ pub fn input_health_check_system(
         println!("📊 输入系统健康报告:");
         println!("   输入历史长度: {}", game_input.input_history.len());
         println!("   输入过滤器状态: 计数={}, 上次输入={:.2}s前", 
-            game_input.input_filter.input_count,
-            current_time - game_input.input_filter.last_input_time);
+        game_input.input_filter.input_count,
+        current_time - game_input.input_filter.last_input_time);
     }
 }

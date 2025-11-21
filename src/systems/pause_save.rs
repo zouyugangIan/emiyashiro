@@ -2,7 +2,7 @@
 //!
 //! 实现完整的游戏状态保存、恢复和管理功能
 
-use crate::{components::*, resources::*, states::*, systems::async_file_ops::SaveFileData};
+use crate::{components::*, resources::*, states::*};
 use bevy::prelude::*;
 use std::fs;
 use std::path::Path;
@@ -263,36 +263,24 @@ fn process_save_file(
     entry: &std::fs::DirEntry,
     save_file_manager: &mut SaveFileManager,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    use crate::systems::shared_utils::calculate_checksum;
     let json_data = fs::read_to_string(entry.path())?;
 
-    // 尝试新格式
-    if let Ok(mut save_file_data) = serde_json::from_str::<SaveFileData>(&json_data) {
+    // 尝试新格式 (SaveFileData with metadata and checksum)
+    if let Ok(save_file_data) = serde_json::from_str::<SaveFileData>(&json_data) {
         // 验证校验和
-        let received_checksum = save_file_data.checksum.clone();
-        save_file_data.checksum = String::new();
-
-        if let Ok(json_for_check) = serde_json::to_string_pretty(&save_file_data) {
-            let calculated_checksum = calculate_checksum(json_for_check.as_bytes());
-
-            if received_checksum != calculated_checksum {
-                println!(
-                    "⚠️ Checksum mismatch for {}, but loading anyway",
-                    entry.path().display()
-                );
-            }
-        } else {
+        if !save_file_data.verify_checksum() {
             println!(
-                "⚠️ Could not re-serialize for checksum validation: {}",
+                "⚠️ Checksum mismatch for {}, but loading anyway",
                 entry.path().display()
             );
         }
 
         save_file_manager.save_files.push(save_file_data.metadata);
+        println!("📂 New format loaded: {}", entry.path().display());
         return Ok(true);
     }
 
-    // 尝试旧格式
+    // 尝试旧格式 (直接是 CompleteGameState)
     if let Ok(state) = serde_json::from_str::<CompleteGameState>(&json_data) {
         let file_name_owned = entry.file_name().to_string_lossy().to_string();
         let save_name = file_name_owned.trim_end_matches(".json").to_string();

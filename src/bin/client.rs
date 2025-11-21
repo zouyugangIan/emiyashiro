@@ -1,30 +1,17 @@
 use bevy::prelude::*;
-
-mod asset_paths;
-mod components;
-mod database;
-mod events;
-mod resources;
-mod states;
-mod systems;
-mod tools;
-
-#[cfg(test)]
-mod tests;
-
-// use components::*;
-use events::*;
-use resources::*;
-use states::*;
-use systems::background::*;
-use systems::*;
+use s__emiyashiro::*; // Import from our lib
+use s__emiyashiro::systems::background::*;
+use s__emiyashiro::systems::*;
+use s__emiyashiro::systems::ui; // Explicit import to disambiguate from components::ui
+use s__emiyashiro::systems::player; // Explicit import to disambiguate from components::player
+use s__emiyashiro::systems::animation; // Explicit import to disambiguate from components::animation
 
 fn main() {
     let mut app = App::new();
 
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
-            title: "Fate/stay night Heaven's Feel - Shirou Runner".into(),
+            title: "G-Engine Client (WebGPU)".into(),
             resolution: (1024, 768).into(),
             ..default()
         }),
@@ -41,7 +28,9 @@ fn main() {
     .init_resource::<SaveFileManager>()
     .init_resource::<PauseManager>()
     .init_resource::<AudioStateManager>()
-    .init_resource::<systems::database_service::DatabaseService>()
+    // DatabaseService is Server-only, but for now we keep it to compile, 
+    // we will mock it or remove it in Phase 2
+    .init_resource::<systems::database_service::DatabaseService>() 
     .init_resource::<systems::input::GameInput>()
     .init_resource::<ui::SaveNameInput>()
     .init_resource::<ui::LoadedGameState>()
@@ -51,12 +40,23 @@ fn main() {
     .init_resource::<systems::error_handling::ErrorRecoveryManager>()
     .init_resource::<systems::async_file_ops::AsyncFileManager>()
     .init_resource::<systems::async_file_ops::OperationProgress>()
+    .init_resource::<systems::network::NetworkResource>()
+    .init_resource::<systems::network::NetworkEntityMap>()
+    .init_resource::<systems::network::MyNetworkId>()
     .add_systems(
         Startup,
         (
             setup_game_resources,
             systems::save::load_game,
             setup_cloud_spawner,
+            systems::network::setup_network,
+        ),
+    )
+    .add_systems(
+        Update,
+        (
+            systems::network::handle_network_events,
+            systems::network::send_ping_system,
         ),
     )
     .add_systems(OnEnter(GameState::Menu), menu::setup_menu)
@@ -95,7 +95,7 @@ fn main() {
     .add_systems(
         Update,
         (
-            // 核心游戏系统
+            // Core Game Systems
             player::player_movement,
             player::player_jump,
             player::player_crouch,
@@ -109,7 +109,7 @@ fn main() {
     .add_systems(
         Update,
         (
-            // 动画和视觉效果系统
+            // Animation
             animation::animate_character,
             animation::setup_character_animation,
             animation::trigger_audio_effects,
@@ -117,7 +117,7 @@ fn main() {
             systems::frame_animation::update_character_animations,
             systems::frame_animation::setup_player_animation,
             systems::frame_animation::debug_animations,
-            // 音乐切换系统
+            // Audio
             systems::audio::handle_music_transitions,
         )
             .run_if(in_state(GameState::Playing)),
@@ -134,7 +134,7 @@ fn main() {
     .add_systems(
         Update,
         (
-            // 视觉效果系统
+            // VFX
             systems::visual_effects::trigger_jump_effect,
             systems::visual_effects::trigger_land_effect,
             systems::visual_effects::trigger_run_effect,
@@ -147,11 +147,10 @@ fn main() {
     .add_systems(
         Update,
         (
-            // 数据和存档系统
+            // Save/Load (To be moved to Server)
             systems::save::auto_save_system,
             systems::database_service::database_stats_system,
             systems::database_service::cleanup_old_sessions,
-            // 异步文件操作和进度显示
             systems::async_file_ops::update_operation_progress,
             systems::async_file_ops::display_progress_indicator,
         )
@@ -235,27 +234,24 @@ fn main() {
     )
     .add_systems(OnExit(GameState::RenameDialog), ui::cleanup_rename_dialog);
 
-    // 配置最终集成
+    // Final Integration
     systems::final_integration::configure_final_integration(&mut app);
 
     app.run();
 }
 
-/// 加载游戏资源
+/// Load Game Resources
 fn setup_game_resources(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // 加载游戏资源
     let game_assets = GameAssets {
         cover_texture: asset_server.load(asset_paths::IMAGE_UI_COVER1),
         cover2_texture: asset_server.load(asset_paths::IMAGE_UI_COVER2),
         shirou1_texture: asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
         shirou2_texture: asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE1),
-        font: asset_server.load(asset_paths::FONT_FIRA_SANS), // 使用现有字体，暂时不支持中文
-        // 精灵表资源 - 初始化为空，稍后设置
+        font: asset_server.load(asset_paths::FONT_FIRA_SANS),
         shirou_spritesheet: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
         sakura_atlas: None,
-        // 音效资源 - 暂时使用占位符，后续可以替换为实际音效文件
         jump_sound: asset_server.load(asset_paths::SOUND_JUMP),
         land_sound: asset_server.load(asset_paths::SOUND_LAND),
         menu_music: asset_server.load(asset_paths::SOUND_MENU_MUSIC),

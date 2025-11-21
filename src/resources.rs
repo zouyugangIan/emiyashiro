@@ -130,7 +130,7 @@ pub struct CurrentSession {
     pub player_id: Option<uuid::Uuid>,
 }
 
-/// 存档数据结构
+/// 存档数据结构 (legacy format)
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct SaveData {
     pub player_name: String,
@@ -151,6 +151,45 @@ impl Default for SaveData {
             total_play_time: 0.0,
             save_time: chrono::Utc::now(),
         }
+    }
+}
+
+/// 新的存档文件格式 - 包含元数据、游戏状态和校验和
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct SaveFileData {
+    pub version: String,
+    pub metadata: SaveFileMetadata,
+    pub game_state: CompleteGameState,
+    pub checksum: String,
+}
+
+impl SaveFileData {
+    pub fn new(metadata: SaveFileMetadata, game_state: CompleteGameState) -> Self {
+        let mut data = Self {
+            version: "1.0".to_string(),
+            metadata,
+            game_state,
+            checksum: String::new(),
+        };
+        // Calculate checksum after creating the struct
+        data.checksum = Self::calculate_checksum_for(&data);
+        data
+    }
+
+    fn calculate_checksum_for(data: &SaveFileData) -> String {
+        use crate::systems::shared_utils::calculate_checksum;
+        let mut temp_data = data.clone();
+        temp_data.checksum = String::new();
+        if let Ok(json) = serde_json::to_string_pretty(&temp_data) {
+            calculate_checksum(json.as_bytes())
+        } else {
+            String::new()
+        }
+    }
+
+    pub fn verify_checksum(&self) -> bool {
+        let calculated = Self::calculate_checksum_for(self);
+        calculated == self.checksum
     }
 }
 

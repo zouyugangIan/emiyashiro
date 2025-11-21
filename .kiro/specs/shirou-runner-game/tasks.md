@@ -1,162 +1,45 @@
-# Implementation Plan
-
-- [x] 1. 修复 Bevy 0.16 兼容性问题
-  - 更新所有已弃用的 API 调用到新版本
-  - 修复输入系统的类型错误
-
-  - 更新颜色系统调用
-  - 修复时间系统方法调用
-  - _Requirements: 5.1, 5.2, 5.3, 5.4_
-
-
-
-
-- [x] 2. 重构代码结构和模块化
-
-  - [x] 2.1 创建组件模块
-
-
-    - 将 Player 和 Velocity 组件移动到独立模块
-    - 添加组件文档和类型注解
-
-    - _Requirements: 5.3_
-
-
-
-  - [x] 2.2 创建系统模块
-
-
-
-
-
-
-    - 将所有游戏系统函数组织到独立模块
-    - 实现清晰的系统接口定义
-    - _Requirements: 5.3_
-
-  - [x] 2.3 创建常量配置模块
-
-
-    - 定义所有游戏物理和视觉常量
-    - 实现可配置的游戏参数
-    - _Requirements: 2.1, 2.2, 2.3, 2.4_
-
-
-
-- [x] 3. 完善输入处理系统
-
-
-
-  - [x] 3.1 统一输入处理接口
-
-
-    - 确保所有系统使用相同的输入类型
-    - 修复跳跃系统的输入处理
-    - _Requirements: 1.1, 1.2, 1.3, 1.4_
-
-
-  - [x] 3.2 添加输入验证和错误处理
-
-    - 实现输入状态验证
-    - 添加输入错误的优雅处理
-
-
-
-    - _Requirements: 1.1, 1.2, 1.3, 1.4_
-
-
-
-
-- [x] 4. 优化物理系统实现
-
-  - [x] 4.1 完善重力和跳跃机制
-
-    - 统一时间增量方法调用
-    - 优化重力计算的准确性
-    - _Requirements: 2.1, 2.2, 2.3, 2.4_
-
-
-  - [x] 4.2 改进碰撞检测系统
-
-    - 实现更精确的地面碰撞检测
-
-
-    - 添加边界检查和约束
-    - _Requirements: 2.2, 2.4_
-
-- [ ] 5. 增强摄像机跟随系统
-  - [x] 5.1 修复摄像机系统的 API 调用
-
-
-    - 更新查询方法到非弃用版本
-    - 统一时间增量方法调用
-    - _Requirements: 3.1, 3.2, 3.3, 3.4_
-
-
-  - [x] 5.2 优化摄像机跟随算法
-
-
-
-    - 实现更平滑的摄像机移动
-    - 添加摄像机边界限制
-    - _Requirements: 3.3, 3.4_
-
-- [ ] 6. 完善用户反馈系统
-  - [ ] 6.1 标准化控制台输出
-    - 统一游戏状态反馈格式
-    - 添加更详细的操作指导
-    - _Requirements: 4.1, 4.2, 4.3, 4.4_
-
-
-
-  - [ ] 6.2 添加视觉反馈效果
-    - 实现角色状态的视觉指示
-    - 添加简单的动画效果
-    - _Requirements: 4.1, 4.2_
-
-- [ ] 7. 实现错误处理和稳定性改进
-  - [ ] 7.1 添加系统级错误处理
-    - 实现查询失败的优雅处理
-    - 添加实体状态验证
-    - _Requirements: 5.1, 5.2, 5.3, 5.4_
-
-  - [ ] 7.2 优化性能和资源管理
-    - 减少不必要的系统查询
-    - 优化实体生命周期管理
-    - _Requirements: 5.1, 5.4_
-
-- [x] 8. 添加单元测试和集成测试
-
-
-  - [ ] 8.1 创建组件和系统的单元测试
-
-    - 测试 Player 和 Velocity 组件
-    - 测试各个系统的核心逻辑
-    - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4_
-
-  - [ ] 8.2 实现集成测试套件
-    - 测试完整的游戏流程
-    - 验证系统间的协作
-    - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4_
-
-- [ ] 9. 文档和代码质量改进
-  - [ ] 9.1 添加代码文档和注释
-    - 为所有公共接口添加文档
-    - 添加复杂逻辑的内联注释
-    - _Requirements: 5.3_
-
-  - [ ] 9.2 代码格式化和 lint 检查
-    - 应用 Rust 标准代码格式
-    - 修复所有 clippy 警告
-    - _Requirements: 5.3_
-
-- [ ] 10. 游戏功能扩展准备
-  - [ ] 10.1 设计可扩展的架构
-    - 创建插件系统接口
-    - 实现配置驱动的游戏设置
-    - _Requirements: 5.3, 5.4_
-
-  - [ ] 10.2 准备资源管理系统
-    - 设计资源加载接口
-    - 实现基础的资源管理
-    - _Requirements: 4.1, 4.2_
+# Implementation Tasks: G-Engine
+
+## Phase 1: Project Restructuring (G-Engine Core)
+- [x] **1.1 拆分项目结构** ✅ 已完成
+    - [x] 创建 `bin/client.rs` (WebGPU 客户端)
+    - [x] 创建 `bin/server.rs` (Native 服务端)
+    - [x] 提取共享库 `lib.rs` (组件、协议)
+- [x] **1.2 依赖管理** ✅ 已完成
+    - [x] 配置 `Cargo.toml` features
+    - [x] 将 `sqlx`, `tokio` (full) 移至 server-only
+    - [x] 引入 `serde`, `bincode` 用于协议序列化
+
+## Phase 2: Networking Layer (WebSocket)
+- [x] **2.1 协议定义** ✅ 已完成
+    - [x] 定义 `GamePacket` 枚举
+    - [x] 定义 `PlayerAction` 输入抽象
+- [x] **2.2 服务端网络实现** ✅ 已完成
+    - [x] 集成 `tokio-tungstenite`
+    - [x] 实现多客户端连接管理
+    - [x] 实现广播机制 (Broadcast Loop)
+- [x] **2.3 客户端网络实现** ✅ 已完成
+    - [x] 集成 `gloo-net` (WASM) / `tungstenite` (Native)
+    - [x] 实现自动重连机制
+
+## Phase 3: Infrastructure Integration
+- [ ] **3.1 Redis 集成**
+    - [ ] 实现 `RedisPlugin`
+    - [ ] 每一帧同步 ECS `Transform` 到 Redis
+- [ ] **3.2 RabbitMQ & Postgres**
+    - [ ] 搭建 Docker 环境 (docker-compose.yml)
+    - [ ] 实现异步存档消费者 (Save Worker)
+
+## Phase 4: Gameplay Adaptation
+- [ ] **4.1 输入重构**
+    - [ ] 将 `KeyboardInput` 转换为 `PlayerAction`
+    - [ ] 客户端发送 `PlayerAction`
+    - [ ] 服务端接收并应用物理力
+- [ ] **4.2 状态同步**
+    - [ ] 服务端下发 `WorldSnapshot`
+    - [ ] 客户端实现插值渲染 (Interpolation)
+
+## Phase 5: AI Preparation
+- [ ] **5.1 AI 接口**
+    - [ ] 定义 `Controller` trait
+    - [ ] 实现简单的 `BotController` (自动巡逻)
