@@ -84,10 +84,12 @@ async fn main() {
     });
 
     app.init_resource::<ClientEntityMap>();
+    app.init_resource::<ServerTick>();
     
     app.add_systems(Startup, setup_bots);
 
     app.add_systems(Update, (
+        increment_tick,
         process_network_events, 
         broadcast_snapshot_system, 
         s__emiyashiro::systems::sync_redis::sync_transform_to_redis, 
@@ -150,6 +152,34 @@ use s__emiyashiro::components::ai::BotController;
 
 #[derive(Resource, Default)]
 struct ClientEntityMap(HashMap<u64, Entity>);
+
+#[derive(Resource, Default)]
+struct ServerTick(u64);
+
+fn increment_tick(mut tick: ResMut<ServerTick>) {
+    tick.0 = tick.0.wrapping_add(1);
+}
+
+fn determine_animation_state(velocity: &Velocity, input: &PlayerInputState, transform: &Transform) -> String {
+    // Simple ground detection based on y position
+    let is_grounded = transform.translation.y <= 0.5;
+    
+    if !is_grounded {
+        if velocity.y > 0.0 { 
+            "Jump".to_string() 
+        } else { 
+            "Fall".to_string() 
+        }
+    } else if input.move_x.abs() > 0.1 {
+        if input.move_y < -0.5 { 
+            "Crouch".to_string() 
+        } else { 
+            "Run".to_string() 
+        }
+    } else {
+        "Idle".to_string()
+    }
+}
 
 fn setup_bots(mut commands: Commands) {
     println!("Spawning Bot...");
@@ -237,22 +267,25 @@ fn server_physics_system(
 
 fn broadcast_snapshot_system(
     channels: Res<NetworkChannels>,
-    query: Query<(&Transform, &Velocity, &NetworkId)>,
+    tick: Res<ServerTick>,
+    query: Query<(&Transform, &Velocity, &NetworkId, &PlayerInputState)>,
 ) {
     let mut players = Vec::new();
-    for (transform, velocity, net_id) in query.iter() {
+    for (transform, velocity, net_id, input) in query.iter() {
+        let animation_state = determine_animation_state(velocity, input, transform);
+        
         players.push(s__emiyashiro::protocol::PlayerState {
             id: net_id.0,
             position: transform.translation,
             velocity: Vec3::new(velocity.x, velocity.y, 0.0),
             facing_right: velocity.x >= 0.0,
-            animation_state: "Idle".to_string(), // Placeholder
+            animation_state,
         });
     }
 
     if !players.is_empty() {
         let snapshot = GamePacket::WorldSnapshot {
-            tick: 0, // TODO: Implement tick counter
+            tick: tick.0,
             players,
         };
         let _ = channels.broadcast_tx.send(snapshot);

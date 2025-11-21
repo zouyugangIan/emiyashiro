@@ -5,6 +5,7 @@ use s__emiyashiro::systems::*;
 use s__emiyashiro::systems::ui; // Explicit import to disambiguate from components::ui
 use s__emiyashiro::systems::player; // Explicit import to disambiguate from components::player
 use s__emiyashiro::systems::animation; // Explicit import to disambiguate from components::animation
+use s__emiyashiro::systems::network; // Explicit import for network systems
 
 fn main() {
     let mut app = App::new();
@@ -95,14 +96,14 @@ fn main() {
     .add_systems(
         Update,
         (
-            // Core Game Systems
-            player::player_movement,
-            player::player_jump,
-            player::player_crouch,
-            player::update_player_state,
+            // Core Game Systems - Physics removed (now server-authoritative)
+            // Only keep stats tracking and camera
             player::update_game_stats,
             camera::camera_follow,
             ui::update_game_hud,
+            // Network systems
+            network::handle_network_events,
+            network::interpolate_positions,
         )
             .run_if(in_state(GameState::Playing)),
     )
