@@ -105,13 +105,26 @@ pub struct NetworkEntityMap(pub HashMap<u64, Entity>);
 #[derive(Resource, Default)]
 pub struct MyNetworkId(pub Option<u64>);
 
+#[derive(Component)]
+pub struct InterpolationState {
+    pub start_pos: Vec3,
+    pub target_pos: Vec3,
+    pub start_time: f32,
+    pub duration: f32,
+}
+
+#[derive(Component)]
+pub struct LocalPlayer;
+
 pub fn handle_network_events(
     mut commands: Commands,
     mut net: ResMut<NetworkResource>,
     mut entity_map: ResMut<NetworkEntityMap>,
     mut my_id: ResMut<MyNetworkId>,
-    mut query: Query<&mut Transform>,
+    mut query: Query<(&mut Transform, Option<&mut InterpolationState>)>,
+    mut local_player_query: Query<(Entity, &mut crate::components::network::NetworkId), With<LocalPlayer>>,
     asset_server: Res<AssetServer>,
+    time: Res<Time>,
 ) {
     let mut rx = net.packet_rx.lock().unwrap();
     while let Some(packet) = rx.pop_front() {
@@ -119,47 +132,89 @@ pub fn handle_network_events(
             GamePacket::Welcome { id, message } => {
                 println!("Server says: {} (My ID: {})", message, id);
                 my_id.0 = Some(id);
+                
+                // Update local player's NetworkId if it exists
+                if let Ok((entity, mut net_id)) = local_player_query.single_mut() {
+                    net_id.0 = id;
+                    entity_map.0.insert(id, entity);
+                    println!("Updated local player NetworkId to {}", id);
+                }
             }
             GamePacket::WorldSnapshot { tick: _, players } => {
+                let current_time = time.elapsed_secs();
+                
                 for player_state in players {
+                    // Check if this is the local player
+                    let is_local = Some(player_state.id) == my_id.0;
+                    
                     if let Some(&entity) = entity_map.0.get(&player_state.id) {
-                        // Update existing entity
-                        if let Ok(mut transform) = query.get_mut(entity) {
-                            // Simple interpolation (lerp) could be added here
-                            // For now, direct snap
-                            transform.translation = player_state.position;
+                        // Update existing entity with interpolation
+                        if let Ok((mut transform, interp_state)) = query.get_mut(entity) {
+                            if let Some(mut interp) = interp_state {
+                                // Update interpolation target
+                                interp.start_pos = transform.translation;
+                                interp.target_pos = player_state.position;
+                                interp.start_time = current_time;
+                                interp.duration = 0.1; // 100ms interpolation
+                            } else {
+                                // No interpolation component, add it
+                                commands.entity(entity).insert(InterpolationState {
+                                    start_pos: transform.translation,
+                                    target_pos: player_state.position,
+                                    start_time: current_time,
+                                    duration: 0.1,
+                                });
+                            }
                         }
-                    } else {
-                        // Check if this is us (local player)
-                        // If we already have a local player entity (spawned by game setup), we should attach NetworkId to it.
-                        // But here we might not know which entity is local player easily unless we tagged it.
-                        // For simplicity, let's assume we spawn new entities for everyone for now, 
-                        // or we need to find the local player entity.
-                        
-                        // If it's us, we might want to find the existing Player entity
-                        if Some(player_state.id) == my_id.0 {
-                             // Find entity with Player component
-                             // This requires a query. But we can't query inside loop easily if we didn't pass it.
-                             // Let's just spawn a visual representation for now.
-                        }
-
-                        println!("Spawning network player {}", player_state.id);
+                    } else if !is_local {
+                        // Spawn new remote player entity
+                        println!("Spawning remote player {}", player_state.id);
                         let entity = commands.spawn((
                             Sprite {
-                                image: asset_server.load("images/characters/shirou/idle/shirou_idle1.png"), // Placeholder path
+                                image: asset_server.load("images/characters/shirou/idle/shirou_idle1.png"),
                                 ..default()
                             },
                             Transform::from_translation(player_state.position).with_scale(Vec3::splat(0.5)),
                             crate::components::network::NetworkId(player_state.id),
+                            InterpolationState {
+                                start_pos: player_state.position,
+                                target_pos: player_state.position,
+                                start_time: current_time,
+                                duration: 0.1,
+                            },
                         )).id();
                         entity_map.0.insert(player_state.id, entity);
                     }
+                    // If is_local and not in entity_map, the local player hasn't been spawned yet
+                    // This should be handled by the game setup
                 }
             }
             GamePacket::Pong(id) => {
                 println!("Pong from server: {}", id);
             }
             _ => {}
+        }
+    }
+}
+
+// Interpolation system
+pub fn interpolate_positions(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Transform, &mut InterpolationState)>,
+    time: Res<Time>,
+) {
+    let current_time = time.elapsed_secs();
+    
+    for (entity, mut transform, mut interp) in query.iter_mut() {
+        let elapsed = current_time - interp.start_time;
+        let t = (elapsed / interp.duration).min(1.0);
+        
+        // Lerp position
+        transform.translation = interp.start_pos.lerp(interp.target_pos, t);
+        
+        // Remove interpolation component when done
+        if t >= 1.0 {
+            commands.entity(entity).remove::<InterpolationState>();
         }
     }
 }
