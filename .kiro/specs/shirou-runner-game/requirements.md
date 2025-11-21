@@ -2,61 +2,51 @@
 
 ## Introduction
 
-Shirou Runner 是一个基于 Fate/stay night Heaven's Feel 主题的 2D 横版跑酷游戏。玩家控制卫宫士郎在游戏世界中奔跑、跳跃，体验流畅的平台动作游戏玩法。游戏使用 Bevy 引擎开发，具有简洁的视觉风格和直观的操作体验。
+Shirou Runner 是一个基于 **G-Engine** (基于 Bevy 深度定制的云原生游戏引擎) 开发的 2D 横版跑酷游戏。游戏支持 WebGPU 跨平台运行（浏览器/桌面），并具备实时多人联机功能。
 
 ## Requirements
 
-### Requirement 1
+### Requirement 1: 核心玩法 (Core Gameplay)
 
-**User Story:** 作为玩家，我希望能够控制卫宫士郎角色进行基本的移动操作，以便在游戏世界中自由移动。
-
-#### Acceptance Criteria
-
-1. WHEN 玩家按下 A 键或左箭头键 THEN 系统 SHALL 让士郎角色向左移动
-2. WHEN 玩家按下 D 键或右箭头键 THEN 系统 SHALL 让士郎角色向右移动
-3. WHEN 玩家按下 W 键或上箭头键且角色在地面上 THEN 系统 SHALL 让士郎角色执行跳跃动作
-4. WHEN 玩家按下空格键且游戏中没有士郎角色 THEN 系统 SHALL 生成士郎角色到游戏场景中
-
-### Requirement 2
-
-**User Story:** 作为玩家，我希望游戏具有真实的物理效果，以便获得沉浸式的游戏体验。
+**User Story:** 作为玩家，我希望控制卫宫士郎进行跑酷，体验流畅的动作。
 
 #### Acceptance Criteria
+1.  **移动控制**: 支持 A/D (移动) 和 W/Space (跳跃)。
+2.  **物理反馈**: 具备重力、碰撞检测和跳跃惯性。
+3.  **摄像机**: 智能跟随角色，保持视野清晰。
 
-1. WHEN 士郎角色在空中时 THEN 系统 SHALL 对角色施加重力效果
-2. WHEN 士郎角色接触地面时 THEN 系统 SHALL 停止角色的下降运动
-3. WHEN 士郎角色移动时 THEN 系统 SHALL 根据时间增量平滑更新角色位置
-4. IF 士郎角色位置低于地面高度 THEN 系统 SHALL 将角色位置重置到地面上
+### Requirement 2: 多人联机 (Multiplayer)
 
-### Requirement 3
-
-**User Story:** 作为玩家，我希望摄像机能够跟随我的角色，以便始终保持良好的游戏视野。
+**User Story:** 作为玩家，我希望能看到其他玩家在同一个世界中奔跑。
 
 #### Acceptance Criteria
+1.  **实时同步**: 系统 SHALL 通过 WebSocket 以至少 20Hz 的频率同步其他玩家的位置。
+2.  **加入/退出**: 玩家进入游戏时，系统 SHALL 自动连接服务器并同步当前世界状态。
+3.  **平滑插值**: 当网络波动时，系统 SHALL 使用插值算法平滑其他玩家的移动轨迹。
+4.  **延迟补偿**: 客户端 SHALL 实施预测算法，确保本地操作无延迟感。
 
-1. WHEN 士郎角色存在于游戏中时 THEN 系统 SHALL 让摄像机平滑跟随角色移动
-2. WHEN 士郎角色不存在时 THEN 系统 SHALL 让摄像机缓慢向右移动
-3. WHEN 摄像机跟随角色时 THEN 系统 SHALL 在角色前方保持适当的偏移距离
-4. IF 摄像机移动速度过快 THEN 系统 SHALL 使用平滑插值来减缓移动速度
+### Requirement 3: 跨平台引擎 (G-Engine / WebGPU)
 
-### Requirement 4
-
-**User Story:** 作为玩家，我希望游戏具有清晰的视觉反馈，以便了解游戏状态和操作结果。
-
-#### Acceptance Criteria
-
-1. WHEN 游戏启动时 THEN 系统 SHALL 显示游戏标题和操作说明
-2. WHEN 士郎角色生成时 THEN 系统 SHALL 在控制台输出角色登场信息
-3. WHEN 士郎角色跳跃时 THEN 系统 SHALL 在控制台输出跳跃反馈信息
-4. WHEN 士郎角色生成时 THEN 系统 SHALL 显示完整的操作控制说明
-
-### Requirement 5
-
-**User Story:** 作为玩家，我希望游戏具有稳定的性能表现，以便获得流畅的游戏体验。
+**User Story:** 作为玩家，我希望能在浏览器中直接打开游戏，无需下载安装包。
 
 #### Acceptance Criteria
+1.  **Web 运行**: 客户端 SHALL 能够编译为 WASM 并通过 WebGPU 在现代浏览器中运行。
+2.  **资源加载**: 游戏资源 SHALL 支持通过 HTTP 远程加载。
+3.  **输入适配**: 引擎 SHALL 自动适配桌面键盘和触摸屏输入（预留）。
 
-1. WHEN 游戏运行时 THEN 系统 SHALL 保持稳定的帧率
-2. WHEN 处理用户输入时 THEN 系统 SHALL 在单帧内响应所有输入事件
-3. WHEN 更新游戏状态时 THEN 系统 SHALL 使用高效的 ECS 系统架构
-4. IF 多个系统同时运行 THEN 系统 SHALL 正确处理系统间的依赖关系
+### Requirement 4: 云端架构 (Cloud Infrastructure)
+
+**User Story:** 作为开发者，我希望游戏后端具备高可用性和持久化能力。
+
+#### Acceptance Criteria
+1.  **热数据缓存**: 玩家实时位置和状态 SHALL 存储于 Redis 中，以支持快速读写。
+2.  **数据持久化**: 玩家存档（分数、解锁物品） SHALL 异步写入 Postgres 数据库。
+3.  **任务解耦**: 耗时的 I/O 操作（如保存存档、AI 计算） SHALL 通过 RabbitMQ 消息队列异步处理。
+
+### Requirement 5: AI 扩展性 (AI Extensibility)
+
+**User Story:** 作为开发者，我希望预留 AI 接口，以便未来接入智能代理。
+
+#### Acceptance Criteria
+1.  **输入抽象**: 系统 SHALL 将“输入源”抽象为通用接口，允许键盘、网络或 AI 脚本控制角色。
+2.  **状态观测**: 系统 SHALL 提供序列化的“世界快照”接口，供 AI 模型读取环境信息。

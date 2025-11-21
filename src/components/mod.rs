@@ -7,6 +7,8 @@ pub mod audio;
 pub mod physics;
 pub mod player;
 pub mod ui;
+pub mod network;
+pub mod ai;
 
 // 重新导出所有组件，保持向后兼容性
 pub use animation::*;

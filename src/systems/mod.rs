@@ -31,6 +31,8 @@ pub mod audio;
 
 // 数据持久化系统
 pub mod async_file_ops;
+#[cfg(feature = "server")]
+pub mod server_file_ops;
 pub mod async_tasks;
 pub mod database_service;
 pub mod pause_save;
@@ -56,8 +58,13 @@ pub mod error_handling;
 // 系统调度配置
 pub mod system_sets;
 
+// 网络系统
+pub mod network;
+#[cfg(feature = "server")]
+pub mod sync_redis;
+#[cfg(feature = "server")]
+pub mod save_worker;
+pub mod ai;
+
 // 最终集成
 pub mod final_integration;
-
-// 重新导出常用系统，保持向后兼容性
-// 注意：只导出实际使用的模块，避免编译警告

@@ -94,3 +94,11 @@ impl PlayerState {
         self.is_crouching = crouching;
     }
 }
+
+/// 玩家输入状态（服务端使用）
+#[derive(Component, Default, Debug, Clone)]
+pub struct PlayerInputState {
+    pub move_x: f32,
+    pub move_y: f32,
+    pub jump_pressed: bool,
+}

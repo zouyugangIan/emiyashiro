@@ -1,15 +1,20 @@
+#[cfg(feature = "server")]
+use sqlx::PgPool;
+#[cfg(feature = "server")]
+use std::env;
+
 pub mod models;
 pub mod operations;
 
-use sqlx::PgPool;
-use std::env;
+#[cfg(feature = "server")]
+pub mod redis;
 
-/// 数据库连接池
-#[derive(Clone)]
+#[cfg(feature = "server")]
 pub struct Database {
     pub pool: PgPool,
 }
 
+#[cfg(feature = "server")]
 impl Database {
     /// 创建数据库连接
     pub async fn new() -> Result<Self, sqlx::Error> {
