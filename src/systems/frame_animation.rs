@@ -82,7 +82,7 @@ pub fn load_character_animations(
 
     // 加载樱的动画帧
     let _sakura_idle_frames: Vec<Handle<Image>> = vec![
-        asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE1),
+        asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE01),
         asset_server.load(asset_paths::IMAGE_CHAR_TEACHER_IDLE), // 临时使用
     ];
 
@@ -268,7 +268,11 @@ pub fn setup_player_animation(
     }
 }
 
-/// 创建动画背景系统
+/// 创建动画背景系统（備用 - 目前使用程序化雲彩系統）
+/// 
+/// 注意：此函數目前未被使用。遊戲使用 `background.rs` 中的程序化雲彩系統。
+/// 如果需要切換到圖片背景，可以在 client.rs 中註冊此系統。
+#[allow(dead_code)]
 pub fn setup_animated_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 创建动态背景 - 使用所有封面图片
     let background_frames: Vec<Handle<Image>> = asset_paths::UI_COVER_IMAGES
@@ -288,7 +292,7 @@ pub fn setup_animated_background(mut commands: Commands, asset_server: Res<Asset
         background_animation,
     ));
 
-    println!("🌅 创建动态背景");
+    println!("🌅 创建动态背景（圖片模式）");
 }
 
 /// 动画调试系统
