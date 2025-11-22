@@ -5,7 +5,6 @@ use s__emiyashiro::systems::*;
 use s__emiyashiro::systems::ui; // Explicit import to disambiguate from components::ui
 use s__emiyashiro::systems::player; // Explicit import to disambiguate from components::player
 use s__emiyashiro::systems::animation; // Explicit import to disambiguate from components::animation
-use s__emiyashiro::systems::network; // Explicit import for network systems
 
 fn main() {
     let mut app = App::new();
@@ -51,16 +50,18 @@ fn main() {
             setup_animation_data,
             systems::save::load_game,
             setup_cloud_spawner,
-            // systems::network::setup_network, // 暫時禁用網絡系統進行測試
+            systems::network::setup_network,
         ),
     )
-    // .add_systems(
-    //     Update,
-    //     (
-    //         systems::network::handle_network_events,
-    //         systems::network::send_ping_system,
-    //     ),
-    // )
+    .add_systems(
+        Update,
+        (
+            systems::network::handle_network_events,
+            systems::network::send_ping_system,
+            systems::network::send_player_input,
+            systems::network::interpolate_positions,
+        ),
+    )
     .add_systems(OnEnter(GameState::Menu), menu::setup_menu)
     .add_systems(
         Update,
@@ -88,6 +89,7 @@ fn main() {
             game::setup_game,
             ui::setup_game_hud,
             systems::audio::play_game_music_and_stop_menu,
+            systems::scene_decoration::setup_parallax_background, // 設置視差背景
         ),
     )
     .add_systems(
@@ -106,9 +108,6 @@ fn main() {
             player::update_game_stats,
             camera::camera_follow,
             ui::update_game_hud,
-            // Network systems (暫時禁用)
-            // network::handle_network_events,
-            // network::interpolate_positions,
         )
             .run_if(in_state(GameState::Playing)),
     )
@@ -131,9 +130,45 @@ fn main() {
     .add_systems(
         Update,
         (
-            spawn_clouds_system,
-            move_clouds_system,
-            despawn_offscreen_clouds_system,
+            // 場景裝飾系統
+            systems::scene_decoration::spawn_enhanced_clouds,
+            systems::scene_decoration::spawn_ground_decorations,
+            systems::scene_decoration::move_scene_decorations,
+            systems::scene_decoration::cleanup_offscreen_decorations,
+            systems::scene_decoration::loop_far_background,
+            systems::scene_decoration::dynamic_lighting,
+        )
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        Update,
+        (
+            // 敵人系統
+            systems::enemy::spawn_mushroom_enemies,
+            systems::enemy::enemy_patrol_ai,
+            systems::enemy::cleanup_dead_enemies,
+            systems::enemy::cleanup_offscreen_enemies,
+        )
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        Update,
+        (
+            // 戰鬥系統
+            systems::combat::player_shoot_projectile,
+            systems::combat::update_projectiles,
+            systems::combat::cleanup_expired_projectiles,
+            systems::combat::projectile_enemy_collision,
+            systems::combat::player_enemy_collision,
+        )
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        Update,
+        (
+            // 死亡系統
+            systems::death::check_player_fall_death,
+            systems::death::respawn_player,
         )
             .run_if(in_state(GameState::Playing)),
     )

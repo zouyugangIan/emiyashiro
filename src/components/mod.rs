@@ -5,18 +5,22 @@
 pub mod animation;
 pub mod animation_data;
 pub mod audio;
+pub mod background;
+pub mod enemy;
+pub mod network;
 pub mod physics;
 pub mod player;
+pub mod projectile;
 pub mod ui;
-pub mod network;
 pub mod ai;
 
 // 重新导出所有组件，保持向后兼容性
 pub use animation::*;
 pub use animation_data::*;
 pub use audio::*;
+pub use background::*;
+pub use enemy::*;
 pub use physics::*;
 pub use player::*;
+pub use projectile::*;
 pub use ui::*;
-pub mod background;
-pub use background::*;

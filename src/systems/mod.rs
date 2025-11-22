@@ -15,8 +15,10 @@ pub mod player;
 
 // 渲染和视觉系统
 pub mod animation;
+pub mod background;
 pub mod camera;
 pub mod frame_animation;
+pub mod scene_decoration;
 pub mod sprite_animation;
 
 // 物理和碰撞系统
@@ -40,11 +42,15 @@ pub mod save;
 pub mod shared_utils;
 
 // 资源生成系统
-pub mod background;
 pub mod procedural_assets;
 
 // 视觉效果系统
 pub mod visual_effects;
+
+// 戰鬥和敵人系統
+pub mod combat;
+pub mod death;
+pub mod enemy;
 
 // 文本常量系统
 pub mod text_constants;

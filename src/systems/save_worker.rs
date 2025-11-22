@@ -1,92 +1,142 @@
-use lapin::{options::*, types::FieldTable, Connection, ConnectionProperties};
 use sqlx::PgPool;
-use std::env;
-use futures_lite::stream::StreamExt;
+use lapin::{
+    options::*, types::FieldTable, Connection, ConnectionProperties,
+};
 use serde::{Deserialize, Serialize};
+use std::env;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SaveRequest {
-    pub player_id: uuid::Uuid,
+/// 存档任务消息
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SaveGameTask {
+    pub player_id: String,
     pub save_name: String,
     pub game_data: serde_json::Value,
 }
 
+/// 异步存档消费者 (Save Worker)
+/// 从 RabbitMQ 队列 `q_save_game` 消费存档任务，并写入 Postgres
 pub async fn run_save_worker(pool: PgPool) {
-    let rabbitmq_addr = env::var("RABBITMQ_URL").unwrap_or_else(|_| "amqp://guest:guest@127.0.0.1:5672/%2f".into());
-    
-    println!("Connecting to RabbitMQ at {}", rabbitmq_addr);
-    
-    let conn = match Connection::connect(&rabbitmq_addr, ConnectionProperties::default()).await {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Failed to connect to RabbitMQ: {}", e);
-            return;
-        }
-    };
+    println!("Starting Save Worker...");
 
-    let channel = match conn.create_channel().await {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Failed to create RabbitMQ channel: {}", e);
-            return;
-        }
-    };
+    let rabbitmq_url = env::var("RABBITMQ_URL")
+        .unwrap_or_else(|_| "amqp://guest:guest@127.0.0.1:5672/%2f".to_string());
 
-    let _queue = channel
-        .queue_declare(
-            "save_game_queue",
-            QueueDeclareOptions::default(),
-            FieldTable::default(),
-        )
-        .await
-        .expect("Failed to declare queue");
-
-    let mut consumer = channel
-        .basic_consume(
-            "save_game_queue",
-            "save_worker",
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        )
-        .await
-        .expect("Failed to create consumer");
-
-    println!("Save Worker started, waiting for messages...");
-
-    while let Some(delivery) = consumer.next().await {
-        if let Ok(delivery) = delivery {
-            let data = delivery.data.clone();
-            if let Ok(save_req) = serde_json::from_slice::<SaveRequest>(&data) {
-                println!("Processing save for player: {}", save_req.player_id);
+    loop {
+        match Connection::connect(&rabbitmq_url, ConnectionProperties::default()).await {
+            Ok(conn) => {
+                println!("Save Worker connected to RabbitMQ");
                 
-                // Write to Postgres
-                let result = sqlx::query(
-                    r#"
-                    INSERT INTO save_games (player_id, save_name, game_data)
-                    VALUES ($1, $2, $3)
-                    "#
-                )
-                .bind(save_req.player_id)
-                .bind(&save_req.save_name)
-                .bind(&save_req.game_data)
-                .execute(&pool)
-                .await;
+                let channel = conn.create_channel().await.expect("Failed to create channel");
+                
+                // 声明队列
+                let _queue = channel
+                    .queue_declare(
+                        "q_save_game",
+                        QueueDeclareOptions::default(),
+                        FieldTable::default(),
+                    )
+                    .await
+                    .expect("Failed to declare queue");
 
-                match result {
-                    Ok(_) => {
-                        println!("Save successful for {}", save_req.player_id);
-                        let _ = delivery.ack(BasicAckOptions::default()).await;
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to save to DB: {}", e);
-                        // Optionally nack or retry
-                        let _ = delivery.nack(BasicNackOptions::default()).await;
+                println!("Save Worker listening on queue: q_save_game");
+
+                let mut consumer = channel
+                    .basic_consume(
+                        "q_save_game",
+                        "save_worker",
+                        BasicConsumeOptions::default(),
+                        FieldTable::default(),
+                    )
+                    .await
+                    .expect("Failed to create consumer");
+
+                while let Some(delivery) = futures_lite::StreamExt::next(&mut consumer).await {
+                    if let Ok(delivery) = delivery {
+                        match serde_json::from_slice::<SaveGameTask>(&delivery.data) {
+                            Ok(task) => {
+                                println!("Processing save task for player: {}", task.player_id);
+                                
+                                // 保存到数据库
+                                let result = sqlx::query(
+                                    r#"
+                                    INSERT INTO save_games (player_id, save_name, game_data, created_at, updated_at)
+                                    VALUES ($1::uuid, $2, $3, NOW(), NOW())
+                                    ON CONFLICT (player_id, save_name) 
+                                    DO UPDATE SET game_data = $3, updated_at = NOW()
+                                    "#
+                                )
+                                .bind(&task.player_id)
+                                .bind(&task.save_name)
+                                .bind(&task.game_data)
+                                .execute(&pool)
+                                .await;
+
+                                match result {
+                                    Ok(_) => {
+                                        println!("Save task completed for player: {}", task.player_id);
+                                        delivery
+                                            .ack(BasicAckOptions::default())
+                                            .await
+                                            .expect("Failed to ack");
+                                    }
+                                    Err(e) => {
+                                        eprintln!("Failed to save to database: {}", e);
+                                        // Nack and requeue
+                                        delivery
+                                            .nack(BasicNackOptions { requeue: true, ..Default::default() })
+                                            .await
+                                            .expect("Failed to nack");
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to deserialize save task: {}", e);
+                                // Ack to remove invalid message
+                                delivery
+                                    .ack(BasicAckOptions::default())
+                                    .await
+                                    .expect("Failed to ack");
+                            }
+                        }
                     }
                 }
-            } else {
-                eprintln!("Failed to deserialize save request");
-                let _ = delivery.nack(BasicNackOptions { requeue: false, ..Default::default() }).await;
+            }
+            Err(e) => {
+                eprintln!("Failed to connect to RabbitMQ: {}. Retrying in 5s...", e);
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             }
         }
     }
+}
+
+/// 发布存档任务到 RabbitMQ
+pub async fn publish_save_task(task: SaveGameTask) -> Result<(), Box<dyn std::error::Error>> {
+    let rabbitmq_url = env::var("RABBITMQ_URL")
+        .unwrap_or_else(|_| "amqp://guest:guest@127.0.0.1:5672/%2f".to_string());
+
+    let conn = Connection::connect(&rabbitmq_url, ConnectionProperties::default()).await?;
+    let channel = conn.create_channel().await?;
+
+    channel
+        .queue_declare(
+            "q_save_game",
+            QueueDeclareOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
+
+    let payload = serde_json::to_vec(&task)?;
+
+    channel
+        .basic_publish(
+            "",
+            "q_save_game",
+            BasicPublishOptions::default(),
+            &payload,
+            lapin::BasicProperties::default(),
+        )
+        .await?;
+
+    println!("Published save task for player: {}", task.player_id);
+    Ok(())
 }

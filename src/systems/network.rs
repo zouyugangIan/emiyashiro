@@ -230,3 +230,35 @@ pub fn send_ping_system(
         }
     }
 }
+
+/// 将键盘输入转换为 PlayerAction 并发送到服务器
+pub fn send_player_input(
+    input: Res<ButtonInput<KeyCode>>,
+    net: Res<NetworkResource>,
+) {
+    if let Some(tx) = &net.action_tx {
+        // 计算移动方向
+        let mut move_x = 0.0;
+        let mut move_y = 0.0;
+
+        if input.pressed(KeyCode::KeyA) || input.pressed(KeyCode::ArrowLeft) {
+            move_x -= 1.0;
+        }
+        if input.pressed(KeyCode::KeyD) || input.pressed(KeyCode::ArrowRight) {
+            move_x += 1.0;
+        }
+        if input.pressed(KeyCode::KeyS) || input.pressed(KeyCode::ArrowDown) {
+            move_y -= 1.0;
+        }
+
+        // 发送移动输入
+        if move_x != 0.0 || move_y != 0.0 {
+            let _ = tx.send(PlayerAction::Move { x: move_x, y: move_y });
+        }
+
+        // 发送跳跃输入
+        if input.just_pressed(KeyCode::KeyW) || input.just_pressed(KeyCode::Space) {
+            let _ = tx.send(PlayerAction::Jump);
+        }
+    }
+}

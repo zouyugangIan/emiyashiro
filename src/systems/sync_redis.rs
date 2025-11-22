@@ -1,30 +1,26 @@
 use bevy::prelude::*;
-use crate::database::redis::RedisManager;
 use crate::components::network::NetworkId;
-use serde::{Serialize, Deserialize};
+use crate::database::redis::RedisManager;
 
-#[derive(Serialize, Deserialize)]
-struct RedisTransform {
-    x: f32,
-    y: f32,
-    z: f32,
-}
-
+/// 每一帧同步 ECS Transform 到 Redis
+/// 按照设计文档中的 Redis Key Schema: `player:{id}:pos` -> `x,y,vx,vy`
 pub fn sync_transform_to_redis(
-    redis_manager: Res<RedisManager>,
-    query: Query<(&NetworkId, &Transform)>,
+    redis: Option<Res<RedisManager>>,
+    query: Query<(&Transform, &NetworkId, Option<&crate::components::physics::Velocity>)>,
 ) {
-    for (net_id, transform) in query.iter() {
-        let redis_transform = RedisTransform {
-            x: transform.translation.x,
-            y: transform.translation.y,
-            z: transform.translation.z,
-        };
+    let Some(redis) = redis else {
+        return; // Redis not available, skip
+    };
 
-        if let Ok(json) = serde_json::to_string(&redis_transform) {
-            let key = format!("player:{}:transform", net_id.0);
-            // We ignore errors here to avoid spamming logs if redis is down for a moment
-            let _ = redis_manager.set_key(&key, &json);
+    for (transform, net_id, velocity) in query.iter() {
+        let pos = transform.translation;
+        let vel = velocity.map(|v| (v.x, v.y)).unwrap_or((0.0, 0.0));
+        
+        let key = format!("player:{}:pos", net_id.0);
+        let value = format!("{},{},{},{}", pos.x, pos.y, vel.0, vel.1);
+        
+        if let Err(e) = redis.set_key(&key, &value) {
+            eprintln!("Failed to sync player {} to Redis: {}", net_id.0, e);
         }
     }
 }

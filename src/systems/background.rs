@@ -25,6 +25,7 @@ pub fn spawn_clouds_system(
 ) {
     if cloud_spawn_timer.0.tick(time.delta()).just_finished() {
         let Some(window) = window_query.iter().next() else {
+            println!("⚠️ 無法獲取窗口，跳過雲彩生成");
             return;
         };
 
@@ -54,6 +55,8 @@ pub fn spawn_clouds_system(
             Transform::from_xyz(window.width() + 100.0, cloud_y, -5.0), // z = -5.0 確保在背景
             Cloud,
         ));
+        
+        println!("☁️ 生成雲彩 at x={}, y={}, scale={:.2}", window.width() + 100.0, cloud_y, scale_factor);
     }
 }
 
@@ -71,6 +74,29 @@ pub fn despawn_offscreen_clouds_system(
         if transform.translation.x < -200.0 {
             // Despawn when off-screen
             commands.entity(entity).despawn();
+            println!("🗑️ 清理離屏雲彩 at x={:.1}", transform.translation.x);
         }
+    }
+}
+
+/// 調試系統：定期報告雲彩數量
+pub fn debug_cloud_count(
+    cloud_query: Query<&Transform, With<Cloud>>,
+    time: Res<Time>,
+    mut last_report: Local<f32>,
+) {
+    let current_time = time.elapsed_secs();
+    
+    // 每 10 秒報告一次
+    if current_time - *last_report > 10.0 {
+        let count = cloud_query.iter().count();
+        println!("☁️ 當前雲彩數量: {}", count);
+        
+        // 顯示所有雲彩的位置
+        for (i, transform) in cloud_query.iter().enumerate() {
+            println!("  雲彩 #{}: x={:.1}, y={:.1}", i + 1, transform.translation.x, transform.translation.y);
+        }
+        
+        *last_report = current_time;
     }
 }
