@@ -28,12 +28,16 @@ rand = "0.8"
 futures-lite = "2.6.1"
 bincode = "1.3"
 futures-util = "0.3"
+ron = "0.8"
 
 # G-Engine Dependencies
 tokio-tungstenite = { version = "0.20", optional = true } # Server WebSocket
 gloo-net = { version = "0.4", optional = true } # Client WebSocket (WASM)
 redis = { version = "0.23", features = ["tokio-comp"], optional = true }
 lapin = { version = "2.3", optional = true } # RabbitMQ
+
+[dev-dependencies]
+proptest = "1.4"
 
 [features]
 default = ["client"]

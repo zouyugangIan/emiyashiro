@@ -14,7 +14,7 @@ use bevy::prelude::*;
 /// * `Jumping` - 跳跃动画
 /// * `Crouching` - 蹲下动画
 /// * `Landing` - 着陆动画
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Deserialize)]
 pub enum AnimationType {
     Idle,
     Running,

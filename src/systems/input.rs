@@ -66,27 +66,19 @@ pub fn update_game_input(
 ) {
     let current_time = time.elapsed_secs();
     
-    // 验证当前输入状态
+    // 验证当前输入状态（静默处理错误，避免日志污染）
     if let Err(error) = game_input.validate_input_state() {
         match error {
             InputValidationError::HistoryTooLong => {
-                println!("警告: 输入历史过长，正在清理");
                 game_input.cleanup_history(current_time, 1.0);
             }
             InputValidationError::InvalidTimestamp => {
-                println!("错误: 输入时间戳无效，重置输入历史");
                 game_input.input_history.clear();
             }
-            InputValidationError::StateConflict => {
-                println!("警告: 输入状态冲突");
-            }
             InputValidationError::InputTooFrequent => {
-                println!("警告: 输入频率过高，忽略此次输入");
                 return;
             }
-            InputValidationError::InvalidInputCombination => {
-                println!("警告: 无效的输入组合");
-            }
+            _ => {}
         }
     }
     
@@ -99,7 +91,6 @@ pub fn update_game_input(
     // 检查输入冲突（同时按下相反方向）
     if new_move_left && new_move_right {
         // 保持之前的状态，忽略冲突输入
-        println!("输入冲突: 同时按下左右移动键");
         return;
     }
     
@@ -138,18 +129,9 @@ pub fn update_game_input(
     game_input.cancel = new_cancel;
     game_input.pause = new_pause;
     
-    // 应用输入过滤
-    if let Err(error) = game_input.filter_input(current_time) {
-        match error {
-            InputValidationError::InputTooFrequent => {
-                println!("输入过于频繁，已过滤");
-                // 可以选择重置某些输入状态
-                game_input.action1 = false;
-                game_input.action2 = false;
-            }
-            _ => {}
-        }
-    }
+    // 注意：不再对持续输入进行过滤
+    // 输入过滤器会导致正常的游戏输入被错误地过滤
+    // 只在输入历史中记录变化，不对持续按住的按键进行限制
     
     // 定期清理输入历史（保留最近2秒）
     game_input.cleanup_history(current_time, 2.0);
@@ -438,14 +420,15 @@ impl InputFilter {
     }
 }
 
-/// 显示输入调试信息
+/// 显示输入调试信息（仅在需要调试时启用）
+#[allow(dead_code)]
 pub fn debug_input_system(
     game_input: Res<GameInput>,
     mut timer: Local<Timer>,
     time: Res<Time>,
 ) {
     if timer.duration().is_zero() {
-        timer.set_duration(std::time::Duration::from_secs(1));
+        timer.set_duration(std::time::Duration::from_secs(5)); // 降低频率到5秒
         timer.set_mode(bevy::time::TimerMode::Repeating);
     }
     timer.tick(time.delta());
@@ -482,19 +465,16 @@ pub fn input_health_check_system(
     if timer.just_finished() {
         let current_time = time.elapsed_secs();
         
-        // 验证输入状态
+        // 验证输入状态（静默修复）
         if let Err(error) = game_input.validate_input_state() {
             match error {
                 InputValidationError::HistoryTooLong => {
-                    println!("🔧 健康检查: 清理过长的输入历史");
                     game_input.cleanup_history(current_time, 2.0);
                 }
                 InputValidationError::InvalidTimestamp => {
-                    println!("🔧 健康检查: 修复无效时间戳");
                     game_input.input_history.clear();
                 }
                 InputValidationError::StateConflict => {
-                    println!("🔧 健康检查: 解决输入状态冲突");
                     // 重置冲突的输入
                     if game_input.move_left && game_input.move_right {
                         game_input.move_left = false;
@@ -508,12 +488,5 @@ pub fn input_health_check_system(
                 _ => {}
             }
         }
-        
-        // 输出健康状态报告
-        println!("📊 输入系统健康报告:");
-        println!("   输入历史长度: {}", game_input.input_history.len());
-        println!("   输入过滤器状态: 计数={}, 上次输入={:.2}s前", 
-        game_input.input_filter.input_count,
-        current_time - game_input.input_filter.last_input_time);
     }
 }

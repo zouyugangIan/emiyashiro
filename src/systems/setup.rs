@@ -10,11 +10,36 @@ use bevy::prelude::*;
 /// 加载游戏所需的所有资源，包括图片、音频、字体等。
 /// 创建 GameAssets 资源并插入到世界中供其他系统使用。
 pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // 加载所有UI封面图片
+    let cover_textures: Vec<Handle<Image>> = asset_paths::UI_COVER_IMAGES
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
+    
+    // 加载所有Shirou动画帧
+    let shirou_animation_frames: Vec<Handle<Image>> = asset_paths::SHIROU_ANIMATION_FRAMES
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
+    
+    // 加载所有Sakura动画帧
+    let sakura_animation_frames: Vec<Handle<Image>> = asset_paths::SAKURA_ANIMATION_FRAMES
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
+    
+    println!("📦 加载资源:");
+    println!("  - UI封面图片: {} 张", cover_textures.len());
+    println!("  - Shirou动画帧: {} 帧", shirou_animation_frames.len());
+    println!("  - Sakura动画帧: {} 帧", sakura_animation_frames.len());
+
     let game_assets = GameAssets {
-        cover_texture: asset_server.load(asset_paths::IMAGE_UI_COVER1),
-        cover2_texture: asset_server.load(asset_paths::IMAGE_UI_COVER2),
-        shirou1_texture: asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
-        shirou2_texture: asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE2),
+        cover_textures,
+        current_cover_index: 0,
+        shirou_animation_frames,
+        sakura_animation_frames,
+        current_shirou_frame: 0,
+        current_sakura_frame: 0,
         font: asset_server.load(asset_paths::FONT_FIRA_SANS),
 
         // 精灵表资源（可选）

@@ -118,7 +118,7 @@ pub struct LocalPlayer;
 
 pub fn handle_network_events(
     mut commands: Commands,
-    mut net: ResMut<NetworkResource>,
+    net: ResMut<NetworkResource>,
     mut entity_map: ResMut<NetworkEntityMap>,
     mut my_id: ResMut<MyNetworkId>,
     mut query: Query<(&mut Transform, Option<&mut InterpolationState>)>,
@@ -149,7 +149,7 @@ pub fn handle_network_events(
                     
                     if let Some(&entity) = entity_map.0.get(&player_state.id) {
                         // Update existing entity with interpolation
-                        if let Ok((mut transform, interp_state)) = query.get_mut(entity) {
+                        if let Ok((transform, interp_state)) = query.get_mut(entity) {
                             if let Some(mut interp) = interp_state {
                                 // Update interpolation target
                                 interp.start_pos = transform.translation;
@@ -171,7 +171,7 @@ pub fn handle_network_events(
                         println!("Spawning remote player {}", player_state.id);
                         let entity = commands.spawn((
                             Sprite {
-                                image: asset_server.load("images/characters/shirou/idle/shirou_idle1.png"),
+                                image: asset_server.load("images/characters/shirou_idle1.jpg"),
                                 ..default()
                             },
                             Transform::from_translation(player_state.position).with_scale(Vec3::splat(0.5)),
@@ -205,7 +205,7 @@ pub fn interpolate_positions(
 ) {
     let current_time = time.elapsed_secs();
     
-    for (entity, mut transform, mut interp) in query.iter_mut() {
+    for (entity, mut transform, interp) in query.iter_mut() {
         let elapsed = current_time - interp.start_time;
         let t = (elapsed / interp.duration).min(1.0);
         

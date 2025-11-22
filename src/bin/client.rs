@@ -48,6 +48,7 @@ fn main() {
         Startup,
         (
             setup_game_resources,
+            setup_animation_data,
             systems::save::load_game,
             setup_cloud_spawner,
             systems::network::setup_network,
@@ -96,8 +97,12 @@ fn main() {
     .add_systems(
         Update,
         (
-            // Core Game Systems - Physics removed (now server-authoritative)
-            // Only keep stats tracking and camera
+            // Core Game Systems - Local physics as fallback when server is not connected
+            player::player_movement,
+            player::player_jump,
+            player::player_crouch,
+            player::update_player_state,
+            player::physics_update_system,
             player::update_game_stats,
             camera::camera_follow,
             ui::update_game_hud,
@@ -171,7 +176,7 @@ fn main() {
             systems::input::update_game_input,
             systems::sprite_animation::update_sprite_animations,
             systems::sprite_animation::update_character_animation_state,
-            systems::input::debug_input_system,
+            // debug_input_system removed - enable only when debugging input issues
         )
             .run_if(in_state(GameState::Playing)),
     )
@@ -243,11 +248,31 @@ fn main() {
 
 /// Load Game Resources
 fn setup_game_resources(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // 加载所有UI封面图片
+    let cover_textures: Vec<Handle<Image>> = asset_paths::UI_COVER_IMAGES
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
+    
+    // 加载所有Shirou动画帧
+    let shirou_animation_frames: Vec<Handle<Image>> = asset_paths::SHIROU_ANIMATION_FRAMES
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
+    
+    // 加载所有Sakura动画帧
+    let sakura_animation_frames: Vec<Handle<Image>> = asset_paths::SAKURA_ANIMATION_FRAMES
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
+    
     let game_assets = GameAssets {
-        cover_texture: asset_server.load(asset_paths::IMAGE_UI_COVER1),
-        cover2_texture: asset_server.load(asset_paths::IMAGE_UI_COVER2),
-        shirou1_texture: asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
-        shirou2_texture: asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE1),
+        cover_textures,
+        current_cover_index: 0,
+        shirou_animation_frames,
+        sakura_animation_frames,
+        current_shirou_frame: 0,
+        current_sakura_frame: 0,
         font: asset_server.load(asset_paths::FONT_FIRA_SANS),
         shirou_spritesheet: None,
         sakura_spritesheet: None,
@@ -263,4 +288,10 @@ fn setup_game_resources(mut commands: Commands, asset_server: Res<AssetServer>) 
     };
 
     commands.insert_resource(game_assets);
+}
+
+/// Load Animation Data
+fn setup_animation_data(mut commands: Commands) {
+    let animation_data = systems::sprite_animation::load_animation_data();
+    commands.insert_resource(animation_data);
 }

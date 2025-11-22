@@ -128,34 +128,56 @@ pub fn update_frame_animations(
 
 /// 角色动画控制系统
 pub fn update_character_animations(
-    mut query: Query<(&mut FrameAnimation, &PlayerState, &CharacterAnimationState), With<Player>>,
+    mut query: Query<
+        (&mut FrameAnimation, &PlayerState, &mut CharacterAnimationState, Option<&Velocity>),
+        With<Player>
+    >,
     _asset_server: Res<AssetServer>,
 ) {
-    for (mut animation, player_state, anim_state) in query.iter_mut() {
+    for (mut animation, player_state, mut anim_state, velocity) in query.iter_mut() {
+        // 根據玩家狀態和速度決定目標動畫
         let target_animation = if !player_state.is_grounded {
             CharacterAnimationType::Jumping
         } else if player_state.is_crouching {
             CharacterAnimationType::Crouching
-        } else if player_state.is_grounded {
-            // 这里可以根据速度判断是否在跑步
-            CharacterAnimationType::Idle
+        } else if let Some(vel) = velocity {
+            // 根據速度判斷是否在跑步（速度閾值：50.0）
+            if vel.x.abs() > 50.0 {
+                CharacterAnimationType::Running
+            } else {
+                CharacterAnimationType::Idle
+            }
         } else {
             CharacterAnimationType::Idle
         };
 
         // 如果动画类型改变，切换动画帧
         if anim_state.current_animation != target_animation {
-            let new_frames = match target_animation {
-                CharacterAnimationType::Idle => &anim_state.idle_frames,
-                CharacterAnimationType::Running => &anim_state.running_frames,
-                CharacterAnimationType::Jumping => &anim_state.jumping_frames,
-                CharacterAnimationType::Crouching => &anim_state.crouching_frames,
+            // 先獲取幀數據，避免借用衝突
+            let new_frames = match &target_animation {
+                CharacterAnimationType::Idle => anim_state.idle_frames.clone(),
+                CharacterAnimationType::Running => anim_state.running_frames.clone(),
+                CharacterAnimationType::Jumping => anim_state.jumping_frames.clone(),
+                CharacterAnimationType::Crouching => anim_state.crouching_frames.clone(),
+            };
+            
+            let frame_duration = match target_animation {
+                CharacterAnimationType::Idle => 0.15,
+                CharacterAnimationType::Running => 0.1,
+                CharacterAnimationType::Jumping => 0.12,
+                CharacterAnimationType::Crouching => 0.15,
             };
 
             if !new_frames.is_empty() {
                 animation.frames = new_frames.clone();
+                animation.timer.set_duration(std::time::Duration::from_secs_f32(frame_duration));
                 animation.reset();
                 animation.play();
+                
+                println!("🎬 切換動畫: {:?} ({}幀)", target_animation, new_frames.len());
+                
+                // 最後更新狀態
+                anim_state.current_animation = target_animation;
             }
         }
     }
@@ -172,35 +194,55 @@ pub fn setup_player_animation(
         let (idle_frames, running_frames, jumping_frames, crouching_frames) =
             match character_selection.selected_character {
                 CharacterType::Shirou1 => {
-                    let idle = vec![
-                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
-                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE2),
-                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE3),
-                    ];
-                    let running = vec![
-                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE4),
-                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE5),
-                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE6),
-                        asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE7),
-                    ];
-                    let jumping = vec![asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE8)];
-                    let crouching = vec![asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE3)];
+                    // 使用優化後的 Shirou 動畫幀序列
+                    let idle: Vec<Handle<Image>> = asset_paths::SHIROU_IDLE_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
+                    let running: Vec<Handle<Image>> = asset_paths::SHIROU_RUNNING_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
+                    let jumping: Vec<Handle<Image>> = asset_paths::SHIROU_JUMPING_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
+                    let crouching: Vec<Handle<Image>> = asset_paths::SHIROU_CROUCHING_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
                     (idle, running, jumping, crouching)
                 }
                 CharacterType::Shirou2 => {
-                    let idle = vec![
-                        asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE1),
-                        asset_server.load(asset_paths::IMAGE_CHAR_TEACHER_IDLE),
-                    ];
-                    let running = idle.clone();
-                    let jumping = idle.clone();
-                    let crouching = idle.clone();
+                    // 使用優化後的 Sakura 動畫幀序列
+                    let idle: Vec<Handle<Image>> = asset_paths::SAKURA_IDLE_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
+                    let running: Vec<Handle<Image>> = asset_paths::SAKURA_RUNNING_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
+                    let jumping: Vec<Handle<Image>> = asset_paths::SAKURA_JUMPING_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
+                    let crouching: Vec<Handle<Image>> = asset_paths::SAKURA_CROUCHING_FRAMES
+                        .iter()
+                        .map(|path| asset_server.load(*path))
+                        .collect();
                     (idle, running, jumping, crouching)
                 }
             };
 
-        // 添加帧动画组件
-        let frame_animation = FrameAnimation::new(idle_frames.clone(), 0.3, true);
+        // 記錄幀數用於日誌
+        let idle_count = idle_frames.len();
+        let running_count = running_frames.len();
+        let jumping_count = jumping_frames.len();
+        let crouching_count = crouching_frames.len();
+
+        // 添加帧动画组件（調整幀率為 0.15 秒，讓動畫更流暢）
+        let frame_animation = FrameAnimation::new(idle_frames.clone(), 0.15, true);
 
         // 添加角色动画状态
         let char_anim_state = CharacterAnimationState {
@@ -216,21 +258,23 @@ pub fn setup_player_animation(
             .insert((frame_animation, char_anim_state));
 
         println!(
-            "🎭 为玩家添加动画组件: {:?}",
-            character_selection.selected_character
+            "🎭 为玩家添加动画组件: {:?} (待機: {}幀, 跑步: {}幀, 跳躍: {}幀, 蹲下: {}幀)",
+            character_selection.selected_character,
+            idle_count,
+            running_count,
+            jumping_count,
+            crouching_count
         );
     }
 }
 
 /// 创建动画背景系统
 pub fn setup_animated_background(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // 创建动态背景
-    let background_frames = vec![
-        asset_server.load(asset_paths::IMAGE_UI_COVER1),
-        asset_server.load(asset_paths::IMAGE_UI_COVER2),
-        asset_server.load(asset_paths::IMAGE_UI_COVER3),
-        asset_server.load(asset_paths::IMAGE_UI_COVER4),
-    ];
+    // 创建动态背景 - 使用所有封面图片
+    let background_frames: Vec<Handle<Image>> = asset_paths::UI_COVER_IMAGES
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
 
     let background_animation = FrameAnimation::new(background_frames.clone(), 2.0, true);
 

@@ -50,12 +50,24 @@ impl CharacterSelectButton {
 /// 封面图片1组件
 /// 
 /// 标识主菜单的第一张封面图片。
+/// 
+/// 此组件用于UI节点（Node + ImageNode），实现响应式布局。
+/// 封面图片使用绝对定位填充整个窗口（100% 宽度和高度）。
+/// 
+/// # 使用
+/// 与 `Node`, `ImageNode`, `BackgroundColor`, 和 `CoverFadeState` 组件配合使用。
 #[derive(Component, Debug)]
 pub struct CoverImage1;
 
 /// 封面图片2组件
 /// 
 /// 标识主菜单的第二张封面图片。
+/// 
+/// 此组件用于UI节点（Node + ImageNode），实现响应式布局。
+/// 封面图片使用绝对定位填充整个窗口（100% 宽度和高度）。
+/// 
+/// # 使用
+/// 与 `Node`, `ImageNode`, `BackgroundColor`, 和 `CoverFadeState` 组件配合使用。
 #[derive(Component, Debug)]
 pub struct CoverImage2;
 
@@ -63,16 +75,24 @@ pub struct CoverImage2;
 /// 
 /// 控制封面图片的渐变动画效果。
 /// 
+/// 此组件与 `BackgroundColor` 配合使用，通过修改 UI 节点的背景颜色透明度
+/// 来实现平滑的渐变动画效果。动画使用 smoothstep 缓动函数，
+/// 在 15 秒的周期内实现两张封面图片的互补渐变。
+/// 
 /// # 字段
 /// * `alpha` - 当前透明度 (0.0-1.0)
-/// * `fade_direction` - 渐变方向 (1.0 为淡入, -1.0 为淡出)
+/// * `fade_direction` - 渐变方向 (1.0 为第一张图片, -1.0 为第二张图片)
 /// 
 /// # 示例
 /// 
 /// ```rust
 /// use crate::components::CoverFadeState;
 /// 
-/// let fade_state = CoverFadeState::new(0.5, 1.0);
+/// // 第一张图片从完全不透明开始
+/// let fade_state_1 = CoverFadeState::default();
+/// 
+/// // 第二张图片从透明开始
+/// let fade_state_2 = CoverFadeState::new(0.0, -1.0);
 /// ```
 #[derive(Component, Debug, Clone)]
 pub struct CoverFadeState {

@@ -24,51 +24,55 @@ pub fn setup_menu(
         commands.spawn(Camera2d);
     }
 
-    // 如果资源已加载，创建封面背景渐变效果
-    if let Some(ref assets) = game_assets {
-        // 第一张封面图片 - 调整到游戏界面大小
-        commands.spawn((
-            Sprite {
-                image: assets.cover_texture.clone(),
-                custom_size: Some(Vec2::new(1024.0, 768.0)), // 匹配游戏窗口大小
-                ..default()
-            },
-            Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-            MenuUI,
-            CoverImage1,
-            CoverFadeState::default(),
-        ));
+    // 创建封面背景 - 即使资源未加载也创建占位符
+    // 第一张封面图片 - 使用UI节点实现响应式布局
+    let cover1_image = game_assets
+        .as_ref()
+        .map(|assets| assets.get_current_cover())
+        .unwrap_or_default();
+    
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            ..default()
+        },
+        ImageNode::new(cover1_image),
+        BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
+        ZIndex(0),
+        MenuUI,
+        CoverImage1,
+        CoverFadeState::default(),
+    ));
 
-        // 第二张封面图片 - 调整到游戏界面大小，从透明开始
-        commands.spawn((
-            Sprite {
-                image: assets.cover2_texture.clone(), // 使用正确的第二张封面
-                custom_size: Some(Vec2::new(1024.0, 768.0)), // 匹配游戏窗口大小
-                color: Color::srgba(1.0, 1.0, 1.0, 0.0), // 从透明开始
-                ..default()
-            },
-            Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)), // 稍微前置
-            MenuUI,
-            CoverImage2,
-            CoverFadeState {
-                alpha: 0.0,           // 从0.0开始
-                fade_direction: -1.0, // 负方向表示第二张图片
-            },
-        ));
+    // 第二张封面图片 - 使用UI节点实现响应式布局，从透明开始
+    let cover2_image = if let Some(ref assets) = game_assets {
+        let next_cover_index = (assets.current_cover_index + 1) % assets.cover_textures.len();
+        assets.cover_textures[next_cover_index].clone()
     } else {
-        // 创建简单的背景色
-        commands.spawn((
-            Sprite {
-                color: Color::srgb(0.1, 0.1, 0.2),
-                custom_size: Some(Vec2::new(1024.0, 768.0)),
-                ..default()
-            },
-            Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-            MenuUI,
-        ));
-    }
+        Handle::default()
+    };
+    
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            ..default()
+        },
+        ImageNode::new(cover2_image),
+        BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.0)), // 从透明开始
+        ZIndex(1),
+        MenuUI,
+        CoverImage2,
+        CoverFadeState {
+            alpha: 0.0,           // 从0.0开始
+            fade_direction: -1.0, // 负方向表示第二张图片
+        },
+    ));
 
-    // 创建UI根节点
+    // 创建UI根节点 - 确保在封面图片之上
     commands
         .spawn((
             Node {
@@ -77,8 +81,10 @@ pub fn setup_menu(
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
                 flex_direction: FlexDirection::Column,
+                position_type: PositionType::Absolute,
                 ..default()
             },
+            ZIndex(2), // 确保在封面图片之上
             MenuUI,
         ))
         .with_children(|parent| {
@@ -427,40 +433,85 @@ pub fn handle_character_select(
     }
 }
 
-/// 封面渐变动画系统 - 缓慢自然的渐变效果
+/// 封面渐变动画系统 - 优雅的淡入淡出效果
+/// 
+/// 实现原理：
+/// - 两张图片层叠显示，通过调整透明度实现淡入淡出
+/// - 当第一张图片完全淡出（alpha=0.1）时，切换其内容为下下张图片
+/// - 当第二张图片完全淡出时，切换其内容为下下张图片
+/// - 这样始终保持两张不同的图片在淡入淡出
 pub fn cover_fade_animation(
+    mut game_assets: Option<ResMut<GameAssets>>,
     mut cover_query: Query<
-        (&mut Sprite, &mut CoverFadeState),
+        (&mut BackgroundColor, &mut ImageNode, &mut CoverFadeState),
         Or<(With<CoverImage1>, With<CoverImage2>)>,
     >,
     time: Res<Time>,
+    mut initialized: Local<bool>,
 ) {
-    // 使用更长的循环时间，让渐变更缓慢
+    // 如果资源未加载，跳过
+    let Some(ref mut assets) = game_assets else {
+        return;
+    };
+
+    // 首次初始化时立即加载图片
+    if !*initialized {
+        for (mut background_color, mut image_node, fade_state) in cover_query.iter_mut() {
+            if fade_state.fade_direction > 0.0 {
+                // 第一张图片：当前封面，初始完全不透明
+                image_node.image = assets.get_current_cover();
+                background_color.0.set_alpha(0.9);
+            } else {
+                // 第二张图片：下一张封面，初始完全透明
+                let next_index = (assets.current_cover_index + 1) % assets.cover_textures.len();
+                image_node.image = assets.cover_textures[next_index].clone();
+                background_color.0.set_alpha(0.1);
+            }
+        }
+        *initialized = true;
+        println!("🖼️ 初始化封面图片: 当前={}, 下一张={} (共{}张)", 
+            assets.current_cover_index, 
+            (assets.current_cover_index + 1) % assets.cover_textures.len(),
+            assets.cover_textures.len()
+        );
+    }
+
     let elapsed_time = time.elapsed_secs();
-    let cycle_duration = 15.0; // 15秒一个完整循环，更慢更稳定
-    let cycle_progress = (elapsed_time % cycle_duration) / cycle_duration;
+    let cycle_duration = 5.0;
+    let fade_duration = 1.0;
+    
+    let time_in_cycle = elapsed_time % cycle_duration;
+    let current_cycle = (elapsed_time / cycle_duration).floor() as i32;
+    let last_cycle = ((elapsed_time - time.delta_secs()) / cycle_duration).floor() as i32;
+    
+    if current_cycle > last_cycle {
+        assets.next_cover();
+        println!("🖼️ 切换封面: {} (共{}张)", assets.current_cover_index, assets.cover_textures.len());
+    }
 
-    for (mut sprite, mut fade_state) in cover_query.iter_mut() {
-        // 使用更平滑的渐变函数
-        let base_alpha = (cycle_progress * 2.0 * std::f32::consts::PI).sin();
-
-        // 根据图片类型调整透明度
-        let final_alpha = if fade_state.fade_direction > 0.0 {
-            // 第一张图片：缓慢淡入淡出
-            (base_alpha + 1.0) * 0.5
+    let next_idx = (assets.current_cover_index + 1) % assets.cover_textures.len();
+    
+    for (mut background_color, mut image_node, mut fade_state) in cover_query.iter_mut() {
+        let is_cover1 = fade_state.fade_direction > 0.0;
+        
+        if is_cover1 {
+            image_node.image = assets.get_current_cover();
         } else {
-            // 第二张图片：与第一张相反
-            ((-base_alpha) + 1.0) * 0.5
+            image_node.image = assets.cover_textures[next_idx].clone();
+        }
+        
+        let alpha = if time_in_cycle < fade_duration {
+            let t = time_in_cycle / fade_duration;
+            if is_cover1 { t } else { 1.0 - t }
+        } else if time_in_cycle < cycle_duration - fade_duration {
+            if is_cover1 { 1.0 } else { 0.0 }
+        } else {
+            let t = (time_in_cycle - (cycle_duration - fade_duration)) / fade_duration;
+            if is_cover1 { 1.0 - t } else { t }
         };
 
-        // 使用更平滑的缓动函数，减少突兀感
-        let eased_alpha = final_alpha * final_alpha * (3.0 - 2.0 * final_alpha); // smoothstep函数
-
-        // 限制透明度变化范围，避免完全透明
-        let clamped_alpha = eased_alpha.clamp(0.1, 0.9);
-
-        sprite.color.set_alpha(clamped_alpha);
-        fade_state.alpha = clamped_alpha;
+        background_color.0.set_alpha(alpha);
+        fade_state.alpha = alpha;
     }
 }
 
