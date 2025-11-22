@@ -62,10 +62,16 @@ impl GameConfig {
 /// 游戏资源句柄
 #[derive(Resource)]
 pub struct GameAssets {
-    pub cover_texture: Handle<Image>,
-    pub cover2_texture: Handle<Image>,
-    pub shirou1_texture: Handle<Image>,
-    pub shirou2_texture: Handle<Image>,
+    // UI封面图片集合（用于轮换显示）
+    pub cover_textures: Vec<Handle<Image>>,
+    pub current_cover_index: usize,
+    
+    // 角色动画帧集合
+    pub shirou_animation_frames: Vec<Handle<Image>>,
+    pub sakura_animation_frames: Vec<Handle<Image>>,
+    pub current_shirou_frame: usize,
+    pub current_sakura_frame: usize,
+    
     pub font: Handle<Font>,
     // 精灵表资源
     pub shirou_spritesheet: Option<Handle<Image>>,
@@ -81,6 +87,41 @@ pub struct GameAssets {
     pub game_music: Handle<AudioSource>,
     pub game_whyifight_music: Handle<AudioSource>, // 第一首游戏音乐
     pub background_music: Handle<AudioSource>,
+}
+
+impl GameAssets {
+    /// 获取当前封面图片
+    pub fn get_current_cover(&self) -> Handle<Image> {
+        self.cover_textures[self.current_cover_index].clone()
+    }
+    
+    /// 切换到下一张封面
+    pub fn next_cover(&mut self) -> Handle<Image> {
+        self.current_cover_index = (self.current_cover_index + 1) % self.cover_textures.len();
+        self.get_current_cover()
+    }
+    
+    /// 获取当前Shirou动画帧
+    pub fn get_current_shirou_frame(&self) -> Handle<Image> {
+        self.shirou_animation_frames[self.current_shirou_frame].clone()
+    }
+    
+    /// 切换到下一个Shirou动画帧
+    pub fn next_shirou_frame(&mut self) -> Handle<Image> {
+        self.current_shirou_frame = (self.current_shirou_frame + 1) % self.shirou_animation_frames.len();
+        self.get_current_shirou_frame()
+    }
+    
+    /// 获取当前Sakura动画帧
+    pub fn get_current_sakura_frame(&self) -> Handle<Image> {
+        self.sakura_animation_frames[self.current_sakura_frame].clone()
+    }
+    
+    /// 切换到下一个Sakura动画帧
+    pub fn next_sakura_frame(&mut self) -> Handle<Image> {
+        self.current_sakura_frame = (self.current_sakura_frame + 1) % self.sakura_animation_frames.len();
+        self.get_current_sakura_frame()
+    }
 }
 
 /// 音效设置资源
@@ -378,12 +419,18 @@ impl PauseManager {
 }
 
 /// 音频状态管理器
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct AudioStateManager {
     pub music_playing: bool,
     pub music_volume: f32,
     pub music_position: f32,
     pub sfx_enabled: bool,
+}
+
+impl Default for AudioStateManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AudioStateManager {

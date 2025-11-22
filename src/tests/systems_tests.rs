@@ -2,7 +2,6 @@
 mod tests {
     use crate::{components::*, resources::*, states::*, systems::*};
     use bevy::prelude::*;
-    use std::collections::HashSet;
 
     fn create_test_app() -> App {
         let mut app = App::new();
@@ -240,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_file_operations() {
-        let mut save_manager = SaveFileManager::default();
+        let save_manager = SaveFileManager::default();
         
         // Test save directory path
         assert_eq!(save_manager.save_directory, "saves");

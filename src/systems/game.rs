@@ -24,6 +24,7 @@ pub fn setup_game(
     mut commands: Commands,
     mut character_selection: ResMut<CharacterSelection>,
     game_assets: Res<GameAssets>,
+    anim_data_map: Res<crate::components::animation_data::AnimationDataMap>,
     camera_query: Query<Entity, With<Camera>>,
     player_query: Query<Entity, With<Player>>,
     ground_query: Query<Entity, With<Ground>>,
@@ -54,8 +55,8 @@ pub fn setup_game(
     if player_query.is_empty() {
         // 根据选择的角色创建玩家
         let texture = match character_selection.selected_character {
-            CharacterType::Shirou1 => game_assets.shirou1_texture.clone(),
-            CharacterType::Shirou2 => game_assets.shirou2_texture.clone(),
+            CharacterType::Shirou1 => game_assets.get_current_shirou_frame(),
+            CharacterType::Shirou2 => game_assets.get_current_sakura_frame(),
         };
 
         println!(
@@ -64,8 +65,14 @@ pub fn setup_game(
         );
 
         // 创建带动画的角色
+        let character_name = match character_selection.selected_character {
+            CharacterType::Shirou1 => "shirou",
+            CharacterType::Shirou2 => "shirou",
+        };
+        
         let sprite_animation = crate::systems::sprite_animation::create_character_animation(
-            &character_selection.selected_character,
+            &anim_data_map,
+            character_name,
         );
 
         commands.spawn((

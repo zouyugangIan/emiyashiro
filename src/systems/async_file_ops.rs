@@ -105,7 +105,7 @@ pub async fn load_game_state_async(
 
 /// 异步扫描存档文件
 pub async fn scan_save_files_async(
-    save_directory: PathBuf,
+    #[allow(unused_variables)] save_directory: PathBuf,
 ) -> Result<Vec<SaveFileMetadata>, SaveSystemError> {
     #[cfg(feature = "server")]
     {

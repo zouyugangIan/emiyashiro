@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy::app::ScheduleRunnerPlugin;
 use std::time::Duration;
 use s__emiyashiro::protocol::{GamePacket, PlayerAction};
-use futures_lite::future;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::accept_async;
 use futures_util::{SinkExt, StreamExt};
@@ -19,14 +18,17 @@ async fn main() {
     // Channel for broadcasting packets from Bevy -> Network
     let (broadcast_tx, mut broadcast_rx) = mpsc::unbounded_channel::<GamePacket>();
 
-    // Initialize Database
-    let database = s__emiyashiro::database::Database::new().await.expect("Failed to connect to database");
-    let pool = database.pool.clone();
+    // Initialize Database (requires server feature)
+    #[cfg(feature = "server")]
+    {
+        let database = s__emiyashiro::database::Database::new().await.expect("Failed to connect to database");
+        let pool = database.pool.clone();
 
-    // Spawn Save Worker
-    tokio::spawn(async move {
-        s__emiyashiro::systems::save_worker::run_save_worker(pool).await;
-    });
+        // Spawn Save Worker
+        tokio::spawn(async move {
+            s__emiyashiro::systems::save_worker::run_save_worker(pool).await;
+        });
+    }
 
     // Shared state for connected clients (id -> sender)
     let clients = Arc::new(Mutex::new(HashMap::new()));
@@ -75,6 +77,9 @@ async fn main() {
 
     // Server runs headless
     app.add_plugins(MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))));
+    
+    // Add Redis plugin (requires server feature)
+    #[cfg(feature = "server")]
     app.add_plugins(s__emiyashiro::database::redis::RedisPlugin);
     
     // Insert resources to communicate with network
@@ -88,11 +93,22 @@ async fn main() {
     
     app.add_systems(Startup, setup_bots);
 
+    // Add update systems
+    #[cfg(feature = "server")]
     app.add_systems(Update, (
         increment_tick,
         process_network_events, 
         broadcast_snapshot_system, 
         s__emiyashiro::systems::sync_redis::sync_transform_to_redis, 
+        server_physics_system,
+        s__emiyashiro::systems::ai::bot_control_system
+    ));
+    
+    #[cfg(not(feature = "server"))]
+    app.add_systems(Update, (
+        increment_tick,
+        process_network_events, 
+        broadcast_snapshot_system, 
         server_physics_system,
         s__emiyashiro::systems::ai::bot_control_system
     ));
@@ -118,7 +134,7 @@ async fn handle_connection(
     }
 
     // Send Welcome
-    let welcome = GamePacket::Welcome { id: client_id, message: "Connected to G-Engine Server".to_string() };
+    let _welcome = GamePacket::Welcome { id: client_id, message: "Connected to G-Engine Server".to_string() };
     let _ = action_tx.send((client_id, PlayerAction::Ping(0))); // Simulate initial ping
 
     while let Some(msg) = rx.next().await {

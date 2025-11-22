@@ -3,6 +3,7 @@
 //! 本模块包含游戏中所有的组件定义，按功能分类组织。
 
 pub mod animation;
+pub mod animation_data;
 pub mod audio;
 pub mod physics;
 pub mod player;
@@ -12,6 +13,7 @@ pub mod ai;
 
 // 重新导出所有组件，保持向后兼容性
 pub use animation::*;
+pub use animation_data::*;
 pub use audio::*;
 pub use physics::*;
 pub use player::*;

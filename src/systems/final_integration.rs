@@ -137,11 +137,21 @@ impl PerformanceMonitor {
 }
 
 /// 性能监控系统
-pub fn monitor_performance(mut monitor: ResMut<PerformanceMonitor>, time: Res<Time>) {
+pub fn monitor_performance(
+    mut monitor: ResMut<PerformanceMonitor>,
+    time: Res<Time>,
+    mut timer: Local<Timer>,
+) {
     monitor.update_frame_time(time.delta_secs());
 
-    // 如果性能不佳，记录警告
-    if !monitor.is_performance_good() {
+    // 初始化计时器（每5秒检查一次）
+    if timer.duration().is_zero() {
+        *timer = Timer::from_seconds(5.0, TimerMode::Repeating);
+    }
+    timer.tick(time.delta());
+
+    // 只在计时器触发时记录警告
+    if timer.just_finished() && !monitor.is_performance_good() {
         warn!(
             "Performance warning: FPS: {:.1}, Save time: {:.2}s",
             monitor.get_fps(),
@@ -220,7 +230,20 @@ pub fn auto_save_system(
 pub fn system_health_check(
     error_recovery: Res<ErrorRecoveryManager>,
     performance: Res<PerformanceMonitor>,
+    mut timer: Local<Timer>,
+    time: Res<Time>,
 ) {
+    // 初始化计时器（每30秒检查一次）
+    if timer.duration().is_zero() {
+        *timer = Timer::from_seconds(30.0, TimerMode::Repeating);
+    }
+    timer.tick(time.delta());
+
+    // 只在计时器触发时输出健康状态
+    if !timer.just_finished() {
+        return;
+    }
+
     let stats = error_recovery.get_error_stats();
 
     // 检查错误率
@@ -233,7 +256,7 @@ pub fn system_health_check(
         warn!("Performance issues detected");
     }
 
-    // 定期输出健康状态
+    // 定期输出健康状态（降低频率）
     if stats.total_errors == 0 && performance.is_performance_good() {
         info!("System health: Good (FPS: {:.1})", performance.get_fps());
     }

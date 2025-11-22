@@ -96,4 +96,7 @@ cargo run --profile dev
 **注意**: 本项目仅用于学习和技术演示目的，与 TYPE-MOON 公司无关。
 
 ## 跑酷动画资源
-https://www.bilibili.com/video/BV1YztTeqENR?spm_id_from=333.788.videopod.sections&vd_source=4de32bc000c4310551cc68e6c62b69f9
+<https://www.bilibili.com/video/BV1YztTeqENR?spm_id_from=333.788.videopod.sections&vd_source=4de32bc000c4310551cc68e6c62b69f9>
+
+
+我的游戏是一个根据卫宫士郎的天之杯为原型的跑酷游戏，卫宫士郎作为1p主角，樱作为2p主角。基于这一设定，采用nanobanana pro生成相关的asset，然后完善我的精灵动画部分的功能。

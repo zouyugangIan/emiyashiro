@@ -77,10 +77,10 @@ pub async fn initialize_database() -> Result<DatabaseService, Box<dyn std::error
 
 /// 保存玩家记录到数据库
 pub fn save_player_to_database(
-    game_stats: Res<GameStats>,
-    character_selection: Res<CharacterSelection>,
+    _game_stats: Res<GameStats>,
+    _character_selection: Res<CharacterSelection>,
     database_service: ResMut<DatabaseService>,
-    mut current_session: ResMut<CurrentSession>,
+    _current_session: ResMut<CurrentSession>,
 ) {
     if !database_service.is_connected {
         return;
@@ -116,6 +116,7 @@ pub fn get_leaderboard(database_service: Res<DatabaseService>) -> Vec<PlayerReco
 }
 
 /// 数据库统计系统
+#[cfg(feature = "server")]
 pub fn database_stats_system(
     database_service: Res<DatabaseService>,
     mut timer: Local<Timer>,
@@ -125,21 +126,30 @@ pub fn database_stats_system(
         return;
     }
 
-    #[cfg(feature = "server")]
-    {
-        if timer.duration().is_zero() {
-            timer.set_duration(std::time::Duration::from_secs(60));
-            timer.set_mode(bevy::time::TimerMode::Repeating);
-        }
-        timer.tick(time.delta());
+    if timer.duration().is_zero() {
+        timer.set_duration(std::time::Duration::from_secs(60));
+        timer.set_mode(bevy::time::TimerMode::Repeating);
+    }
+    timer.tick(time.delta());
 
-        if timer.just_finished() {
-            println!("📊 [Server] 数据库统计...");
-        }
+    if timer.just_finished() {
+        println!("📊 [Server] 数据库统计...");
+    }
+}
+
+#[cfg(not(feature = "server"))]
+pub fn database_stats_system(
+    database_service: Res<DatabaseService>,
+    mut _timer: Local<Timer>,
+    _time: Res<Time>,
+) {
+    if !database_service.is_connected {
+        return;
     }
 }
 
 /// 清理旧的游戏会话数据
+#[cfg(feature = "server")]
 pub fn cleanup_old_sessions(
     database_service: Res<DatabaseService>,
     mut timer: Local<Timer>,
@@ -149,16 +159,24 @@ pub fn cleanup_old_sessions(
         return;
     }
 
-    #[cfg(feature = "server")]
-    {
-        if timer.duration().is_zero() {
-            timer.set_duration(std::time::Duration::from_secs(24 * 60 * 60));
-            timer.set_mode(bevy::time::TimerMode::Repeating);
-        }
-        timer.tick(time.delta());
+    if timer.duration().is_zero() {
+        timer.set_duration(std::time::Duration::from_secs(24 * 60 * 60));
+        timer.set_mode(bevy::time::TimerMode::Repeating);
+    }
+    timer.tick(time.delta());
 
-        if timer.just_finished() {
-            println!("🧹 [Server] 清理旧数据...");
-        }
+    if timer.just_finished() {
+        println!("🧹 [Server] 清理旧数据...");
+    }
+}
+
+#[cfg(not(feature = "server"))]
+pub fn cleanup_old_sessions(
+    database_service: Res<DatabaseService>,
+    mut _timer: Local<Timer>,
+    _time: Res<Time>,
+) {
+    if !database_service.is_connected {
+        return;
     }
 }
