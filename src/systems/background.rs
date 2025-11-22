@@ -18,43 +18,42 @@ pub fn setup_cloud_spawner(mut commands: Commands) {
 
 pub fn spawn_clouds_system(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut cloud_spawn_timer: ResMut<CloudSpawnTimer>,
+    asset_server: Res<AssetServer>,
 ) {
     if cloud_spawn_timer.0.tick(time.delta()).just_finished() {
-        let window = window_query.single().unwrap();
+        let Some(window) = window_query.iter().next() else {
+            return;
+        };
 
         // HACK: Using time for pseudo-randomness to avoid rand dependency issue.
         let pseudo_random = (time.elapsed_secs() * 100.0) as u32;
         let cloud_y =
             (pseudo_random % (window.height() * 0.4) as u32) as f32 + window.height() * 0.5;
 
-        commands
-            .spawn((
-                Transform::from_xyz(window.width() + 100.0, cloud_y, 0.0),
-                Cloud,
-            ))
-            .with_children(|parent| {
-                // Simple cloud shape made of circles
-                parent.spawn((
-                    Mesh2d(meshes.add(Circle::new(30.0))),
-                    MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
-                    Transform::from_xyz(0.0, 0.0, 0.0),
-                ));
-                parent.spawn((
-                    Mesh2d(meshes.add(Circle::new(25.0))),
-                    MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
-                    Transform::from_xyz(-20.0, -10.0, 0.0),
-                ));
-                parent.spawn((
-                    Mesh2d(meshes.add(Circle::new(25.0))),
-                    MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
-                    Transform::from_xyz(20.0, -10.0, 0.0),
-                ));
-            });
+        // 隨機選擇雲彩圖片（使用偽隨機）
+        let cloud_images = [
+            "images/cloud/cloud01.png",
+            "images/cloud/cloud02.png",
+        ];
+        let cloud_index = (pseudo_random % cloud_images.len() as u32) as usize;
+        let cloud_image = asset_server.load(cloud_images[cloud_index]);
+
+        // 隨機縮放（0.8 到 1.2 倍）
+        let scale_factor = 0.8 + ((pseudo_random % 40) as f32 / 100.0);
+
+        // 使用真實的雲彩圖片
+        commands.spawn((
+            Sprite {
+                image: cloud_image,
+                custom_size: Some(Vec2::new(150.0 * scale_factor, 100.0 * scale_factor)),
+                ..default()
+            },
+            Transform::from_xyz(window.width() + 100.0, cloud_y, -5.0), // z = -5.0 確保在背景
+            Cloud,
+        ));
     }
 }
 

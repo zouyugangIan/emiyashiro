@@ -51,16 +51,16 @@ fn main() {
             setup_animation_data,
             systems::save::load_game,
             setup_cloud_spawner,
-            systems::network::setup_network,
+            // systems::network::setup_network, // 暫時禁用網絡系統進行測試
         ),
     )
-    .add_systems(
-        Update,
-        (
-            systems::network::handle_network_events,
-            systems::network::send_ping_system,
-        ),
-    )
+    // .add_systems(
+    //     Update,
+    //     (
+    //         systems::network::handle_network_events,
+    //         systems::network::send_ping_system,
+    //     ),
+    // )
     .add_systems(OnEnter(GameState::Menu), menu::setup_menu)
     .add_systems(
         Update,
@@ -106,9 +106,9 @@ fn main() {
             player::update_game_stats,
             camera::camera_follow,
             ui::update_game_hud,
-            // Network systems
-            network::handle_network_events,
-            network::interpolate_positions,
+            // Network systems (暫時禁用)
+            // network::handle_network_events,
+            // network::interpolate_positions,
         )
             .run_if(in_state(GameState::Playing)),
     )
