@@ -1,0 +1,33 @@
+// assets/animations/hf_shirou.ron
+{
+    Idle: (
+        // Layout 4x4: Row 0 (0-3)
+        frames: [0, 1, 2, 3],
+        frame_duration: 0.15,
+        looping: true,
+    ),
+    Running: (
+        // Layout 5x4: Row 1 (5-9)
+        frames: [5, 6, 7, 8, 9],
+        frame_duration: 0.1,
+        looping: true,
+    ),
+    Jumping: (
+        // Layout 4x4: Row 2 (8-10)
+        frames: [8, 9, 10],
+        frame_duration: 0.12,
+        looping: false,
+    ),
+    Crouching: (
+        // Layout 4x4: Row 2 (11)
+        frames: [11],
+        frame_duration: 0.2,
+        looping: true,
+    ),
+    Landing: (
+        // Layout 4x4: Row 2 (11, 0)
+        frames: [11, 0],
+        frame_duration: 0.1,
+        looping: false,
+    )
+}

@@ -43,44 +43,36 @@ pub const IMAGE_CHAR_SHIROU_IDLE9: &str = "images/characters/shirou_idle9.png";
 pub const IMAGE_CHAR_SHIROU_IDLE10: &str = "images/characters/shirou_idle10.png";
 pub const IMAGE_CHAR_SHIROU_IDLE11: &str = "images/characters/shirou_idle11.png";
 
-// Shirou 待機動畫幀（使用乒乓循環製造流暢效果）
+// HF Shirou Assets (Timestamped from generation)
+// Note: We are replacing "Normal Shirou" with "Heaven's Feel Shirou" for this implementation
+pub const IMAGE_HF_SHIROU_IDLE: &str = "images/characters/hf_idle.png";
+pub const IMAGE_HF_SHIROU_RUN: &str = "images/characters/hf_run.png";
+pub const IMAGE_HF_SHIROU_JUMP: &str = "images/characters/hf_jump.png";
+pub const IMAGE_HF_SHIROU_CROUCH: &str = "images/characters/hf_crouch.png";
+
+// Shirou 待機動畫幀
 pub const SHIROU_IDLE_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE1,
-    IMAGE_CHAR_SHIROU_IDLE2,
-    IMAGE_CHAR_SHIROU_IDLE3,
-    IMAGE_CHAR_SHIROU_IDLE2,  // 反向回到中間幀
-    IMAGE_CHAR_SHIROU_IDLE1,  // 形成循環
+    IMAGE_HF_SHIROU_IDLE,
 ];
 
-// Shirou 跑步動畫幀（使用重複幀延長動作）
+// Shirou 跑步動畫幀
 pub const SHIROU_RUNNING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE4,
-    IMAGE_CHAR_SHIROU_IDLE5,
-    IMAGE_CHAR_SHIROU_IDLE6,
-    IMAGE_CHAR_SHIROU_IDLE7,
-    IMAGE_CHAR_SHIROU_IDLE6,  // 重複關鍵幀
-    IMAGE_CHAR_SHIROU_IDLE5,  // 反向循環
+    IMAGE_HF_SHIROU_RUN,
 ];
 
 // Shirou 跳躍動畫幀
 pub const SHIROU_JUMPING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE8,
-    IMAGE_CHAR_SHIROU_IDLE9,
-    IMAGE_CHAR_SHIROU_IDLE10,
+    IMAGE_HF_SHIROU_JUMP,
 ];
 
 // Shirou 蹲下動畫幀
 pub const SHIROU_CROUCHING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE10,
-    IMAGE_CHAR_SHIROU_IDLE11,
+    IMAGE_HF_SHIROU_CROUCH,
 ];
 
 // Shirou所有动画帧的数组（向後兼容）
 pub const SHIROU_ANIMATION_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE1, IMAGE_CHAR_SHIROU_IDLE2, IMAGE_CHAR_SHIROU_IDLE3,
-    IMAGE_CHAR_SHIROU_IDLE4, IMAGE_CHAR_SHIROU_IDLE5, IMAGE_CHAR_SHIROU_IDLE6,
-    IMAGE_CHAR_SHIROU_IDLE7, IMAGE_CHAR_SHIROU_IDLE8, IMAGE_CHAR_SHIROU_IDLE9,
-    IMAGE_CHAR_SHIROU_IDLE10, IMAGE_CHAR_SHIROU_IDLE11,
+    IMAGE_HF_SHIROU_IDLE, IMAGE_HF_SHIROU_RUN, IMAGE_HF_SHIROU_JUMP, IMAGE_HF_SHIROU_CROUCH,
 ];
 
 // CHARACTER ASSETS - SAKURA (2P角色精灵动画)
@@ -149,6 +141,7 @@ pub const IMAGE_CHAR_TEACHER_IDLE: &str = "images/characters/teacher_idle02.jpg"
 
 pub const IMAGE_CHAR_SHIROU_SPRITESHEET: &str = "images/characters/shirou_spritesheet.png";
 pub const IMAGE_CHAR_SAKURA_SPRITESHEET: &str = "images/characters/sakura_spritesheet.png";
+pub const IMAGE_HF_SHIROU_SPRITESHEET: &str = "images/characters/hf_shirou_spritesheet_final_v2_1767279221195.png";
 
 // CLOUD ASSETS (背景雲彩圖片)
 pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud01.png";

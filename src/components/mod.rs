@@ -13,6 +13,8 @@ pub mod player;
 pub mod projectile;
 pub mod ui;
 pub mod ai;
+pub mod health;
+pub mod shirou;
 
 // 重新导出所有组件，保持向后兼容性
 pub use animation::*;
@@ -24,3 +26,5 @@ pub use physics::*;
 pub use player::*;
 pub use projectile::*;
 pub use ui::*;
+pub use health::*;
+pub use shirou::*;
