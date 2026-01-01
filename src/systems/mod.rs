@@ -12,6 +12,8 @@ pub mod setup;
 // 玩家相关系统
 pub mod input;
 pub mod player;
+pub mod shirou;
+
 
 // 渲染和视觉系统
 pub mod animation;

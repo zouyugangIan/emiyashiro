@@ -10,33 +10,67 @@ pub fn player_shoot_projectile(
     player_query: Query<&Transform, With<Player>>,
     mut cooldown: Local<f32>,
     time: Res<Time>,
+    shroud_query: Query<&ShroudState, With<Player>>,
 ) {
     *cooldown -= time.delta_secs();
     
-    // J 鍵發射法波
+    // J 鍵發射法波 / 攻击
     if keyboard.just_pressed(KeyCode::KeyJ) && *cooldown <= 0.0 {
         if let Some(player_transform) = player_query.iter().next() {
-            *cooldown = 0.5; // 0.5 秒冷卻
             
-            // 在玩家前方生成法波
+            // 检查圣骸布状态
+            let is_shroud_released = shroud_query.iter().next().map(|s| s.is_released).unwrap_or(false);
+            
+            // 基础属性
+            let (proj_type, damage, speed, lifetime, size, color, cd) = if is_shroud_released {
+                // Overedge Mode
+                (
+                    ProjectileType::Overedge,
+                    10,             // 高伤害
+                    400.0,          // 快速度
+                    0.5,            // 短射程 (近战巨剑)
+                    Vec2::new(80.0, 60.0), // 巨大判定
+                    Color::srgb(1.0, 0.0, 0.0), // 红色剑气
+                    0.8             // 较长硬直
+                )
+            } else {
+                // Normal Mode
+                (
+                    ProjectileType::MagicWave,
+                    1,
+                    300.0,
+                    3.0,
+                    Vec2::new(20.0, 10.0),
+                    Color::srgb(0.3, 0.6, 1.0),
+                    0.3             // 快速连发
+                )
+            };
+
+            *cooldown = cd; 
+            
+            // 在玩家前方生成
             let projectile_x = player_transform.translation.x + 50.0;
             let projectile_y = player_transform.translation.y;
             
             commands.spawn((
                 Sprite {
-                    color: Color::srgb(0.3, 0.6, 1.0), // 藍色法波
-                    custom_size: Some(Vec2::new(20.0, 10.0)),
+                    color, 
+                    custom_size: Some(size),
                     ..default()
                 },
                 Transform::from_xyz(projectile_x, projectile_y, 2.0),
                 Projectile,
-                ProjectileType::MagicWave,
-                ProjectileData::new(1, 300.0, 3.0), // 1 點傷害，300 速度，3 秒存活
-                Velocity { x: 300.0, y: 0.0 },
-                crate::systems::collision::CollisionBox::new(Vec2::new(20.0, 10.0)),
+                proj_type,
+                ProjectileData::new(damage, speed, lifetime), 
+                Velocity { x: speed, y: 0.0 },
+                crate::systems::collision::CollisionBox::new(size),
             ));
             
-            println!("✨ 發射法波！");
+            if is_shroud_released {
+                println!("⚔️ OVEREDGE!! (Damage: {})", damage);
+            } else {
+                println!("✨ 投影攻击！ (Damage: {})", damage);
+            }
         }
     }
 }

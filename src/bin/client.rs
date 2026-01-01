@@ -108,6 +108,9 @@ fn main() {
             player::update_game_stats,
             camera::camera_follow,
             ui::update_game_hud,
+            // Shirou Mechanics
+            systems::shirou::handle_shroud_input,
+            systems::shirou::shroud_health_drain,
         )
             .run_if(in_state(GameState::Playing)),
     )
@@ -282,7 +285,11 @@ fn main() {
 }
 
 /// Load Game Resources
-fn setup_game_resources(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_game_resources(
+    mut commands: Commands, 
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+) {
     // 加载所有UI封面图片
     let cover_textures: Vec<Handle<Image>> = asset_paths::UI_COVER_IMAGES
         .iter()
@@ -312,6 +319,7 @@ fn setup_game_resources(mut commands: Commands, asset_server: Res<AssetServer>) 
         shirou_spritesheet: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
+        shirou_atlas_run: None,
         sakura_atlas: None,
         jump_sound: asset_server.load(asset_paths::SOUND_JUMP),
         land_sound: asset_server.load(asset_paths::SOUND_LAND),
@@ -322,7 +330,25 @@ fn setup_game_resources(mut commands: Commands, asset_server: Res<AssetServer>) 
         background_music: asset_server.load(asset_paths::SOUND_BACKGROUND_MUSIC),
     };
 
-    commands.insert_resource(game_assets);
+    // Load HF Shirou Atlas
+    // Layout 1: 4x4 Grid (Standard) - for Idle, Jump, Attack
+    // Width 1024 / 4 = 256. Height 1024 / 4 = 256.
+    let texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_SPRITESHEET);
+    let layout_4x4 = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 4, None, None);
+    let layout_4x4_handle = texture_atlases.add(layout_4x4);
+
+    // Layout 2: 5x4 Grid (Run) - for Run animation (Row 1 has 5 frames)
+    // Width ~204. Height 256.
+    let layout_5x4 = TextureAtlasLayout::from_grid(UVec2::new(204, 256), 5, 4, None, None);
+    let layout_5x4_handle = texture_atlases.add(layout_5x4);
+    
+    // Assign to assets
+    let mut assets = game_assets;
+    assets.shirou_spritesheet = Some(texture_handle);
+    assets.shirou_atlas = Some(layout_4x4_handle);
+    assets.shirou_atlas_run = Some(layout_5x4_handle);
+
+    commands.insert_resource(assets);
 }
 
 /// Load Animation Data

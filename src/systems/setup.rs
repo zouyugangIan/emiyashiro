@@ -46,6 +46,7 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         shirou_spritesheet: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
+        shirou_atlas_run: None,
         sakura_atlas: None,
 
         // 音效资源

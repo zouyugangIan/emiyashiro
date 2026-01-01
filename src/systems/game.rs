@@ -66,32 +66,60 @@ pub fn setup_game(
 
         // 创建带动画的角色
         let character_name = match character_selection.selected_character {
-            CharacterType::Shirou1 => "shirou",
-            CharacterType::Shirou2 => "shirou",
+            CharacterType::Shirou1 => "hf_shirou",
+            CharacterType::Shirou2 => "shirou", // Sakura fallback to old shiro config or keep as is?
         };
         
-        let sprite_animation = crate::systems::sprite_animation::create_character_animation(
-            &anim_data_map,
-            character_name,
-        );
-
-        commands.spawn((
-            Sprite::from_image(texture),
+        // Initialize player components (Common)
+        let player_common = (
             Transform::from_translation(GameConfig::PLAYER_START_POS)
-                .with_scale(Vec3::new(0.2, 0.2, 1.0)), // 缩放图片
+                .with_scale(Vec3::new(0.4, 0.4, 1.0)), 
             Player,
             Velocity { x: 0.0, y: 0.0 },
             PlayerState::default(),
-            sprite_animation,
             crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
-        ));
+            Health::default(),
+            ShroudState::default(),
+        );
 
-        println!("🗡️ Shirou Emiya enters the battle!");
-        println!("Controls:");
-        println!("  A/D or ←/→ : Move left/right");
-        println!("  W or ↑     : Jump");
-        println!("  S or ↓     : Crouch");
-        println!("  ESC        : Pause game");
+        // Check for TextureAtlas (HF Shirou 4x4)
+        if let Some(atlas_layout) = &game_assets.shirou_atlas {
+            if character_selection.selected_character == CharacterType::Shirou1 {
+                if let Some(texture) = &game_assets.shirou_spritesheet {
+                    // Create SpriteAnimation component for Atlas system
+                    let anim_component = crate::systems::sprite_animation::create_character_animation(
+                        &anim_data_map, 
+                        "hf_shirou" // We need to ensure there is data for this, or fallback
+                    );
+
+                    commands.spawn((
+                        Sprite {
+                            image: texture.clone(),
+                            custom_size: Some(Vec2::new(170.0, 256.0) * 0.5), 
+                            texture_atlas: Some(TextureAtlas {
+                                layout: atlas_layout.clone(),
+                                index: 0,
+                            }),
+                            ..default()
+                        },
+                        player_common,
+                        anim_component, // Using SpriteAnimation (Atlas system)
+                    ));
+                    
+                    println!("🗡️ HF Shirou Spawned (Atlas Mode 4x4)!");
+                    // Print controls...
+                    return;
+                }
+            }
+        }
+
+        // Fallback: Frame Mode
+        commands.spawn((
+            Sprite::from_image(texture),
+            player_common,
+        ));
+        
+        println!("🗡️ Shirou Spawned (Frame Mode Fallback)!");
     } else {
         println!("Player already exists, continuing game");
     }

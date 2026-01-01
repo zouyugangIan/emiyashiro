@@ -11,6 +11,7 @@ pub struct Projectile;
 pub enum ProjectileType {
     MagicWave,  // 法波
     Fireball,   // 火球
+    Overedge,   // 鹤翼三连·Overedge
 }
 
 /// 投射物數據
