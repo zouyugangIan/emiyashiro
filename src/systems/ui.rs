@@ -891,18 +891,26 @@ pub fn handle_save_dialog_interactions(
 
     if should_save {
         if let Some(state) = &pause_manager.preserved_state {
-            let save_name = if text_input_state.current_text.is_empty() {
+            let raw_save_name = if text_input_state.current_text.is_empty() {
                 SaveLoadText::DEFAULT_SAVE_NAME.to_string()
             } else {
                 text_input_state.current_text.clone()
             };
 
-            println!("💾 Firing StartSaveGame event with name: '{}'", save_name);
-            ev_save.write(StartSaveGame {
-                save_name,
-                state: state.clone(),
-            });
-            next_state.set(GameState::Paused);
+            let validator = crate::systems::text_input::InputValidator::new();
+            match validator.validate_save_name(&raw_save_name) {
+                Ok(save_name) => {
+                    println!("💾 Firing StartSaveGame event with name: '{}'", save_name);
+                    ev_save.write(StartSaveGame {
+                        save_name,
+                        state: state.clone(),
+                    });
+                    next_state.set(GameState::Paused);
+                }
+                Err(error) => {
+                    println!("❌ Invalid save name: {}", error);
+                }
+            }
         } else {
             println!("❌ No game state to save! PauseManager preserved_state is None");
             next_state.set(GameState::Paused);

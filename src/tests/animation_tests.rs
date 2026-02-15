@@ -1,116 +1,72 @@
-//! 角色動畫系統測試
-//!
-//! 測試角色動畫幀的配置和訪問接口
+//! 角色动画系统测试（数据驱动版本）
 
 #[cfg(test)]
 mod tests {
-    use crate::asset_paths;
+    use crate::components::{
+        animation::AnimationType,
+        animation_data::{CharacterAnimationData, PlaybackMode},
+    };
+    use crate::systems::sprite_animation::frame_count_guideline;
+    use std::fs;
 
-    #[test]
-    fn test_shirou_idle_frames_not_empty() {
-        // 驗證 Shirou 待機動畫幀不為空
-        assert!(!asset_paths::SHIROU_IDLE_FRAMES.is_empty(), "Shirou 待機動畫幀不應為空");
-        println!("✅ Shirou 待機動畫幀數: {}", asset_paths::SHIROU_IDLE_FRAMES.len());
+    fn load_profile(file_name: &str) -> CharacterAnimationData {
+        let path = format!("assets/animations/{}", file_name);
+        let content = fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("Failed to read '{}': {}", path, error));
+        ron::from_str(&content)
+            .unwrap_or_else(|error| panic!("Failed to parse '{}': {}", path, error))
     }
 
     #[test]
-    fn test_shirou_running_frames_not_empty() {
-        // 驗證 Shirou 跑步動畫幀不為空
-        assert!(!asset_paths::SHIROU_RUNNING_FRAMES.is_empty(), "Shirou 跑步動畫幀不應為空");
-        println!("✅ Shirou 跑步動畫幀數: {}", asset_paths::SHIROU_RUNNING_FRAMES.len());
+    fn test_legacy_frame_arrays_still_available() {
+        assert!(!crate::asset_paths::SHIROU_ANIMATION_FRAMES.is_empty());
+        assert!(!crate::asset_paths::SAKURA_ANIMATION_FRAMES.is_empty());
     }
 
     #[test]
-    fn test_shirou_jumping_frames_not_empty() {
-        // 驗證 Shirou 跳躍動畫幀不為空
-        assert!(!asset_paths::SHIROU_JUMPING_FRAMES.is_empty(), "Shirou 跳躍動畫幀不應為空");
-        println!("✅ Shirou 跳躍動畫幀數: {}", asset_paths::SHIROU_JUMPING_FRAMES.len());
+    fn test_animation_profiles_can_parse() {
+        let _ = load_profile("hf_shirou.ron");
+        let _ = load_profile("shirou.ron");
+        let _ = load_profile("sakura.ron");
     }
 
     #[test]
-    fn test_sakura_idle_frames_not_empty() {
-        // 驗證 Sakura 待機動畫幀不為空
-        assert!(!asset_paths::SAKURA_IDLE_FRAMES.is_empty(), "Sakura 待機動畫幀不應為空");
-        println!("✅ Sakura 待機動畫幀數: {}", asset_paths::SAKURA_IDLE_FRAMES.len());
-    }
-
-    #[test]
-    fn test_sakura_running_frames_not_empty() {
-        // 驗證 Sakura 跑步動畫幀不為空
-        assert!(!asset_paths::SAKURA_RUNNING_FRAMES.is_empty(), "Sakura 跑步動畫幀不應為空");
-        println!("✅ Sakura 跑步動畫幀數: {}", asset_paths::SAKURA_RUNNING_FRAMES.len());
-    }
-
-    #[test]
-    fn test_animation_frame_paths_format() {
-        // 驗證所有 Shirou 動畫幀路徑格式正確
-        for path in asset_paths::SHIROU_IDLE_FRAMES {
-            assert!(path.starts_with("images/characters/shirou_"), 
-                "Shirou 動畫幀路徑應以 'images/characters/shirou_' 開頭: {}", path);
+    fn test_animation_profiles_have_core_clips() {
+        for file in ["hf_shirou.ron", "shirou.ron", "sakura.ron"] {
+            let profile = load_profile(file);
+            assert!(profile.animations.contains_key(&AnimationType::Idle));
+            assert!(profile.animations.contains_key(&AnimationType::Running));
+            assert!(profile.animations.contains_key(&AnimationType::Jumping));
         }
+    }
 
-        // 驗證所有 Sakura 動畫幀路徑格式正確
-        for path in asset_paths::SAKURA_IDLE_FRAMES {
-            assert!(path.starts_with("images/characters/sakura_"), 
-                "Sakura 動畫幀路徑應以 'images/characters/sakura_' 開頭: {}", path);
+    #[test]
+    fn test_clip_frame_counts_match_guideline() {
+        let profile = load_profile("hf_shirou.ron");
+
+        for (animation_type, clip) in &profile.animations {
+            let (minimum, _) = frame_count_guideline(animation_type);
+            assert!(
+                clip.frames.len() >= minimum,
+                "{:?} should have at least {} frames, got {}",
+                animation_type,
+                minimum,
+                clip.frames.len()
+            );
         }
-        
-        println!("✅ 所有動畫幀路徑格式正確");
     }
 
     #[test]
-    fn test_shirou_animation_has_ping_pong_effect() {
-        // 驗證 Shirou 待機動畫使用了乒乓效果（首尾相同）
-        let frames = asset_paths::SHIROU_IDLE_FRAMES;
-        assert!(frames.len() >= 3, "乒乓動畫至少需要 3 幀");
-        assert_eq!(frames[0], frames[frames.len() - 1], 
-            "乒乓動畫的首尾幀應該相同");
-        println!("✅ Shirou 待機動畫使用乒乓循環效果");
-    }
+    fn test_running_clip_uses_modern_playback_mode() {
+        let profile = load_profile("hf_shirou.ron");
+        let running_clip = profile
+            .animations
+            .get(&AnimationType::Running)
+            .expect("Running clip should exist");
 
-    #[test]
-    fn test_sakura_animation_has_ping_pong_effect() {
-        // 驗證 Sakura 待機動畫使用了乒乓效果
-        let frames = asset_paths::SAKURA_IDLE_FRAMES;
-        assert!(frames.len() >= 3, "乒乓動畫至少需要 3 幀");
-        assert_eq!(frames[0], frames[frames.len() - 1], 
-            "乒乓動畫的首尾幀應該相同");
-        println!("✅ Sakura 待機動畫使用乒乓循環效果");
-    }
-
-    #[test]
-    fn test_backward_compatibility() {
-        // 驗證向後兼容性：舊的動畫幀數組仍然可用
-        assert!(!asset_paths::SHIROU_ANIMATION_FRAMES.is_empty());
-        assert!(!asset_paths::SAKURA_ANIMATION_FRAMES.is_empty());
-        println!("✅ 向後兼容的動畫幀數組可用");
-    }
-
-    #[test]
-    fn test_all_animation_types_have_frames() {
-        // 驗證所有動畫類型都有對應的幀
-        let shirou_animations = vec![
-            ("待機", asset_paths::SHIROU_IDLE_FRAMES),
-            ("跑步", asset_paths::SHIROU_RUNNING_FRAMES),
-            ("跳躍", asset_paths::SHIROU_JUMPING_FRAMES),
-            ("蹲下", asset_paths::SHIROU_CROUCHING_FRAMES),
-        ];
-
-        for (name, frames) in shirou_animations {
-            assert!(!frames.is_empty(), "Shirou {} 動畫幀不應為空", name);
-            println!("✅ Shirou {} 動畫: {} 幀", name, frames.len());
-        }
-
-        let sakura_animations = vec![
-            ("待機", asset_paths::SAKURA_IDLE_FRAMES),
-            ("跑步", asset_paths::SAKURA_RUNNING_FRAMES),
-            ("跳躍", asset_paths::SAKURA_JUMPING_FRAMES),
-            ("蹲下", asset_paths::SAKURA_CROUCHING_FRAMES),
-        ];
-
-        for (name, frames) in sakura_animations {
-            assert!(!frames.is_empty(), "Sakura {} 動畫幀不應為空", name);
-            println!("✅ Sakura {} 動畫: {} 幀", name, frames.len());
-        }
+        assert_eq!(running_clip.playback_mode(), PlaybackMode::Loop);
+        assert!(running_clip.speed_scale_by_velocity);
+        assert!(running_clip.speed_reference > 0.0);
+        assert!(running_clip.min_frame_duration > 0.0);
     }
 }

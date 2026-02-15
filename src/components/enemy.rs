@@ -9,7 +9,7 @@ pub struct Enemy;
 /// 敵人類型
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub enum EnemyType {
-    Mushroom,  // 蘑菇敵人
+    Mushroom, // 蘑菇敵人
 }
 
 /// 敵人狀態
@@ -18,8 +18,8 @@ pub struct EnemyState {
     pub health: i32,
     pub max_health: i32,
     pub is_alive: bool,
-    pub patrol_left: f32,   // 巡邏左邊界
-    pub patrol_right: f32,  // 巡邏右邊界
+    pub patrol_left: f32,    // 巡邏左邊界
+    pub patrol_right: f32,   // 巡邏右邊界
     pub move_direction: f32, // 移動方向 (-1.0 或 1.0)
 }
 
@@ -47,7 +47,7 @@ impl EnemyState {
             move_direction: 1.0,
         }
     }
-    
+
     pub fn take_damage(&mut self, damage: i32) {
         self.health -= damage;
         if self.health <= 0 {

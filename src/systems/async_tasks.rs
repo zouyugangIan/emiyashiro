@@ -1,6 +1,6 @@
 use crate::{
     events::{StartLoadGame, StartSaveGame},
-    resources::{CompleteGameState, SaveFileManager, SaveFileMetadata},
+    resources::{CompleteGameState, PauseManager, SaveFileManager, SaveFileMetadata},
     states::GameState,
     systems::{
         async_file_ops::{AsyncFileManager, load_game_state_async, save_game_state_async},
@@ -85,6 +85,7 @@ pub fn poll_async_tasks(
     mut load_tasks: Query<(Entity, &mut LoadTask)>,
     mut next_state: ResMut<NextState<GameState>>,
     mut loaded_game_state: ResMut<LoadedGameState>,
+    mut pause_manager: ResMut<PauseManager>,
 ) {
     // Poll save tasks
     for (entity, mut task) in &mut save_tasks {
@@ -106,8 +107,13 @@ pub fn poll_async_tasks(
                         "✅ Async load task for '{}' completed successfully.",
                         metadata.name
                     );
+
+                    // Prevent paused snapshot from overriding the loaded save
+                    pause_manager.clear_pause_state();
+
                     loaded_game_state.state = Some(game_state);
                     loaded_game_state.should_restore = true;
+                    loaded_game_state.previous_state = None;
                     next_state.set(GameState::Playing);
                 }
                 Err(e) => {

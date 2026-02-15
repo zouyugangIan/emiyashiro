@@ -14,7 +14,6 @@ pub mod input;
 pub mod player;
 pub mod shirou;
 
-
 // 渲染和视觉系统
 pub mod animation;
 pub mod background;
@@ -35,12 +34,11 @@ pub mod audio;
 
 // 数据持久化系统
 pub mod async_file_ops;
-#[cfg(feature = "server")]
-pub mod server_file_ops;
 pub mod async_tasks;
 pub mod database_service;
 pub mod pause_save;
 pub mod save;
+pub mod server_file_ops;
 pub mod shared_utils;
 
 // 资源生成系统
@@ -67,12 +65,12 @@ pub mod error_handling;
 pub mod system_sets;
 
 // 网络系统
+pub mod ai;
 pub mod network;
 #[cfg(feature = "server")]
-pub mod sync_redis;
-#[cfg(feature = "server")]
 pub mod save_worker;
-pub mod ai;
+#[cfg(feature = "server")]
+pub mod sync_redis;
 
 // 最终集成
 pub mod final_integration;

@@ -1,9 +1,9 @@
-use bevy::prelude::*;
 use crate::protocol::{GamePacket, PlayerAction};
-use std::sync::{Arc, Mutex};
-use std::collections::VecDeque;
-use tokio::sync::mpsc;
+use bevy::prelude::*;
 use futures_util::{SinkExt, StreamExt};
+use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
 
 #[derive(Resource)]
 pub struct NetworkResource {
@@ -88,7 +88,7 @@ pub fn setup_network(mut net: ResMut<NetworkResource>) {
             }
         });
     });
-    
+
     net.status = NetworkStatus::Connected;
 }
 
@@ -122,7 +122,10 @@ pub fn handle_network_events(
     mut entity_map: ResMut<NetworkEntityMap>,
     mut my_id: ResMut<MyNetworkId>,
     mut query: Query<(&mut Transform, Option<&mut InterpolationState>)>,
-    mut local_player_query: Query<(Entity, &mut crate::components::network::NetworkId), With<LocalPlayer>>,
+    mut local_player_query: Query<
+        (Entity, &mut crate::components::network::NetworkId),
+        With<LocalPlayer>,
+    >,
     asset_server: Res<AssetServer>,
     time: Res<Time>,
 ) {
@@ -132,7 +135,7 @@ pub fn handle_network_events(
             GamePacket::Welcome { id, message } => {
                 println!("Server says: {} (My ID: {})", message, id);
                 my_id.0 = Some(id);
-                
+
                 // Update local player's NetworkId if it exists
                 if let Ok((entity, mut net_id)) = local_player_query.single_mut() {
                     net_id.0 = id;
@@ -142,11 +145,11 @@ pub fn handle_network_events(
             }
             GamePacket::WorldSnapshot { tick: _, players } => {
                 let current_time = time.elapsed_secs();
-                
+
                 for player_state in players {
                     // Check if this is the local player
                     let is_local = Some(player_state.id) == my_id.0;
-                    
+
                     if let Some(&entity) = entity_map.0.get(&player_state.id) {
                         // Update existing entity with interpolation
                         if let Ok((transform, interp_state)) = query.get_mut(entity) {
@@ -169,20 +172,23 @@ pub fn handle_network_events(
                     } else if !is_local {
                         // Spawn new remote player entity
                         println!("Spawning remote player {}", player_state.id);
-                        let entity = commands.spawn((
-                            Sprite {
-                                image: asset_server.load("images/characters/shirou_idle1.jpg"),
-                                ..default()
-                            },
-                            Transform::from_translation(player_state.position).with_scale(Vec3::splat(0.5)),
-                            crate::components::network::NetworkId(player_state.id),
-                            InterpolationState {
-                                start_pos: player_state.position,
-                                target_pos: player_state.position,
-                                start_time: current_time,
-                                duration: 0.1,
-                            },
-                        )).id();
+                        let entity = commands
+                            .spawn((
+                                Sprite {
+                                    image: asset_server.load("images/characters/shirou_idle1.jpg"),
+                                    ..default()
+                                },
+                                Transform::from_translation(player_state.position)
+                                    .with_scale(Vec3::splat(0.5)),
+                                crate::components::network::NetworkId(player_state.id),
+                                InterpolationState {
+                                    start_pos: player_state.position,
+                                    target_pos: player_state.position,
+                                    start_time: current_time,
+                                    duration: 0.1,
+                                },
+                            ))
+                            .id();
                         entity_map.0.insert(player_state.id, entity);
                     }
                     // If is_local and not in entity_map, the local player hasn't been spawned yet
@@ -204,14 +210,14 @@ pub fn interpolate_positions(
     time: Res<Time>,
 ) {
     let current_time = time.elapsed_secs();
-    
+
     for (entity, mut transform, interp) in query.iter_mut() {
         let elapsed = current_time - interp.start_time;
         let t = (elapsed / interp.duration).min(1.0);
-        
+
         // Lerp position
         transform.translation = interp.start_pos.lerp(interp.target_pos, t);
-        
+
         // Remove interpolation component when done
         if t >= 1.0 {
             commands.entity(entity).remove::<InterpolationState>();
@@ -219,10 +225,7 @@ pub fn interpolate_positions(
     }
 }
 
-pub fn send_ping_system(
-    input: Res<ButtonInput<KeyCode>>,
-    net: Res<NetworkResource>,
-) {
+pub fn send_ping_system(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResource>) {
     if input.just_pressed(KeyCode::KeyP) {
         if let Some(tx) = &net.action_tx {
             let _ = tx.send(PlayerAction::Ping(0));
@@ -232,10 +235,7 @@ pub fn send_ping_system(
 }
 
 /// 将键盘输入转换为 PlayerAction 并发送到服务器
-pub fn send_player_input(
-    input: Res<ButtonInput<KeyCode>>,
-    net: Res<NetworkResource>,
-) {
+pub fn send_player_input(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResource>) {
     if let Some(tx) = &net.action_tx {
         // 计算移动方向
         let mut move_x = 0.0;
@@ -253,7 +253,10 @@ pub fn send_player_input(
 
         // 发送移动输入
         if move_x != 0.0 || move_y != 0.0 {
-            let _ = tx.send(PlayerAction::Move { x: move_x, y: move_y });
+            let _ = tx.send(PlayerAction::Move {
+                x: move_x,
+                y: move_y,
+            });
         }
 
         // 发送跳跃输入

@@ -1,6 +1,6 @@
+use bevy::prelude::*;
 use redis::{Client, Commands, Connection, RedisError};
 use std::env;
-use bevy::prelude::*;
 
 #[derive(Resource)]
 pub struct RedisManager {
@@ -9,7 +9,8 @@ pub struct RedisManager {
 
 impl RedisManager {
     pub fn new() -> Result<Self, RedisError> {
-        let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/".to_string());
+        let redis_url =
+            env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/".to_string());
         let client = Client::open(redis_url)?;
         Ok(Self { client })
     }

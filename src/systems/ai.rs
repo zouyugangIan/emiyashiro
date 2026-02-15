@@ -1,6 +1,6 @@
-use bevy::prelude::*;
-use crate::components::player::PlayerInputState;
 use crate::components::ai::BotController;
+use crate::components::player::PlayerInputState;
+use bevy::prelude::*;
 
 /// Controller trait - 输入源抽象接口
 /// 允许键盘、网络或 AI 脚本控制角色
@@ -14,24 +14,24 @@ pub trait Controller {
 impl Controller for BotController {
     fn get_input(&mut self, transform: &Transform, time: f32) -> PlayerInputState {
         let mut input = PlayerInputState::default();
-        
+
         // 更新巡逻方向
         if transform.translation.x > self.patrol_max_x {
             self.direction = -1.0;
         } else if transform.translation.x < self.patrol_min_x {
             self.direction = 1.0;
         }
-        
+
         // 设置移动输入
         input.move_x = self.direction;
-        
+
         // 随机跳跃
         self.jump_timer -= time;
         if self.jump_timer <= 0.0 {
             input.jump_pressed = true;
             self.jump_timer = self.jump_interval;
         }
-        
+
         input
     }
 }
@@ -43,7 +43,7 @@ pub fn bot_control_system(
     time: Res<Time>,
 ) {
     let delta_time = time.delta_secs();
-    
+
     for (transform, mut input, mut bot) in query.iter_mut() {
         *input = bot.get_input(transform, delta_time);
     }

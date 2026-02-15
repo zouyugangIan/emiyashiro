@@ -33,14 +33,14 @@ mod tests {
     #[test]
     fn test_player_state_can_jump() {
         let mut state = PlayerState::default();
-        
+
         // Can jump when grounded and not crouching
         assert!(state.can_jump());
-        
+
         // Cannot jump when not grounded
         state.is_grounded = false;
         assert!(!state.can_jump());
-        
+
         // Cannot jump when crouching
         state.is_grounded = true;
         state.is_crouching = true;
@@ -73,12 +73,12 @@ mod tests {
         let jump_sound = SoundType::Jump;
         let land_sound = SoundType::Land;
         let footstep_sound = SoundType::Footstep;
-        
+
         // Test that variants can be created and compared
         assert_eq!(jump_sound, SoundType::Jump);
         assert_eq!(land_sound, SoundType::Land);
         assert_eq!(footstep_sound, SoundType::Footstep);
-        
+
         // Test that different variants are not equal
         assert_ne!(jump_sound, land_sound);
         assert_ne!(land_sound, footstep_sound);
@@ -90,7 +90,7 @@ mod tests {
             sound_type: SoundType::Jump,
             should_play: true,
         };
-        
+
         assert_eq!(trigger.sound_type, SoundType::Jump);
         assert!(trigger.should_play);
     }

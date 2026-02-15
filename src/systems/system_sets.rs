@@ -32,7 +32,8 @@ pub fn configure_save_system_scheduling(app: &mut App) {
             UnifiedSaveSystemSet::UIUpdate,
             UnifiedSaveSystemSet::AudioManagement,
             UnifiedSaveSystemSet::ErrorHandling,
-        ).chain()
+        )
+            .chain(),
     );
 }
 
@@ -72,6 +73,7 @@ pub fn configure_performance_scheduling(app: &mut App) {
             PerformanceSystemSet::HighFrequency,
             PerformanceSystemSet::MediumFrequency,
             PerformanceSystemSet::LowFrequency,
-        ).chain()
+        )
+            .chain(),
     );
 }

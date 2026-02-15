@@ -1,9 +1,9 @@
 //! 视觉效果系统
-//! 
+//!
 //! 提供简单的视觉反馈效果，如跳跃时的缩放、着陆时的震动等
 
-use bevy::prelude::*;
 use crate::components::*;
+use bevy::prelude::*;
 
 /// 视觉效果组件
 #[derive(Component)]
@@ -17,10 +17,10 @@ pub struct VisualEffect {
 /// 效果类型
 #[derive(Debug, Clone)]
 pub enum EffectType {
-    JumpScale,      // 跳跃时的缩放效果
-    LandShake,      // 着陆时的震动效果
-    RunBob,         // 跑步时的上下摆动
-    CrouchSquash,   // 蹲下时的压扁效果
+    JumpScale,    // 跳跃时的缩放效果
+    LandShake,    // 着陆时的震动效果
+    RunBob,       // 跑步时的上下摆动
+    CrouchSquash, // 蹲下时的压扁效果
 }
 
 impl VisualEffect {
@@ -32,11 +32,11 @@ impl VisualEffect {
             intensity,
         }
     }
-    
+
     pub fn is_finished(&self) -> bool {
         self.elapsed >= self.duration
     }
-    
+
     pub fn progress(&self) -> f32 {
         (self.elapsed / self.duration).clamp(0.0, 1.0)
     }
@@ -62,14 +62,17 @@ pub fn trigger_jump_effect(
 /// 着陆视觉效果触发器
 pub fn trigger_land_effect(
     mut commands: Commands,
-    mut player_query: Query<(Entity, &Transform, &PlayerState), (With<Player>, Changed<PlayerState>)>,
+    mut player_query: Query<
+        (Entity, &Transform, &PlayerState),
+        (With<Player>, Changed<PlayerState>),
+    >,
 ) {
     for (entity, _transform, player_state) in player_query.iter_mut() {
         // 检测着陆（刚刚接触地面）
         if player_state.is_grounded {
             commands.entity(entity).insert(VisualEffect::new(
                 EffectType::LandShake,
-                0.2, // 0.2秒的震动
+                0.2,  // 0.2秒的震动
                 0.05, // 轻微的震动强度
             ));
         }
@@ -87,7 +90,7 @@ pub fn trigger_run_effect(
             // 检查是否已经有跑步效果
             commands.entity(entity).insert(VisualEffect::new(
                 EffectType::RunBob,
-                0.5, // 0.5秒的摆动周期
+                0.5,  // 0.5秒的摆动周期
                 0.02, // 轻微的上下摆动
             ));
         }
@@ -97,7 +100,10 @@ pub fn trigger_run_effect(
 /// 蹲下视觉效果
 pub fn trigger_crouch_effect(
     mut commands: Commands,
-    mut player_query: Query<(Entity, &Transform, &PlayerState), (With<Player>, Changed<PlayerState>)>,
+    mut player_query: Query<
+        (Entity, &Transform, &PlayerState),
+        (With<Player>, Changed<PlayerState>),
+    >,
 ) {
     for (entity, _transform, player_state) in player_query.iter_mut() {
         // 检测蹲下状态变化
@@ -119,14 +125,14 @@ pub fn update_visual_effects(
 ) {
     for (entity, mut effect, mut transform) in effect_query.iter_mut() {
         effect.elapsed += time.delta_secs();
-        
+
         if effect.is_finished() {
             // 重置变换并移除效果
             reset_transform(&mut transform);
             commands.entity(entity).remove::<VisualEffect>();
             continue;
         }
-        
+
         // 应用效果
         apply_visual_effect(&effect, &mut transform);
     }
@@ -135,7 +141,7 @@ pub fn update_visual_effects(
 /// 应用视觉效果到变换
 fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
     let progress = effect.progress();
-    
+
     match effect.effect_type {
         EffectType::JumpScale => {
             // 跳跃时的缩放效果（快速放大然后恢复）
@@ -148,24 +154,24 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
             };
             transform.scale = Vec3::new(scale_factor * 0.2, scale_factor * 0.2, 1.0);
         }
-        
+
         EffectType::LandShake => {
             // 着陆时的震动效果
             let shake_intensity = effect.intensity * (1.0 - progress); // 逐渐减弱
             let shake_x = (effect.elapsed * 50.0).sin() * shake_intensity;
             let shake_y = (effect.elapsed * 60.0).cos() * shake_intensity;
-            
+
             // 在原始位置基础上添加震动
             transform.translation.x += shake_x;
             transform.translation.y += shake_y;
         }
-        
+
         EffectType::RunBob => {
             // 跑步时的上下摆动
             let bob_offset = (effect.elapsed * 8.0).sin() * effect.intensity;
             transform.translation.y += bob_offset;
         }
-        
+
         EffectType::CrouchSquash => {
             // 蹲下时的压扁效果
             let squash_factor = if progress < 0.5 {
@@ -242,10 +248,10 @@ pub fn update_blinking_text(
     time: Res<Time>,
 ) {
     for (mut text_color, blink) in text_query.iter_mut() {
-        let alpha = blink.min_alpha + 
-            (blink.max_alpha - blink.min_alpha) * 
-            (0.5 + 0.5 * (time.elapsed_secs() * blink.blink_speed).sin());
-        
+        let alpha = blink.min_alpha
+            + (blink.max_alpha - blink.min_alpha)
+                * (0.5 + 0.5 * (time.elapsed_secs() * blink.blink_speed).sin());
+
         text_color.0.set_alpha(alpha);
     }
 }

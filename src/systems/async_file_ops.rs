@@ -1,13 +1,10 @@
 use bevy::prelude::*;
 use std::path::PathBuf;
 
-#[cfg(feature = "server")]
-use crate::systems::server_file_ops;
-
 use crate::{
     asset_paths,
     resources::{CompleteGameState, SaveFileMetadata},
-    systems::error_handling::SaveSystemError,
+    systems::{error_handling::SaveSystemError, server_file_ops},
 };
 
 /// 异步文件操作管理器
@@ -23,7 +20,7 @@ impl AsyncFileManager {
     pub fn new() -> Self {
         Self {
             compression_enabled: true,
-            compression_level: 6, // 平衡压缩率和速度
+            compression_level: 3, // Zstd level 3: good speed/ratio balance
             max_concurrent_operations: 4,
             operation_timeout_seconds: 30,
         }
@@ -62,60 +59,35 @@ impl OperationProgress {
 
 /// 异步保存游戏状态
 pub async fn save_game_state_async(
-    _save_path: PathBuf,
-    _game_state: CompleteGameState,
-    _metadata: SaveFileMetadata,
-    _compression_enabled: bool,
-    _compression_level: u32,
+    save_path: PathBuf,
+    game_state: CompleteGameState,
+    metadata: SaveFileMetadata,
+    compression_enabled: bool,
+    compression_level: u32,
 ) -> Result<(), SaveSystemError> {
-    #[cfg(feature = "server")]
-    {
-        server_file_ops::save_game_state_internal(
-            _save_path,
-            _game_state,
-            _metadata,
-            _compression_enabled,
-            _compression_level,
-        )
-        .await
-    }
-
-    #[cfg(not(feature = "server"))]
-    {
-        // Client cannot save to disk directly
-        Err(SaveSystemError::FileWriteFailed("Client cannot write to disk".into()))
-    }
+    server_file_ops::save_game_state_internal(
+        save_path,
+        game_state,
+        metadata,
+        compression_enabled,
+        compression_level,
+    )
+    .await
 }
 
 /// 异步加载游戏状态
 pub async fn load_game_state_async(
-    _save_path: PathBuf,
-    _compression_enabled: bool,
+    save_path: PathBuf,
+    compression_enabled: bool,
 ) -> Result<(CompleteGameState, SaveFileMetadata), SaveSystemError> {
-    #[cfg(feature = "server")]
-    {
-        server_file_ops::load_game_state_internal(_save_path, _compression_enabled).await
-    }
-
-    #[cfg(not(feature = "server"))]
-    {
-        Err(SaveSystemError::FileNotFound("Client cannot read from disk".into()))
-    }
+    server_file_ops::load_game_state_internal(save_path, compression_enabled).await
 }
 
 /// 异步扫描存档文件
 pub async fn scan_save_files_async(
-    #[allow(unused_variables)] save_directory: PathBuf,
+    save_directory: PathBuf,
 ) -> Result<Vec<SaveFileMetadata>, SaveSystemError> {
-    #[cfg(feature = "server")]
-    {
-        server_file_ops::scan_save_files_internal(save_directory).await
-    }
-
-    #[cfg(not(feature = "server"))]
-    {
-        Ok(Vec::new())
-    }
+    server_file_ops::scan_save_files_internal(save_directory).await
 }
 
 /// 系统：更新操作进度
