@@ -33,6 +33,7 @@ fn main() {
     .init_resource::<systems::database_service::DatabaseService>()
     .init_resource::<systems::input::GameInput>()
     .init_resource::<ui::SaveNameInput>()
+    .init_resource::<ui::SaveLoadUiState>()
     .init_resource::<ui::LoadedGameState>()
     .init_resource::<ui::RenameInput>()
     .insert_resource(systems::text_input::TextInputState::new(25))
@@ -63,7 +64,16 @@ fn main() {
             systems::network::interpolate_positions,
         ),
     )
-    .add_systems(OnEnter(GameState::Menu), menu::setup_menu)
+    .add_systems(
+        OnEnter(GameState::Menu),
+        (
+            game::cleanup_game,
+            ui::cleanup_game_hud,
+            systems::audio::stop_game_music,
+            menu::setup_menu,
+        )
+            .chain(),
+    )
     .add_systems(
         Update,
         systems::audio::play_menu_music.run_if(in_state(GameState::Menu)),
@@ -190,14 +200,27 @@ fn main() {
     .add_systems(
         Update,
         (
-            // Save/Load (To be moved to Server)
+            // Save/Load (legacy gameplay autosave + database)
             systems::save::auto_save_system,
             systems::database_service::database_stats_system,
             systems::database_service::cleanup_old_sessions,
-            systems::async_file_ops::update_operation_progress,
-            systems::async_file_ops::display_progress_indicator,
         )
             .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        Update,
+        (
+            // Save/Load UX feedback
+            systems::async_file_ops::update_operation_progress,
+            systems::async_file_ops::display_progress_indicator,
+            ui::update_save_load_status_text,
+        )
+            .run_if(
+                in_state(GameState::Playing)
+                    .or(in_state(GameState::Paused))
+                    .or(in_state(GameState::SaveDialog))
+                    .or(in_state(GameState::LoadTable)),
+            ),
     )
     .add_systems(
         Update,
@@ -221,14 +244,6 @@ fn main() {
         Update,
         systems::pause_save::handle_pause_input
             .run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
-    )
-    .add_systems(
-        OnExit(GameState::Playing),
-        (
-            game::cleanup_game,
-            ui::cleanup_game_hud,
-            systems::audio::stop_game_music,
-        ),
     )
     .add_systems(
         OnEnter(GameState::Paused),

@@ -322,6 +322,7 @@ pub fn handle_start_button(
     >,
     mut next_state: ResMut<NextState<GameState>>,
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
+    mut save_load_ui_state: ResMut<crate::systems::ui::SaveLoadUiState>,
     mut game_stats: ResMut<GameStats>,
     mut pause_manager: ResMut<PauseManager>,
 ) {
@@ -340,9 +341,13 @@ pub fn handle_start_button(
                 game_stats.play_time = 0.0;
 
                 // 清理暂停管理器状态
-                pause_manager.is_paused = false;
-                pause_manager.preserved_state = None;
-                pause_manager.pause_timestamp = None;
+                pause_manager.clear_pause_state();
+
+                // 清理存档UI运行状态
+                save_load_ui_state.is_busy = false;
+                save_load_ui_state.pending_load_index = None;
+                save_load_ui_state.status_message.clear();
+                save_load_ui_state.error_message.clear();
 
                 next_state.set(GameState::Playing);
                 println!("🎮 Starting NEW game! (All states reset)");
@@ -366,6 +371,7 @@ pub fn handle_load_button(
     mut next_state: ResMut<NextState<GameState>>,
     save_file_manager: Res<SaveFileManager>,
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
+    mut save_load_ui_state: ResMut<crate::systems::ui::SaveLoadUiState>,
 ) {
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
@@ -377,6 +383,11 @@ pub fn handle_load_button(
 
                 // 记录来源状态
                 loaded_game_state.previous_state = Some(GameState::Menu);
+                save_load_ui_state.pending_load_index = None;
+                save_load_ui_state.error_message.clear();
+                if !save_load_ui_state.is_busy {
+                    save_load_ui_state.status_message.clear();
+                }
                 next_state.set(GameState::LoadTable);
             }
             Interaction::Hovered => {

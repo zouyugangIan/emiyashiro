@@ -93,13 +93,9 @@ pub async fn scan_save_files_async(
 /// 系统：更新操作进度
 pub fn update_operation_progress(mut progress: ResMut<OperationProgress>, time: Res<Time>) {
     if progress.is_active {
-        // 模拟进度更新（实际实现中会从异步任务获取真实进度）
-        let delta = time.delta_secs() * 10.0; // 假设每秒增加10%
-        progress.progress_percentage = (progress.progress_percentage + delta).min(100.0);
-
-        if progress.progress_percentage >= 100.0 {
-            progress.complete_operation();
-        }
+        // 模拟进度更新（实际完成由异步任务完成回调触发）
+        let delta = time.delta_secs() * 12.0;
+        progress.progress_percentage = (progress.progress_percentage + delta).min(95.0);
     }
 }
 
