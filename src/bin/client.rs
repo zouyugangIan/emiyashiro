@@ -1,10 +1,10 @@
 use bevy::prelude::*;
-use s__emiyashiro::*; // Import from our lib
-use s__emiyashiro::systems::background::*;
-use s__emiyashiro::systems::*;
-use s__emiyashiro::systems::ui; // Explicit import to disambiguate from components::ui
-use s__emiyashiro::systems::player; // Explicit import to disambiguate from components::player
 use s__emiyashiro::systems::animation; // Explicit import to disambiguate from components::animation
+use s__emiyashiro::systems::background::*;
+use s__emiyashiro::systems::player; // Explicit import to disambiguate from components::player
+use s__emiyashiro::systems::ui; // Explicit import to disambiguate from components::ui
+use s__emiyashiro::systems::*;
+use s__emiyashiro::*; // Import from our lib
 
 fn main() {
     let mut app = App::new();
@@ -28,9 +28,9 @@ fn main() {
     .init_resource::<SaveFileManager>()
     .init_resource::<PauseManager>()
     .init_resource::<AudioStateManager>()
-    // DatabaseService is Server-only, but for now we keep it to compile, 
+    // DatabaseService is Server-only, but for now we keep it to compile,
     // we will mock it or remove it in Phase 2
-    .init_resource::<systems::database_service::DatabaseService>() 
+    .init_resource::<systems::database_service::DatabaseService>()
     .init_resource::<systems::input::GameInput>()
     .init_resource::<ui::SaveNameInput>()
     .init_resource::<ui::LoadedGameState>()
@@ -43,6 +43,7 @@ fn main() {
     .init_resource::<systems::network::NetworkResource>()
     .init_resource::<systems::network::NetworkEntityMap>()
     .init_resource::<systems::network::MyNetworkId>()
+    .init_resource::<systems::sprite_animation::AnimationRuntimeConfig>()
     .add_systems(
         Startup,
         (
@@ -117,9 +118,7 @@ fn main() {
     .add_systems(
         Update,
         (
-            // Animation
-            animation::animate_character,
-            animation::setup_character_animation,
+            // Animation (single source of truth: sprite atlas / frame animation)
             animation::trigger_audio_effects,
             systems::frame_animation::update_frame_animations,
             systems::frame_animation::update_character_animations,
@@ -239,10 +238,13 @@ fn main() {
         Update,
         (
             ui::handle_pause_menu_interactions,
-            systems::pause_save::restore_paused_state,
             systems::audio::maintain_audio_during_pause,
         )
             .run_if(in_state(GameState::Paused)),
+    )
+    .add_systems(
+        Update,
+        systems::pause_save::restore_paused_state.run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnExit(GameState::Paused), ui::cleanup_pause_menu)
     .add_systems(OnEnter(GameState::SaveDialog), ui::setup_save_dialog)
@@ -278,15 +280,12 @@ fn main() {
     )
     .add_systems(OnExit(GameState::RenameDialog), ui::cleanup_rename_dialog);
 
-    // Final Integration
-    systems::final_integration::configure_final_integration(&mut app);
-
     app.run();
 }
 
 /// Load Game Resources
 fn setup_game_resources(
-    mut commands: Commands, 
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
 ) {
@@ -295,19 +294,19 @@ fn setup_game_resources(
         .iter()
         .map(|path| asset_server.load(*path))
         .collect();
-    
+
     // 加载所有Shirou动画帧
     let shirou_animation_frames: Vec<Handle<Image>> = asset_paths::SHIROU_ANIMATION_FRAMES
         .iter()
         .map(|path| asset_server.load(*path))
         .collect();
-    
+
     // 加载所有Sakura动画帧
     let sakura_animation_frames: Vec<Handle<Image>> = asset_paths::SAKURA_ANIMATION_FRAMES
         .iter()
         .map(|path| asset_server.load(*path))
         .collect();
-    
+
     let game_assets = GameAssets {
         cover_textures,
         current_cover_index: 0,
@@ -341,7 +340,7 @@ fn setup_game_resources(
     // Width ~204. Height 256.
     let layout_5x4 = TextureAtlasLayout::from_grid(UVec2::new(204, 256), 5, 4, None, None);
     let layout_5x4_handle = texture_atlases.add(layout_5x4);
-    
+
     // Assign to assets
     let mut assets = game_assets;
     assets.shirou_spritesheet = Some(texture_handle);

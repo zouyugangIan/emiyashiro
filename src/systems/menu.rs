@@ -30,7 +30,7 @@ pub fn setup_menu(
         .as_ref()
         .map(|assets| assets.get_current_cover())
         .unwrap_or_default();
-    
+
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,
@@ -53,7 +53,7 @@ pub fn setup_menu(
     } else {
         Handle::default()
     };
-    
+
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,
@@ -434,7 +434,7 @@ pub fn handle_character_select(
 }
 
 /// 封面渐变动画系统 - 优雅的淡入淡出效果
-/// 
+///
 /// 实现原理：
 /// - 两张图片层叠显示，通过调整透明度实现淡入淡出
 /// - 当第一张图片完全淡出（alpha=0.1）时，切换其内容为下下张图片
@@ -469,8 +469,9 @@ pub fn cover_fade_animation(
             }
         }
         *initialized = true;
-        println!("🖼️ 初始化封面图片: 当前={}, 下一张={} (共{}张)", 
-            assets.current_cover_index, 
+        println!(
+            "🖼️ 初始化封面图片: 当前={}, 下一张={} (共{}张)",
+            assets.current_cover_index,
             (assets.current_cover_index + 1) % assets.cover_textures.len(),
             assets.cover_textures.len()
         );
@@ -479,27 +480,31 @@ pub fn cover_fade_animation(
     let elapsed_time = time.elapsed_secs();
     let cycle_duration = 5.0;
     let fade_duration = 1.0;
-    
+
     let time_in_cycle = elapsed_time % cycle_duration;
     let current_cycle = (elapsed_time / cycle_duration).floor() as i32;
     let last_cycle = ((elapsed_time - time.delta_secs()) / cycle_duration).floor() as i32;
-    
+
     if current_cycle > last_cycle {
         assets.next_cover();
-        println!("🖼️ 切换封面: {} (共{}张)", assets.current_cover_index, assets.cover_textures.len());
+        println!(
+            "🖼️ 切换封面: {} (共{}张)",
+            assets.current_cover_index,
+            assets.cover_textures.len()
+        );
     }
 
     let next_idx = (assets.current_cover_index + 1) % assets.cover_textures.len();
-    
+
     for (mut background_color, mut image_node, mut fade_state) in cover_query.iter_mut() {
         let is_cover1 = fade_state.fade_direction > 0.0;
-        
+
         if is_cover1 {
             image_node.image = assets.get_current_cover();
         } else {
             image_node.image = assets.cover_textures[next_idx].clone();
         }
-        
+
         let alpha = if time_in_cycle < fade_duration {
             let t = time_in_cycle / fade_duration;
             if is_cover1 { t } else { 1.0 - t }

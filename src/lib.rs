@@ -9,11 +9,11 @@ pub mod database {
     pub struct Database;
 }
 pub mod events;
+pub mod protocol;
 pub mod resources;
 pub mod states;
 pub mod systems;
 pub mod tools;
-pub mod protocol;
 
 #[cfg(test)]
 mod tests;

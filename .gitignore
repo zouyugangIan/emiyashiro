@@ -1,1 +1,55 @@
-/target
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Build outputs / packaging
+/build/
+/dist/
+/release/
+/debug/
+
+# Coverage / profiling
+/coverage/
+*.profraw
+*.profdata
+*.lcov
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS junk files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Windows ADS metadata files (copied from NTFS)
+*.Zone.Identifier
+*Zone.Identifier
+
+# Environment / local secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Runtime / local generated data
+/saves/*
+!/saves/.gitkeep
+
+# Local scratch directories
+/blenderIdle/
+/music/
+/tmp/
+/.cache/
+
+# Tooling local state
+/.kiro/
+
+# Logs
+*.log
+*.out
+*.err

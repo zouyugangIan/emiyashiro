@@ -98,7 +98,10 @@ pub fn load_character_animations(
 /// 更新帧动画系统
 pub fn update_frame_animations(
     time: Res<Time>,
-    mut query: Query<(&mut FrameAnimation, &mut Sprite)>,
+    mut query: Query<
+        (&mut FrameAnimation, &mut Sprite),
+        Without<crate::systems::sprite_animation::SpriteAnimation>,
+    >,
 ) {
     for (mut animation, mut sprite) in query.iter_mut() {
         if !animation.is_playing || animation.frames.is_empty() {
@@ -129,8 +132,13 @@ pub fn update_frame_animations(
 /// 角色动画控制系统
 pub fn update_character_animations(
     mut query: Query<
-        (&mut FrameAnimation, &PlayerState, &mut CharacterAnimationState, Option<&Velocity>),
-        With<Player>
+        (
+            &mut FrameAnimation,
+            &PlayerState,
+            &mut CharacterAnimationState,
+            Option<&Velocity>,
+        ),
+        With<Player>,
     >,
     _asset_server: Res<AssetServer>,
 ) {
@@ -160,7 +168,7 @@ pub fn update_character_animations(
                 CharacterAnimationType::Jumping => anim_state.jumping_frames.clone(),
                 CharacterAnimationType::Crouching => anim_state.crouching_frames.clone(),
             };
-            
+
             let frame_duration = match target_animation {
                 CharacterAnimationType::Idle => 0.15,
                 CharacterAnimationType::Running => 0.1,
@@ -170,12 +178,18 @@ pub fn update_character_animations(
 
             if !new_frames.is_empty() {
                 animation.frames = new_frames.clone();
-                animation.timer.set_duration(std::time::Duration::from_secs_f32(frame_duration));
+                animation
+                    .timer
+                    .set_duration(std::time::Duration::from_secs_f32(frame_duration));
                 animation.reset();
                 animation.play();
-                
-                println!("🎬 切換動畫: {:?} ({}幀)", target_animation, new_frames.len());
-                
+
+                println!(
+                    "🎬 切換動畫: {:?} ({}幀)",
+                    target_animation,
+                    new_frames.len()
+                );
+
                 // 最後更新狀態
                 anim_state.current_animation = target_animation;
             }
@@ -187,7 +201,14 @@ pub fn update_character_animations(
 pub fn setup_player_animation(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    player_query: Query<Entity, (With<Player>, Without<FrameAnimation>)>,
+    player_query: Query<
+        Entity,
+        (
+            With<Player>,
+            Without<FrameAnimation>,
+            Without<crate::systems::sprite_animation::SpriteAnimation>,
+        ),
+    >,
     character_selection: Res<CharacterSelection>,
 ) {
     for entity in player_query.iter() {
@@ -269,7 +290,7 @@ pub fn setup_player_animation(
 }
 
 /// 创建动画背景系统（備用 - 目前使用程序化雲彩系統）
-/// 
+///
 /// 注意：此函數目前未被使用。遊戲使用 `background.rs` 中的程序化雲彩系統。
 /// 如果需要切換到圖片背景，可以在 client.rs 中註冊此系統。
 #[allow(dead_code)]

@@ -42,17 +42,17 @@ impl GameConfig {
     pub const JUMP_VELOCITY: f32 = 400.0;
     pub const MOVE_SPEED: f32 = 250.0;
     pub const GROUND_LEVEL: f32 = -240.0;
-    
+
     // 摄像机设置
     pub const CAMERA_FOLLOW_SPEED: f32 = 2.0;
     pub const CAMERA_OFFSET: f32 = 200.0;
     pub const CAMERA_IDLE_SPEED: f32 = 50.0;
-    
+
     // 玩家设置
     pub const PLAYER_SIZE: Vec2 = Vec2::new(40.0, 60.0);
     pub const PLAYER_CROUCH_SIZE: Vec2 = Vec2::new(40.0, 30.0);
     pub const PLAYER_START_POS: Vec3 = Vec3::new(-400.0, -240.0, 1.0);
-    
+
     // 地面设置
     pub const GROUND_SIZE: Vec2 = Vec2::new(2000.0, 50.0);
     pub const GROUND_POS: Vec3 = Vec3::new(0.0, -300.0, 0.0);
@@ -65,13 +65,13 @@ pub struct GameAssets {
     // UI封面图片集合（用于轮换显示）
     pub cover_textures: Vec<Handle<Image>>,
     pub current_cover_index: usize,
-    
+
     // 角色动画帧集合
     pub shirou_animation_frames: Vec<Handle<Image>>,
     pub sakura_animation_frames: Vec<Handle<Image>>,
     pub current_shirou_frame: usize,
     pub current_sakura_frame: usize,
-    
+
     pub font: Handle<Font>,
     // 精灵表资源
     pub shirou_spritesheet: Option<Handle<Image>>,
@@ -95,32 +95,34 @@ impl GameAssets {
     pub fn get_current_cover(&self) -> Handle<Image> {
         self.cover_textures[self.current_cover_index].clone()
     }
-    
+
     /// 切换到下一张封面
     pub fn next_cover(&mut self) -> Handle<Image> {
         self.current_cover_index = (self.current_cover_index + 1) % self.cover_textures.len();
         self.get_current_cover()
     }
-    
+
     /// 获取当前Shirou动画帧
     pub fn get_current_shirou_frame(&self) -> Handle<Image> {
         self.shirou_animation_frames[self.current_shirou_frame].clone()
     }
-    
+
     /// 切换到下一个Shirou动画帧
     pub fn next_shirou_frame(&mut self) -> Handle<Image> {
-        self.current_shirou_frame = (self.current_shirou_frame + 1) % self.shirou_animation_frames.len();
+        self.current_shirou_frame =
+            (self.current_shirou_frame + 1) % self.shirou_animation_frames.len();
         self.get_current_shirou_frame()
     }
-    
+
     /// 获取当前Sakura动画帧
     pub fn get_current_sakura_frame(&self) -> Handle<Image> {
         self.sakura_animation_frames[self.current_sakura_frame].clone()
     }
-    
+
     /// 切换到下一个Sakura动画帧
     pub fn next_sakura_frame(&mut self) -> Handle<Image> {
-        self.current_sakura_frame = (self.current_sakura_frame + 1) % self.sakura_animation_frames.len();
+        self.current_sakura_frame =
+            (self.current_sakura_frame + 1) % self.sakura_animation_frames.len();
         self.get_current_sakura_frame()
     }
 }
@@ -196,10 +198,28 @@ impl Default for SaveData {
     }
 }
 
+fn default_save_file_version() -> String {
+    "1.0".to_string()
+}
+
+fn default_checksum_algorithm() -> String {
+    "default-hasher-v1".to_string()
+}
+
+fn is_legacy_checksum_algorithm(value: &String) -> bool {
+    value == "default-hasher-v1" || value == "legacy-default-hasher"
+}
+
 /// 新的存档文件格式 - 包含元数据、游戏状态和校验和
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct SaveFileData {
+    #[serde(default = "default_save_file_version")]
     pub version: String,
+    #[serde(
+        default = "default_checksum_algorithm",
+        skip_serializing_if = "is_legacy_checksum_algorithm"
+    )]
+    pub checksum_algorithm: String,
     pub metadata: SaveFileMetadata,
     pub game_state: CompleteGameState,
     pub checksum: String,
@@ -208,7 +228,8 @@ pub struct SaveFileData {
 impl SaveFileData {
     pub fn new(metadata: SaveFileMetadata, game_state: CompleteGameState) -> Self {
         let mut data = Self {
-            version: "1.0".to_string(),
+            version: "2.0".to_string(),
+            checksum_algorithm: "blake3".to_string(),
             metadata,
             game_state,
             checksum: String::new(),
@@ -219,11 +240,18 @@ impl SaveFileData {
     }
 
     fn calculate_checksum_for(data: &SaveFileData) -> String {
-        use crate::systems::shared_utils::calculate_checksum;
+        use crate::systems::shared_utils::{calculate_checksum, calculate_legacy_checksum};
+
         let mut temp_data = data.clone();
         temp_data.checksum = String::new();
         if let Ok(json) = serde_json::to_string_pretty(&temp_data) {
-            calculate_checksum(json.as_bytes())
+            match temp_data.checksum_algorithm.as_str() {
+                "blake3" => calculate_checksum(json.as_bytes()),
+                "default-hasher-v1" | "legacy-default-hasher" => {
+                    calculate_legacy_checksum(json.as_bytes())
+                }
+                _ => calculate_checksum(json.as_bytes()),
+            }
         } else {
             String::new()
         }
@@ -261,31 +289,31 @@ pub struct CompleteGameState {
     pub player_grounded: bool,
     pub player_crouching: bool,
     pub player_animation_state: String, // 当前动画状态
-    
+
     // Camera state
     #[serde(with = "vec3_serde")]
     pub camera_position: Vec3,
     #[serde(with = "vec3_serde")]
     pub camera_target: Vec3,
-    
+
     // Game metrics
     pub score: u32,
     pub distance_traveled: f32,
     pub jump_count: u32,
     pub play_time: f32,
-    
+
     // Character selection and player count
     pub selected_character: crate::states::CharacterType,
     pub player_count: PlayerCount,
-    
+
     // Audio state
     pub music_position: f32,
     pub music_playing: bool,
     pub audio_volume: f32,
-    
+
     // Game entities state (for future expansion)
     pub entities_snapshot: Vec<EntitySnapshot>,
-    
+
     // Timestamp
     pub save_timestamp: chrono::DateTime<chrono::Utc>,
 }
@@ -405,17 +433,24 @@ impl PauseManager {
             pause_timestamp: None,
         }
     }
-    
+
     pub fn pause_game(&mut self, state: CompleteGameState) {
         self.is_paused = true;
         self.preserved_state = Some(state);
         self.pause_timestamp = Some(std::time::Instant::now());
     }
-    
+
+    pub fn clear_pause_state(&mut self) {
+        self.is_paused = false;
+        self.preserved_state = None;
+        self.pause_timestamp = None;
+    }
+
     pub fn resume_game(&mut self) -> Option<CompleteGameState> {
+        let preserved_state = self.preserved_state.take();
         self.is_paused = false;
         self.pause_timestamp = None;
-        self.preserved_state.take()
+        preserved_state
     }
 }
 
@@ -443,11 +478,11 @@ impl AudioStateManager {
             sfx_enabled: true,
         }
     }
-    
+
     pub fn set_music_playing(&mut self, playing: bool) {
         self.music_playing = playing;
     }
-    
+
     pub fn set_music_position(&mut self, position: f32) {
         self.music_position = position;
     }

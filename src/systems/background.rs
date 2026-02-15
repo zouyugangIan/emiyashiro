@@ -35,10 +35,7 @@ pub fn spawn_clouds_system(
             (pseudo_random % (window.height() * 0.4) as u32) as f32 + window.height() * 0.5;
 
         // 隨機選擇雲彩圖片（使用偽隨機）
-        let cloud_images = [
-            "images/cloud/cloud01.png",
-            "images/cloud/cloud02.png",
-        ];
+        let cloud_images = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
         let cloud_index = (pseudo_random % cloud_images.len() as u32) as usize;
         let cloud_image = asset_server.load(cloud_images[cloud_index]);
 
@@ -55,8 +52,13 @@ pub fn spawn_clouds_system(
             Transform::from_xyz(window.width() + 100.0, cloud_y, -5.0), // z = -5.0 確保在背景
             Cloud,
         ));
-        
-        println!("☁️ 生成雲彩 at x={}, y={}, scale={:.2}", window.width() + 100.0, cloud_y, scale_factor);
+
+        println!(
+            "☁️ 生成雲彩 at x={}, y={}, scale={:.2}",
+            window.width() + 100.0,
+            cloud_y,
+            scale_factor
+        );
     }
 }
 
@@ -86,17 +88,22 @@ pub fn debug_cloud_count(
     mut last_report: Local<f32>,
 ) {
     let current_time = time.elapsed_secs();
-    
+
     // 每 10 秒報告一次
     if current_time - *last_report > 10.0 {
         let count = cloud_query.iter().count();
         println!("☁️ 當前雲彩數量: {}", count);
-        
+
         // 顯示所有雲彩的位置
         for (i, transform) in cloud_query.iter().enumerate() {
-            println!("  雲彩 #{}: x={:.1}, y={:.1}", i + 1, transform.translation.x, transform.translation.y);
+            println!(
+                "  雲彩 #{}: x={:.1}, y={:.1}",
+                i + 1,
+                transform.translation.x,
+                transform.translation.y
+            );
         }
-        
+
         *last_report = current_time;
     }
 }

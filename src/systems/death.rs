@@ -1,9 +1,9 @@
 //! 死亡系統 - 掉入谷底、重生
 
-use bevy::prelude::*;
 use crate::components::*;
 use crate::resources::GameConfig;
 use crate::states::GameState;
+use bevy::prelude::*;
 
 const DEATH_ZONE_Y: f32 = -400.0; // 死亡線
 

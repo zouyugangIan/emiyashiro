@@ -5,25 +5,33 @@
         frames: [0, 1, 2, 3],
         frame_duration: 0.2,
         looping: true,
+        playback_mode: PingPong,
     ),
     Running: (
         frames: [8, 9, 10, 11, 12, 13],
         frame_duration: 0.1,
         looping: true,
+        playback_mode: Loop,
+        speed_scale_by_velocity: true,
+        speed_reference: 160.0,
+        min_frame_duration: 0.05,
     ),
     Jumping: (
         frames: [16, 17, 18],
         frame_duration: 0.15,
         looping: false,
+        playback_mode: Once,
     ),
     Crouching: (
         frames: [24, 25],
         frame_duration: 0.2,
         looping: true,
+        playback_mode: Loop,
     ),
     Landing: (
         frames: [18, 0], // Example: a short landing animation ending in idle
         frame_duration: 0.08,
         looping: false,
+        playback_mode: Once,
     )
 }

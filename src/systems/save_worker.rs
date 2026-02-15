@@ -1,8 +1,6 @@
-use sqlx::PgPool;
-use lapin::{
-    options::*, types::FieldTable, Connection, ConnectionProperties,
-};
+use lapin::{Connection, ConnectionProperties, options::*, types::FieldTable};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::env;
 
 /// 存档任务消息
@@ -25,9 +23,12 @@ pub async fn run_save_worker(pool: PgPool) {
         match Connection::connect(&rabbitmq_url, ConnectionProperties::default()).await {
             Ok(conn) => {
                 println!("Save Worker connected to RabbitMQ");
-                
-                let channel = conn.create_channel().await.expect("Failed to create channel");
-                
+
+                let channel = conn
+                    .create_channel()
+                    .await
+                    .expect("Failed to create channel");
+
                 // 声明队列
                 let _queue = channel
                     .queue_declare(
@@ -55,7 +56,7 @@ pub async fn run_save_worker(pool: PgPool) {
                         match serde_json::from_slice::<SaveGameTask>(&delivery.data) {
                             Ok(task) => {
                                 println!("Processing save task for player: {}", task.player_id);
-                                
+
                                 // 保存到数据库
                                 let result = sqlx::query(
                                     r#"
@@ -73,7 +74,10 @@ pub async fn run_save_worker(pool: PgPool) {
 
                                 match result {
                                     Ok(_) => {
-                                        println!("Save task completed for player: {}", task.player_id);
+                                        println!(
+                                            "Save task completed for player: {}",
+                                            task.player_id
+                                        );
                                         delivery
                                             .ack(BasicAckOptions::default())
                                             .await
@@ -83,7 +87,10 @@ pub async fn run_save_worker(pool: PgPool) {
                                         eprintln!("Failed to save to database: {}", e);
                                         // Nack and requeue
                                         delivery
-                                            .nack(BasicNackOptions { requeue: true, ..Default::default() })
+                                            .nack(BasicNackOptions {
+                                                requeue: true,
+                                                ..Default::default()
+                                            })
                                             .await
                                             .expect("Failed to nack");
                                     }

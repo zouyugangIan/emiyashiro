@@ -5,6 +5,8 @@
 use crate::{components::*, resources::*, states::*};
 use bevy::prelude::*;
 
+const PLAYER_RENDER_SIZE: Vec2 = Vec2::new(96.0, 144.0);
+
 /// 设置游戏场景
 ///
 /// 初始化游戏世界，包括摄像机、地面、玩家等基本实体。
@@ -19,7 +21,6 @@ use bevy::prelude::*;
 /// * `player_query` - 玩家查询
 /// * `ground_query` - 地面查询
 /// * `loaded_game_state` - 加载的游戏状态
-/// * `game_stats` - 游戏统计
 pub fn setup_game(
     mut commands: Commands,
     mut character_selection: ResMut<CharacterSelection>,
@@ -28,8 +29,7 @@ pub fn setup_game(
     camera_query: Query<Entity, With<Camera>>,
     player_query: Query<Entity, With<Player>>,
     ground_query: Query<Entity, With<Ground>>,
-    mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
-    mut game_stats: ResMut<GameStats>,
+    loaded_game_state: Res<crate::systems::ui::LoadedGameState>,
 ) {
     // 确保有摄像机存在
     if camera_query.is_empty() {
@@ -51,6 +51,13 @@ pub fn setup_game(
         ));
     }
 
+    // Ensure correct character is spawned when entering from a load request.
+    if loaded_game_state.should_restore {
+        if let Some(state) = &loaded_game_state.state {
+            character_selection.selected_character = state.selected_character.clone();
+        }
+    }
+
     // 只有在没有玩家时才创建玩家
     if player_query.is_empty() {
         // 根据选择的角色创建玩家
@@ -67,13 +74,12 @@ pub fn setup_game(
         // 创建带动画的角色
         let character_name = match character_selection.selected_character {
             CharacterType::Shirou1 => "hf_shirou",
-            CharacterType::Shirou2 => "shirou", // Sakura fallback to old shiro config or keep as is?
+            CharacterType::Shirou2 => "sakura",
         };
-        
+
         // Initialize player components (Common)
         let player_common = (
-            Transform::from_translation(GameConfig::PLAYER_START_POS)
-                .with_scale(Vec3::new(0.4, 0.4, 1.0)), 
+            Transform::from_translation(GameConfig::PLAYER_START_POS),
             Player,
             Velocity { x: 0.0, y: 0.0 },
             PlayerState::default(),
@@ -87,15 +93,16 @@ pub fn setup_game(
             if character_selection.selected_character == CharacterType::Shirou1 {
                 if let Some(texture) = &game_assets.shirou_spritesheet {
                     // Create SpriteAnimation component for Atlas system
-                    let anim_component = crate::systems::sprite_animation::create_character_animation(
-                        &anim_data_map, 
-                        "hf_shirou" // We need to ensure there is data for this, or fallback
-                    );
+                    let anim_component =
+                        crate::systems::sprite_animation::create_character_animation(
+                            &anim_data_map,
+                            character_name,
+                        );
 
                     commands.spawn((
                         Sprite {
                             image: texture.clone(),
-                            custom_size: Some(Vec2::new(170.0, 256.0) * 0.5), 
+                            custom_size: Some(PLAYER_RENDER_SIZE),
                             texture_atlas: Some(TextureAtlas {
                                 layout: atlas_layout.clone(),
                                 index: 0,
@@ -105,7 +112,7 @@ pub fn setup_game(
                         player_common,
                         anim_component, // Using SpriteAnimation (Atlas system)
                     ));
-                    
+
                     println!("🗡️ HF Shirou Spawned (Atlas Mode 4x4)!");
                     // Print controls...
                     return;
@@ -115,36 +122,17 @@ pub fn setup_game(
 
         // Fallback: Frame Mode
         commands.spawn((
-            Sprite::from_image(texture),
+            Sprite {
+                image: texture,
+                custom_size: Some(PLAYER_RENDER_SIZE),
+                ..default()
+            },
             player_common,
         ));
-        
+
         println!("🗡️ Shirou Spawned (Frame Mode Fallback)!");
     } else {
         println!("Player already exists, continuing game");
-    }
-
-    // 检查是否需要恢复加载的游戏状态
-    if loaded_game_state.should_restore {
-        if let Some(state) = &loaded_game_state.state {
-            println!("🔄 恢复加载的游戏状态");
-
-            // 恢复角色选择
-            character_selection.selected_character = state.selected_character.clone();
-
-            // 恢复游戏统计
-            game_stats.distance_traveled = state.distance_traveled;
-            game_stats.jump_count = state.jump_count;
-            game_stats.play_time = state.play_time;
-
-            println!("   角色: {:?}", state.selected_character);
-            println!("   分数: {}", state.score);
-            println!("   距离: {:.1}m", state.distance_traveled);
-            println!("   时间: {:.1}s", state.play_time);
-
-            // 标记状态已恢复
-            loaded_game_state.should_restore = false;
-        }
     }
 }
 
@@ -191,6 +179,7 @@ pub fn restore_loaded_game_entities(
     if loaded_game_state.should_restore {
         if let Some(state) = &loaded_game_state.state {
             println!("Loading Game...");
+            let mut player_restored = false;
 
             // 恢复玩家状态
             if let Ok((mut player_transform, mut player_velocity, mut player_state)) =
@@ -208,6 +197,9 @@ pub fn restore_loaded_game_entities(
                 );
                 println!("   Animation: {}", state.player_animation_state);
                 println!("   Grounded: {}", state.player_grounded);
+                player_restored = true;
+            } else {
+                warn!("⚠️ Player entity not ready yet, retrying save restore next frame");
             }
 
             // 恢复摄像机状态
@@ -247,8 +239,10 @@ pub fn restore_loaded_game_entities(
 
             println!("✅ {}", SaveLoadText::LOAD_SUCCESS);
 
-            // 标记恢复完成
-            loaded_game_state.should_restore = false;
+            if player_restored {
+                loaded_game_state.should_restore = false;
+                loaded_game_state.previous_state = None;
+            }
         }
     }
 }

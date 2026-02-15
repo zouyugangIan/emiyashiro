@@ -5,29 +5,37 @@
         frames: [0, 1, 2, 3],
         frame_duration: 0.15,
         looping: true,
+        playback_mode: PingPong,
     ),
     Running: (
         // Layout 5x4: Row 1 (5-9)
         frames: [5, 6, 7, 8, 9],
         frame_duration: 0.1,
         looping: true,
+        playback_mode: Loop,
+        speed_scale_by_velocity: true,
+        speed_reference: 180.0,
+        min_frame_duration: 0.05,
     ),
     Jumping: (
         // Layout 4x4: Row 2 (8-10)
         frames: [8, 9, 10],
         frame_duration: 0.12,
         looping: false,
+        playback_mode: Once,
     ),
     Crouching: (
         // Layout 4x4: Row 2 (11)
         frames: [11],
         frame_duration: 0.2,
         looping: true,
+        playback_mode: Loop,
     ),
     Landing: (
         // Layout 4x4: Row 2 (11, 0)
         frames: [11, 0],
         frame_duration: 0.1,
         looping: false,
+        playback_mode: Once,
     )
 }

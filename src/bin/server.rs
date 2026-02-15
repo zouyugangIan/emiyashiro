@@ -1,13 +1,13 @@
-use bevy::prelude::*;
 use bevy::app::ScheduleRunnerPlugin;
-use std::time::Duration;
-use s__emiyashiro::protocol::{GamePacket, PlayerAction};
-use tokio::net::{TcpListener, TcpStream};
-use tokio_tungstenite::accept_async;
+use bevy::prelude::*;
 use futures_util::{SinkExt, StreamExt};
-use std::sync::{Arc, Mutex};
+use s__emiyashiro::protocol::{GamePacket, PlayerAction};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
+use tokio_tungstenite::accept_async;
 
 #[tokio::main]
 async fn main() {
@@ -21,7 +21,9 @@ async fn main() {
     // Initialize Database (requires server feature)
     #[cfg(feature = "server")]
     {
-        let database = s__emiyashiro::database::Database::new().await.expect("Failed to connect to database");
+        let database = s__emiyashiro::database::Database::new()
+            .await
+            .expect("Failed to connect to database");
         let pool = database.pool.clone();
 
         // Spawn Save Worker
@@ -61,14 +63,25 @@ async fn main() {
             let msg = bincode::serialize(&packet).unwrap();
             let mut clients_guard = clients_broadcast.lock().unwrap();
             // Remove disconnected clients
-            clients_guard.retain(|_, tx: &mut futures_util::stream::SplitSink<tokio_tungstenite::WebSocketStream<TcpStream>, tokio_tungstenite::tungstenite::Message>| {
-                let _ = tx.start_send_unpin(tokio_tungstenite::tungstenite::Message::Binary(msg.clone()));
-                true // We can't easily detect disconnect here without await, so we rely on the read loop to clean up
-            });
+            clients_guard.retain(
+                |_,
+                 tx: &mut futures_util::stream::SplitSink<
+                    tokio_tungstenite::WebSocketStream<TcpStream>,
+                    tokio_tungstenite::tungstenite::Message,
+                >| {
+                    let _ = tx.start_send_unpin(tokio_tungstenite::tungstenite::Message::Binary(
+                        msg.clone(),
+                    ));
+                    true // We can't easily detect disconnect here without await, so we rely on the read loop to clean up
+                },
+            );
             // Flush all
             for tx in clients_guard.values_mut() {
-                 let _ = tx.poll_ready_unpin(&mut std::task::Context::from_waker(&futures_util::task::noop_waker()));
-                 let _ = tx.start_send_unpin(tokio_tungstenite::tungstenite::Message::Binary(msg.clone()));
+                let _ = tx.poll_ready_unpin(&mut std::task::Context::from_waker(
+                    &futures_util::task::noop_waker(),
+                ));
+                let _ = tx
+                    .start_send_unpin(tokio_tungstenite::tungstenite::Message::Binary(msg.clone()));
             }
         }
     });
@@ -76,12 +89,16 @@ async fn main() {
     let mut app = App::new();
 
     // Server runs headless
-    app.add_plugins(MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))));
-    
+    app.add_plugins(
+        MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+            1.0 / 60.0,
+        ))),
+    );
+
     // Add Redis plugin (requires server feature)
     #[cfg(feature = "server")]
     app.add_plugins(s__emiyashiro::database::redis::RedisPlugin);
-    
+
     // Insert resources to communicate with network
     app.insert_resource(NetworkChannels {
         action_rx: Arc::new(Mutex::new(action_rx)),
@@ -90,28 +107,34 @@ async fn main() {
 
     app.init_resource::<ClientEntityMap>();
     app.init_resource::<ServerTick>();
-    
+
     app.add_systems(Startup, setup_bots);
 
     // Add update systems
     #[cfg(feature = "server")]
-    app.add_systems(Update, (
-        increment_tick,
-        process_network_events, 
-        broadcast_snapshot_system, 
-        s__emiyashiro::systems::sync_redis::sync_transform_to_redis, 
-        server_physics_system,
-        s__emiyashiro::systems::ai::bot_control_system
-    ));
-    
+    app.add_systems(
+        Update,
+        (
+            increment_tick,
+            process_network_events,
+            broadcast_snapshot_system,
+            s__emiyashiro::systems::sync_redis::sync_transform_to_redis,
+            server_physics_system,
+            s__emiyashiro::systems::ai::bot_control_system,
+        ),
+    );
+
     #[cfg(not(feature = "server"))]
-    app.add_systems(Update, (
-        increment_tick,
-        process_network_events, 
-        broadcast_snapshot_system, 
-        server_physics_system,
-        s__emiyashiro::systems::ai::bot_control_system
-    ));
+    app.add_systems(
+        Update,
+        (
+            increment_tick,
+            process_network_events,
+            broadcast_snapshot_system,
+            server_physics_system,
+            s__emiyashiro::systems::ai::bot_control_system,
+        ),
+    );
 
     app.run();
 }
@@ -119,7 +142,17 @@ async fn main() {
 async fn handle_connection(
     stream: TcpStream,
     client_id: u64,
-    clients: Arc<Mutex<HashMap<u64, futures_util::stream::SplitSink<tokio_tungstenite::WebSocketStream<TcpStream>, tokio_tungstenite::tungstenite::Message>>>>,
+    clients: Arc<
+        Mutex<
+            HashMap<
+                u64,
+                futures_util::stream::SplitSink<
+                    tokio_tungstenite::WebSocketStream<TcpStream>,
+                    tokio_tungstenite::tungstenite::Message,
+                >,
+            >,
+        >,
+    >,
     action_tx: mpsc::UnboundedSender<(u64, PlayerAction)>,
 ) {
     let ws_stream = accept_async(stream).await.expect("Error during handshake");
@@ -134,7 +167,10 @@ async fn handle_connection(
     }
 
     // Send Welcome
-    let _welcome = GamePacket::Welcome { id: client_id, message: "Connected to G-Engine Server".to_string() };
+    let _welcome = GamePacket::Welcome {
+        id: client_id,
+        message: "Connected to G-Engine Server".to_string(),
+    };
     let _ = action_tx.send((client_id, PlayerAction::Ping(0))); // Simulate initial ping
 
     while let Some(msg) = rx.next().await {
@@ -161,10 +197,10 @@ struct NetworkChannels {
     broadcast_tx: mpsc::UnboundedSender<GamePacket>,
 }
 
+use s__emiyashiro::components::ai::BotController;
+use s__emiyashiro::components::network::NetworkId;
 use s__emiyashiro::components::physics::Velocity;
 use s__emiyashiro::components::player::{Player, PlayerInputState};
-use s__emiyashiro::components::network::NetworkId;
-use s__emiyashiro::components::ai::BotController;
 
 #[derive(Resource, Default)]
 struct ClientEntityMap(HashMap<u64, Entity>);
@@ -176,21 +212,25 @@ fn increment_tick(mut tick: ResMut<ServerTick>) {
     tick.0 = tick.0.wrapping_add(1);
 }
 
-fn determine_animation_state(velocity: &Velocity, input: &PlayerInputState, transform: &Transform) -> String {
+fn determine_animation_state(
+    velocity: &Velocity,
+    input: &PlayerInputState,
+    transform: &Transform,
+) -> String {
     // Simple ground detection based on y position
     let is_grounded = transform.translation.y <= 0.5;
-    
+
     if !is_grounded {
-        if velocity.y > 0.0 { 
-            "Jump".to_string() 
-        } else { 
-            "Fall".to_string() 
+        if velocity.y > 0.0 {
+            "Jump".to_string()
+        } else {
+            "Fall".to_string()
         }
     } else if input.move_x.abs() > 0.1 {
-        if input.move_y < -0.5 { 
-            "Crouch".to_string() 
-        } else { 
-            "Run".to_string() 
+        if input.move_y < -0.5 {
+            "Crouch".to_string()
+        } else {
+            "Run".to_string()
         }
     } else {
         "Idle".to_string()
@@ -220,13 +260,15 @@ fn process_network_events(
         // Ensure player entity exists
         let entity = *client_map.0.entry(client_id).or_insert_with(|| {
             println!("Spawning player for client {}", client_id);
-            commands.spawn((
-                Transform::from_xyz(0.0, 0.0, 0.0),
-                Velocity::zero(),
-                Player,
-                NetworkId(client_id),
-                PlayerInputState::default(),
-            )).id()
+            commands
+                .spawn((
+                    Transform::from_xyz(0.0, 0.0, 0.0),
+                    Velocity::zero(),
+                    Player,
+                    NetworkId(client_id),
+                    PlayerInputState::default(),
+                ))
+                .id()
         });
 
         match action {
@@ -257,7 +299,7 @@ fn server_physics_system(
     for (mut transform, mut velocity, mut input) in query.iter_mut() {
         // Apply movement
         velocity.x = input.move_x * 200.0;
-        
+
         // Apply jump
         if input.jump_pressed {
             velocity.y = 500.0;
@@ -289,7 +331,7 @@ fn broadcast_snapshot_system(
     let mut players = Vec::new();
     for (transform, velocity, net_id, input) in query.iter() {
         let animation_state = determine_animation_state(velocity, input, transform);
-        
+
         players.push(s__emiyashiro::protocol::PlayerState {
             id: net_id.0,
             position: transform.translation,

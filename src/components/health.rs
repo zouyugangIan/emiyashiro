@@ -17,10 +17,7 @@ impl Default for Health {
 
 impl Health {
     pub fn new(max: f32) -> Self {
-        Self {
-            current: max,
-            max,
-        }
+        Self { current: max, max }
     }
 
     pub fn take_damage(&mut self, amount: f32) {
@@ -30,7 +27,7 @@ impl Health {
     pub fn heal(&mut self, amount: f32) {
         self.current = (self.current + amount).min(self.max);
     }
-    
+
     pub fn is_dead(&self) -> bool {
         self.current <= 0.0
     }

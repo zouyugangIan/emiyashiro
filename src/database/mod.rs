@@ -18,17 +18,18 @@ pub struct Database {
 impl Database {
     /// 创建数据库连接
     pub async fn new() -> Result<Self, sqlx::Error> {
-        let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgresql://username:password@localhost/shirou_runner".to_string());
-        
+        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://username:password@localhost/shirou_runner".to_string()
+        });
+
         let pool = PgPool::connect(&database_url).await?;
-        
+
         // 创建表
         Self::create_tables(&pool).await?;
-        
+
         Ok(Database { pool })
     }
-    
+
     /// 创建数据库表
     async fn create_tables(pool: &PgPool) -> Result<(), sqlx::Error> {
         // 创建玩家表
@@ -40,11 +41,11 @@ impl Database {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await?;
-        
+
         // 创建游戏会话表
         sqlx::query(
             r#"
@@ -59,11 +60,11 @@ impl Database {
                 play_time REAL DEFAULT 0.0,
                 score INTEGER DEFAULT 0
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await?;
-        
+
         // 创建玩家操作记录表
         sqlx::query(
             r#"
@@ -76,11 +77,11 @@ impl Database {
                 player_position_x REAL,
                 player_position_y REAL
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await?;
-        
+
         // 创建存档表
         sqlx::query(
             r#"
@@ -92,11 +93,11 @@ impl Database {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await?;
-        
+
         println!("数据库表创建完成");
         Ok(())
     }

@@ -23,11 +23,24 @@ pub const IMAGE_UI_COVER18: &str = "images/ui/cover18.png";
 
 // 所有封面图片的数组，用于轮流显示
 pub const UI_COVER_IMAGES: &[&str] = &[
-    IMAGE_UI_COVER01, IMAGE_UI_COVER02, IMAGE_UI_COVER03,IMAGE_UI_COVER04, 
-    IMAGE_UI_COVER05, IMAGE_UI_COVER06, IMAGE_UI_COVER07,IMAGE_UI_COVER08, 
-    IMAGE_UI_COVER09, IMAGE_UI_COVER10, IMAGE_UI_COVER11,IMAGE_UI_COVER12,
-    IMAGE_UI_COVER13, IMAGE_UI_COVER14, IMAGE_UI_COVER15,IMAGE_UI_COVER16,
-    IMAGE_UI_COVER17, IMAGE_UI_COVER18,
+    IMAGE_UI_COVER01,
+    IMAGE_UI_COVER02,
+    IMAGE_UI_COVER03,
+    IMAGE_UI_COVER04,
+    IMAGE_UI_COVER05,
+    IMAGE_UI_COVER06,
+    IMAGE_UI_COVER07,
+    IMAGE_UI_COVER08,
+    IMAGE_UI_COVER09,
+    IMAGE_UI_COVER10,
+    IMAGE_UI_COVER11,
+    IMAGE_UI_COVER12,
+    IMAGE_UI_COVER13,
+    IMAGE_UI_COVER14,
+    IMAGE_UI_COVER15,
+    IMAGE_UI_COVER16,
+    IMAGE_UI_COVER17,
+    IMAGE_UI_COVER18,
 ];
 
 // CHARACTER ASSETS - SHIROU (1P角色精灵动画)
@@ -51,28 +64,23 @@ pub const IMAGE_HF_SHIROU_JUMP: &str = "images/characters/hf_jump.png";
 pub const IMAGE_HF_SHIROU_CROUCH: &str = "images/characters/hf_crouch.png";
 
 // Shirou 待機動畫幀
-pub const SHIROU_IDLE_FRAMES: &[&str] = &[
-    IMAGE_HF_SHIROU_IDLE,
-];
+pub const SHIROU_IDLE_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_IDLE];
 
 // Shirou 跑步動畫幀
-pub const SHIROU_RUNNING_FRAMES: &[&str] = &[
-    IMAGE_HF_SHIROU_RUN,
-];
+pub const SHIROU_RUNNING_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_RUN];
 
 // Shirou 跳躍動畫幀
-pub const SHIROU_JUMPING_FRAMES: &[&str] = &[
-    IMAGE_HF_SHIROU_JUMP,
-];
+pub const SHIROU_JUMPING_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_JUMP];
 
 // Shirou 蹲下動畫幀
-pub const SHIROU_CROUCHING_FRAMES: &[&str] = &[
-    IMAGE_HF_SHIROU_CROUCH,
-];
+pub const SHIROU_CROUCHING_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_CROUCH];
 
 // Shirou所有动画帧的数组（向後兼容）
 pub const SHIROU_ANIMATION_FRAMES: &[&str] = &[
-    IMAGE_HF_SHIROU_IDLE, IMAGE_HF_SHIROU_RUN, IMAGE_HF_SHIROU_JUMP, IMAGE_HF_SHIROU_CROUCH,
+    IMAGE_HF_SHIROU_IDLE,
+    IMAGE_HF_SHIROU_RUN,
+    IMAGE_HF_SHIROU_JUMP,
+    IMAGE_HF_SHIROU_CROUCH,
 ];
 
 // CHARACTER ASSETS - SAKURA (2P角色精灵动画)
@@ -84,7 +92,7 @@ pub const IMAGE_CHAR_SAKURA_IDLE05: &str = "images/characters/sakura_idle05.png"
 pub const IMAGE_CHAR_SAKURA_IDLE06: &str = "images/characters/sakura_idle06.png";
 pub const IMAGE_CHAR_SAKURA_IDLE07: &str = "images/characters/sakura_idle07.png";
 pub const IMAGE_CHAR_SAKURA_IDLE08: &str = "images/characters/sakura_idle08.png";
-pub const IMAGE_CHAR_SAKURA_IDLE09: &str = "images/characters/sakura_idle9.jpg";  // 注意：實際文件名是 sakura_idle9.jpg
+pub const IMAGE_CHAR_SAKURA_IDLE09: &str = "images/characters/sakura_idle9.jpg"; // 注意：實際文件名是 sakura_idle9.jpg
 pub const IMAGE_CHAR_SAKURA_IDLE10: &str = "images/characters/sakura_idle10.png";
 pub const IMAGE_CHAR_SAKURA_IDLE11: &str = "images/characters/sakura_idle11.png";
 pub const IMAGE_CHAR_SAKURA_IDLE13: &str = "images/characters/sakura_idle13.jpg";
@@ -98,7 +106,7 @@ pub const SAKURA_IDLE_FRAMES: &[&str] = &[
     IMAGE_CHAR_SAKURA_IDLE02,
     IMAGE_CHAR_SAKURA_IDLE03,
     IMAGE_CHAR_SAKURA_IDLE04,
-    IMAGE_CHAR_SAKURA_IDLE03,  // 反向
+    IMAGE_CHAR_SAKURA_IDLE03, // 反向
     IMAGE_CHAR_SAKURA_IDLE02,
     IMAGE_CHAR_SAKURA_IDLE01,
 ];
@@ -109,7 +117,7 @@ pub const SAKURA_RUNNING_FRAMES: &[&str] = &[
     IMAGE_CHAR_SAKURA_IDLE06,
     IMAGE_CHAR_SAKURA_IDLE07,
     IMAGE_CHAR_SAKURA_IDLE08,
-    IMAGE_CHAR_SAKURA_IDLE07,  // 重複關鍵幀
+    IMAGE_CHAR_SAKURA_IDLE07, // 重複關鍵幀
     IMAGE_CHAR_SAKURA_IDLE06,
 ];
 
@@ -121,18 +129,24 @@ pub const SAKURA_JUMPING_FRAMES: &[&str] = &[
 ];
 
 // Sakura 蹲下動畫幀
-pub const SAKURA_CROUCHING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SAKURA_IDLE13,
-    IMAGE_CHAR_SAKURA_IDLE14,
-];
+pub const SAKURA_CROUCHING_FRAMES: &[&str] = &[IMAGE_CHAR_SAKURA_IDLE13, IMAGE_CHAR_SAKURA_IDLE14];
 
 // Sakura所有动画帧的数组（向後兼容）
 pub const SAKURA_ANIMATION_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SAKURA_IDLE01, IMAGE_CHAR_SAKURA_IDLE02,
-    IMAGE_CHAR_SAKURA_IDLE03, IMAGE_CHAR_SAKURA_IDLE04, IMAGE_CHAR_SAKURA_IDLE05,
-    IMAGE_CHAR_SAKURA_IDLE06, IMAGE_CHAR_SAKURA_IDLE07, IMAGE_CHAR_SAKURA_IDLE08,
-    IMAGE_CHAR_SAKURA_IDLE09, IMAGE_CHAR_SAKURA_IDLE10, IMAGE_CHAR_SAKURA_IDLE11,
-    IMAGE_CHAR_SAKURA_IDLE13, IMAGE_CHAR_SAKURA_IDLE14, IMAGE_CHAR_SAKURA_IDLE15,
+    IMAGE_CHAR_SAKURA_IDLE01,
+    IMAGE_CHAR_SAKURA_IDLE02,
+    IMAGE_CHAR_SAKURA_IDLE03,
+    IMAGE_CHAR_SAKURA_IDLE04,
+    IMAGE_CHAR_SAKURA_IDLE05,
+    IMAGE_CHAR_SAKURA_IDLE06,
+    IMAGE_CHAR_SAKURA_IDLE07,
+    IMAGE_CHAR_SAKURA_IDLE08,
+    IMAGE_CHAR_SAKURA_IDLE09,
+    IMAGE_CHAR_SAKURA_IDLE10,
+    IMAGE_CHAR_SAKURA_IDLE11,
+    IMAGE_CHAR_SAKURA_IDLE13,
+    IMAGE_CHAR_SAKURA_IDLE14,
+    IMAGE_CHAR_SAKURA_IDLE15,
     IMAGE_CHAR_SAKURA_IDLE16,
 ];
 
@@ -141,17 +155,15 @@ pub const IMAGE_CHAR_TEACHER_IDLE: &str = "images/characters/teacher_idle02.jpg"
 
 pub const IMAGE_CHAR_SHIROU_SPRITESHEET: &str = "images/characters/shirou_spritesheet.png";
 pub const IMAGE_CHAR_SAKURA_SPRITESHEET: &str = "images/characters/sakura_spritesheet.png";
-pub const IMAGE_HF_SHIROU_SPRITESHEET: &str = "images/characters/hf_shirou_spritesheet_final_v2_1767279221195.png";
+pub const IMAGE_HF_SHIROU_SPRITESHEET: &str =
+    "images/characters/hf_shirou_spritesheet_final_v2_1767279221195.png";
 
 // CLOUD ASSETS (背景雲彩圖片)
 pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud01.png";
 pub const IMAGE_CLOUD_02: &str = "images/cloud/cloud02.png";
 
 // 所有雲彩圖片的數組
-pub const CLOUD_IMAGES: &[&str] = &[
-    IMAGE_CLOUD_01,
-    IMAGE_CLOUD_02,
-];
+pub const CLOUD_IMAGES: &[&str] = &[IMAGE_CLOUD_01, IMAGE_CLOUD_02];
 
 // SOUND ASSETS
 pub const SOUND_JUMP: &str = "sounds/jump.ogg";

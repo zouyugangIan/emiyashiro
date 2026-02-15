@@ -4,11 +4,11 @@ use bevy::prelude::*;
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum GameState {
     #[default]
-    Menu,        // 主菜单/封面
-    Playing,     // 游戏中
-    Paused,      // 暂停
-    SaveDialog,  // 存档对话框
-    LoadTable,   // 加载表格
+    Menu, // 主菜单/封面
+    Playing,      // 游戏中
+    Paused,       // 暂停
+    SaveDialog,   // 存档对话框
+    LoadTable,    // 加载表格
     RenameDialog, // 重命名对话框
 }
 
@@ -22,8 +22,8 @@ pub struct CharacterSelection {
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum CharacterType {
     #[default]
-    Shirou1,   // 士郎角色1
-    Shirou2,   // 士郎角色2
+    Shirou1, // 士郎角色1
+    Shirou2, // 士郎角色2
 }
 
 impl CharacterType {

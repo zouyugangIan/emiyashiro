@@ -192,12 +192,17 @@ pub fn handle_pause_input(
 pub fn restore_paused_state(
     commands: Commands,
     mut pause_manager: ResMut<PauseManager>,
+    current_state: Res<State<GameState>>,
     player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
     camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     game_stats: ResMut<GameStats>,
     character_selection: ResMut<CharacterSelection>,
     audio_state_manager: ResMut<AudioStateManager>,
 ) {
+    if *current_state.get() != GameState::Playing || !pause_manager.is_paused {
+        return;
+    }
+
     if let Some(state) = pause_manager.resume_game() {
         restore_game_state(
             commands,
@@ -263,7 +268,8 @@ fn process_save_file(
     entry: &std::fs::DirEntry,
     save_file_manager: &mut SaveFileManager,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let json_data = fs::read_to_string(entry.path())?;
+    let file_data = fs::read(entry.path())?;
+    let json_data = crate::systems::shared_utils::decode_file_payload(&file_data)?;
 
     // 尝试新格式 (SaveFileData with metadata and checksum)
     if let Ok(save_file_data) = serde_json::from_str::<SaveFileData>(&json_data) {
@@ -275,7 +281,10 @@ fn process_save_file(
             );
         }
 
-        save_file_manager.save_files.push(save_file_data.metadata);
+        let mut metadata = save_file_data.metadata;
+        metadata.file_path = entry.path().to_string_lossy().to_string();
+
+        save_file_manager.save_files.push(metadata);
         println!("📂 New format loaded: {}", entry.path().display());
         return Ok(true);
     }
