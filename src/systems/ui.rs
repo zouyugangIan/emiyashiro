@@ -52,6 +52,15 @@ pub struct LoadedGameState {
     pub previous_state: Option<GameState>,
 }
 
+/// Save/Load UI runtime state
+#[derive(Resource, Default)]
+pub struct SaveLoadUiState {
+    pub is_busy: bool,
+    pub status_message: String,
+    pub error_message: String,
+    pub pending_load_index: Option<usize>,
+}
+
 // Save Dialog Components
 #[derive(Component)]
 pub struct SaveDialog;
@@ -70,6 +79,9 @@ pub struct TextCursor {
     pub blink_timer: f32,
     pub visible: bool,
 }
+
+#[derive(Component)]
+pub struct SaveLoadStatusText;
 
 // Load Table Components
 #[derive(Component)]
@@ -500,6 +512,7 @@ pub fn setup_save_dialog(
     game_assets: Option<Res<GameAssets>>,
     mut save_name_input: ResMut<SaveNameInput>,
     mut text_input_state: ResMut<crate::systems::text_input::TextInputState>,
+    mut save_load_ui_state: ResMut<SaveLoadUiState>,
 ) {
     use crate::systems::text_constants::SaveLoadText;
 
@@ -509,6 +522,25 @@ pub fn setup_save_dialog(
 
     // 激活新的文本输入系统
     text_input_state.activate();
+
+    save_load_ui_state.pending_load_index = None;
+    if !save_load_ui_state.is_busy {
+        save_load_ui_state.status_message.clear();
+    }
+    save_load_ui_state.error_message.clear();
+
+    let (initial_status_text, initial_status_color) =
+        if !save_load_ui_state.status_message.is_empty() {
+            (
+                save_load_ui_state.status_message.clone(),
+                Color::srgba(0.65, 0.85, 1.0, 0.95),
+            )
+        } else {
+            (
+                SaveLoadText::INPUT_HINT.to_string(),
+                Color::srgba(0.8, 0.8, 0.8, 0.6),
+            )
+        };
 
     commands
         .spawn((
@@ -620,13 +652,14 @@ pub fn setup_save_dialog(
 
                     // 输入提示信息
                     parent.spawn((
-                        Text::new(SaveLoadText::INPUT_HINT),
+                        Text::new(initial_status_text.clone()),
                         TextFont {
                             font: font_handle.clone(),
                             font_size: 12.0,
                             ..default()
                         },
-                        TextColor(Color::srgba(0.8, 0.8, 0.8, 0.6)),
+                        TextColor(initial_status_color),
+                        SaveLoadStatusText,
                     ));
 
                     // 按钮容器
@@ -712,6 +745,46 @@ pub fn cleanup_save_dialog(
 
     // 停用文本输入系统
     text_input_state.deactivate();
+}
+
+pub fn update_save_load_status_text(
+    current_state: Res<State<GameState>>,
+    save_load_ui_state: Res<SaveLoadUiState>,
+    mut status_query: Query<(&mut Text, &mut TextColor), With<SaveLoadStatusText>>,
+) {
+    use crate::systems::text_constants::SaveLoadText;
+
+    if status_query.is_empty() {
+        return;
+    }
+
+    let default_message = match current_state.get() {
+        GameState::SaveDialog => SaveLoadText::INPUT_HINT,
+        GameState::LoadTable => SaveLoadText::CLICK_TO_LOAD,
+        _ => "",
+    };
+
+    let (message, color) = if !save_load_ui_state.error_message.is_empty() {
+        (
+            format!("❌ {}", save_load_ui_state.error_message),
+            Color::srgba(1.0, 0.45, 0.45, 1.0),
+        )
+    } else if !save_load_ui_state.status_message.is_empty() {
+        (
+            save_load_ui_state.status_message.clone(),
+            Color::srgba(0.65, 0.85, 1.0, 0.95),
+        )
+    } else {
+        (
+            default_message.to_string(),
+            Color::srgba(0.8, 0.8, 0.8, 0.6),
+        )
+    };
+
+    for (mut text, mut text_color) in &mut status_query {
+        text.0 = message.clone();
+        text_color.0 = color;
+    }
 }
 
 /// Text cursor blinking system
@@ -844,6 +917,7 @@ pub fn handle_save_dialog_interactions(
     mut ev_save: MessageWriter<StartSaveGame>,
     text_input_state: Res<crate::systems::text_input::TextInputState>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut save_load_ui_state: ResMut<SaveLoadUiState>,
 ) {
     use crate::systems::text_constants::SaveLoadText;
 
@@ -890,6 +964,11 @@ pub fn handle_save_dialog_interactions(
     }
 
     if should_save {
+        if save_load_ui_state.is_busy {
+            save_load_ui_state.status_message = "Save operation is already running...".to_string();
+            return;
+        }
+
         if let Some(state) = &pause_manager.preserved_state {
             let raw_save_name = if text_input_state.current_text.is_empty() {
                 SaveLoadText::DEFAULT_SAVE_NAME.to_string()
@@ -900,6 +979,11 @@ pub fn handle_save_dialog_interactions(
             let validator = crate::systems::text_input::InputValidator::new();
             match validator.validate_save_name(&raw_save_name) {
                 Ok(save_name) => {
+                    save_load_ui_state.is_busy = true;
+                    save_load_ui_state.pending_load_index = None;
+                    save_load_ui_state.error_message.clear();
+                    save_load_ui_state.status_message = format!("Saving '{}'...", save_name);
+
                     println!("💾 Firing StartSaveGame event with name: '{}'", save_name);
                     ev_save.write(StartSaveGame {
                         save_name,
@@ -908,14 +992,25 @@ pub fn handle_save_dialog_interactions(
                     next_state.set(GameState::Paused);
                 }
                 Err(error) => {
+                    save_load_ui_state.error_message =
+                        format!("{}: {}", SaveLoadText::INVALID_NAME_ERROR, error);
+                    save_load_ui_state.status_message.clear();
                     println!("❌ Invalid save name: {}", error);
                 }
             }
         } else {
+            save_load_ui_state.error_message = "No paused game snapshot to save".to_string();
+            save_load_ui_state.status_message.clear();
             println!("❌ No game state to save! PauseManager preserved_state is None");
             next_state.set(GameState::Paused);
         }
     } else if should_cancel {
+        if save_load_ui_state.is_busy {
+            save_load_ui_state.status_message = "Save is in progress, please wait...".to_string();
+            return;
+        }
+
+        save_load_ui_state.pending_load_index = None;
         // 取消保存，返回暂停菜单
         next_state.set(GameState::Paused);
         println!("❌ Save canceled");
@@ -927,7 +1022,34 @@ pub fn setup_load_table(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
     save_file_manager: Res<SaveFileManager>,
+    mut save_load_ui_state: ResMut<SaveLoadUiState>,
 ) {
+    use crate::systems::text_constants::SaveLoadText;
+
+    save_load_ui_state.pending_load_index = None;
+    if !save_load_ui_state.is_busy {
+        save_load_ui_state.status_message.clear();
+        save_load_ui_state.error_message.clear();
+    }
+
+    let (initial_status_text, initial_status_color) =
+        if !save_load_ui_state.error_message.is_empty() {
+            (
+                format!("❌ {}", save_load_ui_state.error_message),
+                Color::srgba(1.0, 0.45, 0.45, 1.0),
+            )
+        } else if !save_load_ui_state.status_message.is_empty() {
+            (
+                save_load_ui_state.status_message.clone(),
+                Color::srgba(0.65, 0.85, 1.0, 0.95),
+            )
+        } else {
+            (
+                SaveLoadText::CLICK_TO_LOAD.to_string(),
+                Color::srgba(0.8, 0.8, 0.8, 0.7),
+            )
+        };
+
     commands.spawn((
         Node {
             width: Val::Percent(100.0),
@@ -974,13 +1096,14 @@ pub fn setup_load_table(
 
             // 操作提示
             parent.spawn((
-                Text::new(crate::systems::text_constants::SaveLoadText::CLICK_TO_LOAD),
+                Text::new(initial_status_text.clone()),
                 TextFont {
                     font: font_handle.clone(),
                     font_size: 14.0,
                     ..default()
                 },
-                TextColor(Color::srgba(1.0, 1.0, 1.0, 0.7)),
+                TextColor(initial_status_color),
+                SaveLoadStatusText,
                 Node {
                     margin: UiRect::bottom(Val::Px(10.0)),
                     ..default()
@@ -1493,6 +1616,7 @@ pub fn handle_load_table_interactions(
     mut ev_load: MessageWriter<StartLoadGame>,
     mut loaded_game_state: ResMut<LoadedGameState>,
     mut rename_input: ResMut<RenameInput>,
+    mut save_load_ui_state: ResMut<SaveLoadUiState>,
 ) {
     let mut selected_save_index: Option<usize> = None;
     let mut should_cancel = false;
@@ -1555,8 +1679,27 @@ pub fn handle_load_table_interactions(
 
     // 处理加载存档
     if let Some(index) = selected_save_index {
+        if save_load_ui_state.is_busy {
+            save_load_ui_state.status_message = "Load operation is already running...".to_string();
+            return;
+        }
+
         if index < save_file_manager.save_files.len() {
             let save_file = &save_file_manager.save_files[index];
+
+            if save_load_ui_state.pending_load_index != Some(index) {
+                save_load_ui_state.pending_load_index = Some(index);
+                save_load_ui_state.error_message.clear();
+                save_load_ui_state.status_message =
+                    format!("Click '{}' again to confirm load", save_file.name);
+                return;
+            }
+
+            save_load_ui_state.pending_load_index = None;
+            save_load_ui_state.is_busy = true;
+            save_load_ui_state.error_message.clear();
+            save_load_ui_state.status_message = format!("Loading save '{}'...", save_file.name);
+
             println!(
                 "📂 Firing StartLoadGame event for path: '{}'",
                 &save_file.file_path
@@ -1572,8 +1715,15 @@ pub fn handle_load_table_interactions(
     }
     // 处理重命名
     else if let Some(index) = rename_index {
+        if save_load_ui_state.is_busy {
+            save_load_ui_state.status_message =
+                "Operation in progress, rename is temporarily disabled".to_string();
+            return;
+        }
+
         if index < save_file_manager.save_files.len() {
             let save_file = &save_file_manager.save_files[index];
+            save_load_ui_state.pending_load_index = None;
             rename_input.original_name = save_file.name.clone();
             rename_input.save_index = index;
             next_state.set(GameState::RenameDialog);
@@ -1582,10 +1732,19 @@ pub fn handle_load_table_interactions(
     }
     // 处理删除
     else if let Some(index) = delete_index {
+        if save_load_ui_state.is_busy {
+            save_load_ui_state.status_message =
+                "Operation in progress, delete is temporarily disabled".to_string();
+            return;
+        }
+
         if index < save_file_manager.save_files.len() {
             let save_name = save_file_manager.save_files[index].name.clone();
             match crate::systems::pause_save::delete_save_file(&save_name, &mut save_file_manager) {
                 Ok(_) => {
+                    save_load_ui_state.pending_load_index = None;
+                    save_load_ui_state.error_message.clear();
+                    save_load_ui_state.status_message = format!("Deleted save '{}'", save_name);
                     println!(
                         "🗑️ {}: {}",
                         crate::systems::text_constants::SaveLoadText::DELETE_SUCCESS,
@@ -1595,6 +1754,8 @@ pub fn handle_load_table_interactions(
                     should_refresh = true;
                 }
                 Err(e) => {
+                    save_load_ui_state.error_message = e.to_string();
+                    save_load_ui_state.status_message.clear();
                     println!(
                         "❌ {}: {}",
                         crate::systems::text_constants::SaveLoadText::DELETE_ERROR,
@@ -1606,6 +1767,16 @@ pub fn handle_load_table_interactions(
     }
     // 处理刷新
     else if should_refresh {
+        if save_load_ui_state.is_busy {
+            save_load_ui_state.status_message =
+                "Operation in progress, refresh is temporarily disabled".to_string();
+            return;
+        }
+
+        save_load_ui_state.pending_load_index = None;
+        save_load_ui_state.error_message.clear();
+        save_load_ui_state.status_message = "Save list refreshed".to_string();
+
         // 触发存档文件扫描并重新加载UI
         crate::systems::pause_save::scan_save_files(save_file_manager);
         next_state.set(GameState::LoadTable);
@@ -1613,6 +1784,17 @@ pub fn handle_load_table_interactions(
     }
     // 处理返回
     else if should_cancel {
+        if save_load_ui_state.is_busy {
+            save_load_ui_state.status_message = "Load is in progress, please wait...".to_string();
+            return;
+        }
+
+        save_load_ui_state.pending_load_index = None;
+        if !save_load_ui_state.is_busy {
+            save_load_ui_state.status_message.clear();
+            save_load_ui_state.error_message.clear();
+        }
+
         // 根据来源状态返回到正确的地方
         let target_state = loaded_game_state
             .previous_state
@@ -1796,6 +1978,7 @@ pub fn handle_pause_menu_interactions(
     mut next_state: ResMut<NextState<GameState>>,
     mut pause_manager: ResMut<PauseManager>,
     mut loaded_game_state: ResMut<LoadedGameState>,
+    mut save_load_ui_state: ResMut<SaveLoadUiState>,
     _player_query: Query<(&Transform, &Velocity, &PlayerState), With<Player>>,
     _camera_query: Query<&Transform, (With<Camera>, Without<Player>)>,
     _game_stats: Res<GameStats>,
@@ -1817,11 +2000,18 @@ pub fn handle_pause_menu_interactions(
                 } else if load_btn.is_some() {
                     // 进入加载表格，记录来源状态
                     loaded_game_state.previous_state = Some(GameState::Paused);
+                    save_load_ui_state.pending_load_index = None;
+                    save_load_ui_state.error_message.clear();
+                    if !save_load_ui_state.is_busy {
+                        save_load_ui_state.status_message.clear();
+                    }
                     next_state.set(GameState::LoadTable);
                     println!("📂 Open load table from pause menu");
                 } else if menu_btn.is_some() || q_btn.is_some() {
                     // 返回主菜单
                     pause_manager.resume_game(); // 清理暂停状态
+                    save_load_ui_state.pending_load_index = None;
+                    save_load_ui_state.is_busy = false;
                     next_state.set(GameState::Menu);
                     println!("🏠 Return to main menu");
                 }
