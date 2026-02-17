@@ -1,44 +1,31 @@
-//! 核心游戏系统
+﻿//! 鏍稿績娓告垙绯荤粺
 //!
-//! 包含游戏场景的设置、清理和核心游戏逻辑管理。
-
+//! 鍖呭惈娓告垙鍦烘櫙鐨勮缃€佹竻鐞嗗拰鏍稿績娓告垙閫昏緫绠＄悊銆?
 use crate::{components::*, resources::*, states::*};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 const PLAYER_RENDER_SIZE: Vec2 = Vec2::new(96.0, 144.0);
 
-/// 设置游戏场景
-///
-/// 初始化游戏世界，包括摄像机、地面、玩家等基本实体。
-/// 根据角色选择创建对应的玩家角色。
-/// 如果有加载的游戏状态，则恢复该状态。
-///
-/// # 参数
-/// * `commands` - 用于生成实体的命令缓冲区
-/// * `character_selection` - 当前选择的角色
-/// * `game_assets` - 游戏资源句柄
-/// * `camera_query` - 摄像机查询
-/// * `player_query` - 玩家查询
-/// * `ground_query` - 地面查询
-/// * `loaded_game_state` - 加载的游戏状态
-pub fn setup_game(
-    mut commands: Commands,
-    mut character_selection: ResMut<CharacterSelection>,
-    game_assets: Res<GameAssets>,
-    anim_data_map: Res<crate::components::animation_data::AnimationDataMap>,
-    camera_query: Query<Entity, With<Camera>>,
-    player_query: Query<Entity, With<Player>>,
-    ground_query: Query<Entity, With<Ground>>,
-    loaded_game_state: Res<crate::systems::ui::LoadedGameState>,
-) {
-    // 确保有摄像机存在
-    if camera_query.is_empty() {
+#[derive(SystemParam)]
+pub struct SetupGameParams<'w, 's> {
+    pub character_selection: ResMut<'w, CharacterSelection>,
+    pub game_assets: Res<'w, GameAssets>,
+    pub anim_data_map: Res<'w, crate::components::animation_data::AnimationDataMap>,
+    pub camera_query: Query<'w, 's, Entity, With<Camera>>,
+    pub player_query: Query<'w, 's, Entity, With<Player>>,
+    pub ground_query: Query<'w, 's, Entity, With<Ground>>,
+    pub loaded_game_state: Res<'w, crate::systems::ui::LoadedGameState>,
+}
+
+/// Sets up gameplay entities for a fresh start or loaded run.
+pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
+    if params.camera_query.is_empty() {
         commands.spawn(Camera2d);
-        println!("创建游戏摄像机");
+        crate::debug_log!("Created gameplay camera");
     }
 
-    // 只有在没有地面时才创建地面
-    if ground_query.is_empty() {
+    if params.ground_query.is_empty() {
         commands.spawn((
             Sprite {
                 color: GameConfig::GROUND_COLOR,
@@ -51,95 +38,81 @@ pub fn setup_game(
         ));
     }
 
-    // Ensure correct character is spawned when entering from a load request.
-    if loaded_game_state.should_restore {
-        if let Some(state) = &loaded_game_state.state {
-            character_selection.selected_character = state.selected_character.clone();
-        }
+    if params.loaded_game_state.should_restore
+        && let Some(state) = &params.loaded_game_state.state
+    {
+        params.character_selection.selected_character = state.selected_character.clone();
     }
 
-    // 只有在没有玩家时才创建玩家
-    if player_query.is_empty() {
-        // 根据选择的角色创建玩家
-        let texture = match character_selection.selected_character {
-            CharacterType::Shirou1 => game_assets.get_current_shirou_frame(),
-            CharacterType::Shirou2 => game_assets.get_current_sakura_frame(),
-        };
+    if !params.player_query.is_empty() {
+        crate::debug_log!("Player already exists, continuing game");
+        return;
+    }
 
-        println!(
-            "🎭 选择的角色: {:?}",
-            character_selection.selected_character
+    let texture = match params.character_selection.selected_character {
+        CharacterType::Shirou1 => params.game_assets.get_current_shirou_frame(),
+        CharacterType::Shirou2 => params.game_assets.get_current_sakura_frame(),
+    };
+
+    crate::debug_log!(
+        "Selected character: {:?}",
+        params.character_selection.selected_character
+    );
+
+    let character_name = match params.character_selection.selected_character {
+        CharacterType::Shirou1 => "hf_shirou",
+        CharacterType::Shirou2 => "sakura",
+    };
+
+    let player_common = (
+        Transform::from_translation(GameConfig::PLAYER_START_POS),
+        Player,
+        Velocity { x: 0.0, y: 0.0 },
+        PlayerState::default(),
+        crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
+        Health::default(),
+        ShroudState::default(),
+    );
+
+    if let Some(atlas_layout) = &params.game_assets.shirou_atlas
+        && params.character_selection.selected_character == CharacterType::Shirou1
+        && let Some(texture) = &params.game_assets.shirou_spritesheet
+    {
+        let anim_component = crate::systems::sprite_animation::create_character_animation(
+            &params.anim_data_map,
+            character_name,
         );
 
-        // 创建带动画的角色
-        let character_name = match character_selection.selected_character {
-            CharacterType::Shirou1 => "hf_shirou",
-            CharacterType::Shirou2 => "sakura",
-        };
-
-        // Initialize player components (Common)
-        let player_common = (
-            Transform::from_translation(GameConfig::PLAYER_START_POS),
-            Player,
-            Velocity { x: 0.0, y: 0.0 },
-            PlayerState::default(),
-            crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
-            Health::default(),
-            ShroudState::default(),
-        );
-
-        // Check for TextureAtlas (HF Shirou 4x4)
-        if let Some(atlas_layout) = &game_assets.shirou_atlas {
-            if character_selection.selected_character == CharacterType::Shirou1 {
-                if let Some(texture) = &game_assets.shirou_spritesheet {
-                    // Create SpriteAnimation component for Atlas system
-                    let anim_component =
-                        crate::systems::sprite_animation::create_character_animation(
-                            &anim_data_map,
-                            character_name,
-                        );
-
-                    commands.spawn((
-                        Sprite {
-                            image: texture.clone(),
-                            custom_size: Some(PLAYER_RENDER_SIZE),
-                            texture_atlas: Some(TextureAtlas {
-                                layout: atlas_layout.clone(),
-                                index: 0,
-                            }),
-                            ..default()
-                        },
-                        player_common,
-                        anim_component, // Using SpriteAnimation (Atlas system)
-                    ));
-
-                    println!("🗡️ HF Shirou Spawned (Atlas Mode 4x4)!");
-                    // Print controls...
-                    return;
-                }
-            }
-        }
-
-        // Fallback: Frame Mode
         commands.spawn((
             Sprite {
-                image: texture,
+                image: texture.clone(),
                 custom_size: Some(PLAYER_RENDER_SIZE),
+                texture_atlas: Some(TextureAtlas {
+                    layout: atlas_layout.clone(),
+                    index: 0,
+                }),
                 ..default()
             },
             player_common,
+            anim_component,
         ));
 
-        println!("🗡️ Shirou Spawned (Frame Mode Fallback)!");
-    } else {
-        println!("Player already exists, continuing game");
+        crate::debug_log!("HF Shirou spawned in atlas mode");
+        return;
     }
-}
 
-/// 处理游戏输入（暂停和返回菜单）
-///
-/// 使用统一的 GameInput 接口处理游戏状态切换。
-/// 支持 ESC 键暂停/恢复游戏，Q 键返回主菜单。
+    commands.spawn((
+        Sprite {
+            image: texture,
+            custom_size: Some(PLAYER_RENDER_SIZE),
+            ..default()
+        },
+        player_common,
+    ));
+
+    crate::debug_log!("Character spawned in frame fallback mode");
+}
+/// 浣跨敤缁熶竴鐨?GameInput 鎺ュ彛澶勭悊娓告垙鐘舵€佸垏鎹€?/// 鏀寔 ESC 閿殏鍋?鎭㈠娓告垙锛孮 閿繑鍥炰富鑿滃崟銆?
 pub fn handle_game_input(
     game_input: Res<crate::systems::input::GameInput>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -149,23 +122,23 @@ pub fn handle_game_input(
         GameState::Playing => {
             if game_input.pause {
                 next_state.set(GameState::Paused);
-                println!("游戏暂停");
+                crate::debug_log!("娓告垙鏆傚仠");
             }
         }
         GameState::Paused => {
             if game_input.pause {
                 next_state.set(GameState::Playing);
-                println!("继续游戏");
+                crate::debug_log!("缁х画娓告垙");
             } else if game_input.cancel {
                 next_state.set(GameState::Menu);
-                println!("返回主菜单");
+                crate::debug_log!("Back to main menu");
             }
         }
         _ => {}
     }
 }
 
-/// 恢复加载的游戏状态中的实体位置
+/// 鎭㈠鍔犺浇鐨勬父鎴忕姸鎬佷腑鐨勫疄浣撲綅缃?
 pub fn restore_loaded_game_entities(
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
@@ -176,92 +149,60 @@ pub fn restore_loaded_game_entities(
 ) {
     use crate::systems::text_constants::SaveLoadText;
 
-    if loaded_game_state.should_restore {
-        if let Some(state) = &loaded_game_state.state {
-            println!("Loading Game...");
-            let mut player_restored = false;
+    if !loaded_game_state.should_restore {
+        return;
+    }
+    let Some(state) = &loaded_game_state.state else {
+        return;
+    };
 
-            // 恢复玩家状态
-            if let Ok((mut player_transform, mut player_velocity, mut player_state)) =
-                player_query.single_mut()
-            {
-                player_transform.translation = state.player_position;
-                *player_velocity = state.player_velocity.clone();
-                player_state.is_grounded = state.player_grounded;
-                player_state.is_crouching = state.player_crouching;
+    crate::debug_log!("Loading Game...");
+    let mut player_restored = false;
 
-                println!("🔄 Player state restored:");
-                println!(
-                    "   Position: ({:.1}, {:.1})",
-                    state.player_position.x, state.player_position.y
-                );
-                println!("   Animation: {}", state.player_animation_state);
-                println!("   Grounded: {}", state.player_grounded);
-                player_restored = true;
-            } else {
-                warn!("⚠️ Player entity not ready yet, retrying save restore next frame");
-            }
+    if let Ok((mut player_transform, mut player_velocity, mut player_state)) =
+        player_query.single_mut()
+    {
+        player_transform.translation = state.player_position;
+        *player_velocity = state.player_velocity.clone();
+        player_state.is_grounded = state.player_grounded;
+        player_state.is_crouching = state.player_crouching;
+        player_restored = true;
+    } else {
+        warn!("Player entity not ready yet, retrying save restore next frame");
+    }
 
-            // 恢复摄像机状态
-            if let Ok(mut camera_transform) = camera_query.single_mut() {
-                camera_transform.translation = state.camera_position;
-                println!(
-                    "🔄 Camera position restored: ({:.1}, {:.1})",
-                    state.camera_position.x, state.camera_position.y
-                );
-            }
+    if let Ok(mut camera_transform) = camera_query.single_mut() {
+        camera_transform.translation = state.camera_position;
+    }
 
-            // 恢复游戏统计
-            game_stats.distance_traveled = state.distance_traveled;
-            game_stats.jump_count = state.jump_count;
-            game_stats.play_time = state.play_time;
+    game_stats.distance_traveled = state.distance_traveled;
+    game_stats.jump_count = state.jump_count;
+    game_stats.play_time = state.play_time;
 
-            println!("🔄 Game stats restored:");
-            println!("   Score: {}", state.score);
-            println!("   Distance: {:.1}m", state.distance_traveled);
-            println!("   Jumps: {}", state.jump_count);
-            println!("   Time: {:.1}s", state.play_time);
+    character_selection.selected_character = state.selected_character.clone();
 
-            // 恢复角色选择
-            character_selection.selected_character = state.selected_character.clone();
-            println!(
-                "🔄 Character selection restored: {:?}",
-                state.selected_character
-            );
+    audio_state_manager.music_playing = state.music_playing;
+    audio_state_manager.music_volume = state.audio_volume;
 
-            // 恢复音频状态
-            audio_state_manager.music_playing = state.music_playing;
-            audio_state_manager.music_volume = state.audio_volume;
+    crate::debug_log!("{}", SaveLoadText::LOAD_SUCCESS);
 
-            println!("🔄 Audio state restored:");
-            println!("   Music playing: {}", state.music_playing);
-            println!("   Volume: {:.1}", state.audio_volume);
-
-            println!("✅ {}", SaveLoadText::LOAD_SUCCESS);
-
-            if player_restored {
-                loaded_game_state.should_restore = false;
-                loaded_game_state.previous_state = None;
-            }
-        }
+    if player_restored {
+        loaded_game_state.should_restore = false;
+        loaded_game_state.previous_state = None;
     }
 }
-
-/// 清理游戏场景
 pub fn cleanup_game(
     mut commands: Commands,
     player_query: Query<Entity, With<Player>>,
     ground_query: Query<Entity, With<Ground>>,
 ) {
-    // 清理所有玩家实体
     for entity in player_query.iter() {
         commands.entity(entity).despawn();
-        println!("清理玩家实体");
+        crate::debug_log!("Cleaned player entity");
     }
 
-    // 清理所有地面实体
     for entity in ground_query.iter() {
         commands.entity(entity).despawn();
-        println!("清理地面实体");
+        crate::debug_log!("Cleaned ground entity");
     }
 }

@@ -1,7 +1,7 @@
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
 use futures_util::{SinkExt, StreamExt};
-use s__emiyashiro::protocol::{GamePacket, PlayerAction};
+use s_emiyashiro::protocol::{GamePacket, PlayerAction};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -21,14 +21,14 @@ async fn main() {
     // Initialize Database (requires server feature)
     #[cfg(feature = "server")]
     {
-        let database = s__emiyashiro::database::Database::new()
+        let database = s_emiyashiro::database::Database::new()
             .await
             .expect("Failed to connect to database");
         let pool = database.pool.clone();
 
         // Spawn Save Worker
         tokio::spawn(async move {
-            s__emiyashiro::systems::save_worker::run_save_worker(pool).await;
+            s_emiyashiro::systems::save_worker::run_save_worker(pool).await;
         });
     }
 
@@ -97,7 +97,7 @@ async fn main() {
 
     // Add Redis plugin (requires server feature)
     #[cfg(feature = "server")]
-    app.add_plugins(s__emiyashiro::database::redis::RedisPlugin);
+    app.add_plugins(s_emiyashiro::database::redis::RedisPlugin);
 
     // Insert resources to communicate with network
     app.insert_resource(NetworkChannels {
@@ -118,9 +118,9 @@ async fn main() {
             increment_tick,
             process_network_events,
             broadcast_snapshot_system,
-            s__emiyashiro::systems::sync_redis::sync_transform_to_redis,
+            s_emiyashiro::systems::sync_redis::sync_transform_to_redis,
             server_physics_system,
-            s__emiyashiro::systems::ai::bot_control_system,
+            s_emiyashiro::systems::ai::bot_control_system,
         ),
     );
 
@@ -132,7 +132,7 @@ async fn main() {
             process_network_events,
             broadcast_snapshot_system,
             server_physics_system,
-            s__emiyashiro::systems::ai::bot_control_system,
+            s_emiyashiro::systems::ai::bot_control_system,
         ),
     );
 
@@ -207,10 +207,10 @@ struct NetworkChannels {
     broadcast_tx: mpsc::UnboundedSender<GamePacket>,
 }
 
-use s__emiyashiro::components::ai::BotController;
-use s__emiyashiro::components::network::NetworkId;
-use s__emiyashiro::components::physics::Velocity;
-use s__emiyashiro::components::player::{Player, PlayerInputState};
+use s_emiyashiro::components::ai::BotController;
+use s_emiyashiro::components::network::NetworkId;
+use s_emiyashiro::components::physics::Velocity;
+use s_emiyashiro::components::player::{Player, PlayerInputState};
 
 #[derive(Resource, Default)]
 struct ClientEntityMap(HashMap<u64, Entity>);
@@ -342,7 +342,7 @@ fn broadcast_snapshot_system(
     for (transform, velocity, net_id, input) in query.iter() {
         let animation_state = determine_animation_state(velocity, input, transform);
 
-        players.push(s__emiyashiro::protocol::PlayerState {
+        players.push(s_emiyashiro::protocol::PlayerState {
             id: net_id.0,
             position: transform.translation,
             velocity: Vec3::new(velocity.x, velocity.y, 0.0),

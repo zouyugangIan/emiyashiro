@@ -104,14 +104,19 @@ pub fn display_progress_indicator(
     mut commands: Commands,
     progress: Res<OperationProgress>,
     asset_server: Res<AssetServer>,
-    mut query: Query<Entity, With<ProgressIndicator>>,
+    root_query: Query<Entity, With<ProgressIndicator>>,
+    mut operation_text_query: Query<&mut Text, With<ProgressOperationText>>,
+    mut percent_text_query: Query<&mut Text, With<ProgressPercentText>>,
+    mut fill_query: Query<&mut Node, With<ProgressBarFill>>,
 ) {
-    // 清理现有的进度指示器
-    for entity in query.iter_mut() {
-        commands.entity(entity).despawn();
+    if !progress.is_active {
+        for entity in root_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        return;
     }
 
-    if progress.is_active {
+    if root_query.is_empty() {
         let font = asset_server.load(asset_paths::FONT_FIRA_SANS);
 
         commands
@@ -128,24 +133,21 @@ pub fn display_progress_indicator(
                 ProgressIndicator,
             ))
             .with_children(|parent| {
-                // 操作名称
-                if let Some(ref operation) = progress.current_operation {
-                    parent.spawn((
-                        Text::new(operation.clone()),
-                        TextFont {
-                            font: font.clone(),
-                            font_size: 16.0,
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                        Node {
-                            margin: UiRect::all(Val::Px(10.0)),
-                            ..default()
-                        },
-                    ));
-                }
+                parent.spawn((
+                    Text::new(progress.current_operation.clone().unwrap_or_default()),
+                    TextFont {
+                        font: font.clone(),
+                        font_size: 16.0,
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                    Node {
+                        margin: UiRect::all(Val::Px(10.0)),
+                        ..default()
+                    },
+                    ProgressOperationText,
+                ));
 
-                // 进度条背景
                 parent
                     .spawn((
                         Node {
@@ -157,7 +159,6 @@ pub fn display_progress_indicator(
                         BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
                     ))
                     .with_children(|parent| {
-                        // 进度条填充
                         parent.spawn((
                             Node {
                                 width: Val::Px(280.0 * progress.progress_percentage / 100.0),
@@ -165,14 +166,14 @@ pub fn display_progress_indicator(
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.2, 0.8, 0.2)),
+                            ProgressBarFill,
                         ));
                     });
 
-                // 进度百分比文本
                 parent.spawn((
                     Text::new(format!("{:.1}%", progress.progress_percentage)),
                     TextFont {
-                        font: font.clone(),
+                        font,
                         font_size: 14.0,
                         ..default()
                     },
@@ -181,11 +182,34 @@ pub fn display_progress_indicator(
                         margin: UiRect::all(Val::Px(10.0)),
                         ..default()
                     },
+                    ProgressPercentText,
                 ));
             });
+        return;
+    }
+
+    if let Ok(mut operation_text) = operation_text_query.single_mut() {
+        **operation_text = progress.current_operation.clone().unwrap_or_default();
+    }
+
+    if let Ok(mut percent_text) = percent_text_query.single_mut() {
+        **percent_text = format!("{:.1}%", progress.progress_percentage);
+    }
+
+    if let Ok(mut fill_node) = fill_query.single_mut() {
+        fill_node.width = Val::Px(280.0 * progress.progress_percentage / 100.0);
     }
 }
 
 /// 进度指示器组件标记
 #[derive(Component)]
 pub struct ProgressIndicator;
+
+#[derive(Component)]
+pub struct ProgressOperationText;
+
+#[derive(Component)]
+pub struct ProgressPercentText;
+
+#[derive(Component)]
+pub struct ProgressBarFill;

@@ -156,15 +156,9 @@ pub struct GameStats {
 }
 
 /// 数据库资源
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct DatabaseResource {
     pub database: Option<crate::database::Database>,
-}
-
-impl Default for DatabaseResource {
-    fn default() -> Self {
-        Self { database: None }
-    }
 }
 
 /// 当前游戏会话资源

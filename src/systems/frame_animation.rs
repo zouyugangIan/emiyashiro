@@ -1,6 +1,17 @@
 use crate::{asset_paths, components::*, resources::*, states::*};
 use bevy::prelude::*;
 
+type PlayerWithoutAnimationQuery<'w, 's> = Query<
+    'w,
+    's,
+    Entity,
+    (
+        With<Player>,
+        Without<FrameAnimation>,
+        Without<crate::systems::sprite_animation::SpriteAnimation>,
+    ),
+>;
+
 /// 帧动画组件
 #[derive(Component, Debug)]
 pub struct FrameAnimation {
@@ -60,7 +71,7 @@ pub fn load_character_animations(
     asset_server: Res<AssetServer>,
     game_assets: Option<ResMut<GameAssets>>,
 ) {
-    println!("🎬 加载角色动画帧...");
+    crate::debug_log!("🎬 加载角色动画帧...");
 
     let _shirou_idle_frames: Vec<Handle<Image>> = vec![
         asset_server.load(asset_paths::IMAGE_CHAR_SHIROU_IDLE1),
@@ -89,9 +100,9 @@ pub fn load_character_animations(
     // 存储到游戏资源中（如果资源存在）
     if let Some(_assets) = game_assets {
         // 这里可以存储动画帧到资源中，但现在我们先跳过
-        println!("✅ 角色动画帧加载完成");
+        crate::debug_log!("✅ 角色动画帧加载完成");
     } else {
-        println!("⚠️ GameAssets 资源尚未创建，跳过动画帧存储");
+        crate::debug_log!("⚠️ GameAssets 资源尚未创建，跳过动画帧存储");
     }
 }
 
@@ -184,7 +195,7 @@ pub fn update_character_animations(
                 animation.reset();
                 animation.play();
 
-                println!(
+                crate::debug_log!(
                     "🎬 切換動畫: {:?} ({}幀)",
                     target_animation,
                     new_frames.len()
@@ -201,14 +212,7 @@ pub fn update_character_animations(
 pub fn setup_player_animation(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    player_query: Query<
-        Entity,
-        (
-            With<Player>,
-            Without<FrameAnimation>,
-            Without<crate::systems::sprite_animation::SpriteAnimation>,
-        ),
-    >,
+    player_query: PlayerWithoutAnimationQuery,
     character_selection: Res<CharacterSelection>,
 ) {
     for entity in player_query.iter() {
@@ -278,7 +282,7 @@ pub fn setup_player_animation(
             .entity(entity)
             .insert((frame_animation, char_anim_state));
 
-        println!(
+        crate::debug_log!(
             "🎭 为玩家添加动画组件: {:?} (待機: {}幀, 跑步: {}幀, 跳躍: {}幀, 蹲下: {}幀)",
             character_selection.selected_character,
             idle_count,
@@ -313,7 +317,7 @@ pub fn setup_animated_background(mut commands: Commands, asset_server: Res<Asset
         background_animation,
     ));
 
-    println!("🌅 创建动态背景（圖片模式）");
+    crate::debug_log!("🌅 创建动态背景（圖片模式）");
 }
 
 /// 动画调试系统
@@ -330,7 +334,7 @@ pub fn debug_animations(
 
     if timer.just_finished() {
         for (animation, char_state) in query.iter() {
-            println!(
+            crate::debug_log!(
                 "🎬 动画状态: {:?}, 当前帧: {}/{}, 播放中: {}",
                 char_state.current_animation,
                 animation.current_frame + 1,

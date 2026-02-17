@@ -10,6 +10,8 @@ pub enum GameState {
     SaveDialog,   // 存档对话框
     LoadTable,    // 加载表格
     RenameDialog, // 重命名对话框
+    GameOver,     // 游戏失败
+    Reviving,     // 复活中
 }
 
 /// 角色选择状态

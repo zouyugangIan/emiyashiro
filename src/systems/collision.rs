@@ -5,6 +5,9 @@
 use crate::{components::*, resources::*};
 use bevy::prelude::*;
 
+type GroundCollisionQuery<'w, 's> =
+    Query<'w, 's, (&'static Transform, &'static CollisionBox), (With<Ground>, Without<Player>)>;
+
 /// 碰撞检测结果
 #[derive(Debug, Clone)]
 pub struct CollisionResult {
@@ -89,7 +92,7 @@ pub fn collision_detection_system(
         ),
         With<Player>,
     >,
-    ground_query: Query<(&Transform, &CollisionBox), (With<Ground>, Without<Player>)>,
+    ground_query: GroundCollisionQuery,
     mut commands: Commands,
 ) {
     if let Ok((mut player_transform, mut player_velocity, mut player_state, player_collision)) =
@@ -106,22 +109,20 @@ pub fn collision_detection_system(
 
             let collision = check_aabb_collision(&player_bounds, &ground_bounds);
 
-            if collision.collided {
-                if !ground_collision.is_trigger {
-                    // 解决碰撞
-                    resolve_collision(&mut player_transform, &mut player_velocity, &collision);
+            if collision.collided && !ground_collision.is_trigger {
+                // 解决碰撞
+                resolve_collision(&mut player_transform, &mut player_velocity, &collision);
 
-                    // 检查是否在地面上
-                    if collision.normal.y > 0.5 {
-                        on_ground = true;
+                // 检查是否在地面上
+                if collision.normal.y > 0.5 {
+                    on_ground = true;
 
-                        // 如果刚着地，触发着地音效
-                        if !player_state.is_grounded && player_velocity.y < -50.0 {
-                            commands.spawn(AudioTrigger {
-                                sound_type: SoundType::Land,
-                                should_play: true,
-                            });
-                        }
+                    // 如果刚着地，触发着地音效
+                    if !player_state.is_grounded && player_velocity.y < -50.0 {
+                        commands.spawn(AudioTrigger {
+                            sound_type: SoundType::Land,
+                            should_play: true,
+                        });
                     }
                 }
             }

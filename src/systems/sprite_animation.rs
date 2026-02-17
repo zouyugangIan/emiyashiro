@@ -226,12 +226,14 @@ pub fn load_animation_data() -> AnimationDataMap {
             }
         }
 
-        println!(
+        crate::debug_log!(
             "📂 Loaded {} character animation profiles.",
             animation_map.0.len()
         );
     } else {
-        println!("⚠️ Warning: assets/animations directory not found, using empty animation map");
+        crate::debug_log!(
+            "⚠️ Warning: assets/animations directory not found, using empty animation map"
+        );
     }
 
     animation_map
@@ -356,16 +358,16 @@ pub fn update_character_animation_state(
             apply_animation_change(&mut animation, new_animation.clone(), velocity.x.abs());
 
             // === Dynamic Layout Switching for Mixed-Grid Sprite Sheets ===
-            if let Some(assets) = &game_assets {
-                if let Some(ref mut atlas) = sprite.texture_atlas {
-                    // Check if we need the 5-column layout (Run) or 4-column (Rest)
-                    if new_animation == AnimationType::Running {
-                        if let Some(run_layout) = &assets.shirou_atlas_run {
-                            atlas.layout = run_layout.clone();
-                        }
-                    } else if let Some(std_layout) = &assets.shirou_atlas {
-                        atlas.layout = std_layout.clone();
+            if let Some(assets) = &game_assets
+                && let Some(ref mut atlas) = sprite.texture_atlas
+            {
+                // Check if we need the 5-column layout (Run) or 4-column (Rest)
+                if new_animation == AnimationType::Running {
+                    if let Some(run_layout) = &assets.shirou_atlas_run {
+                        atlas.layout = run_layout.clone();
                     }
+                } else if let Some(std_layout) = &assets.shirou_atlas {
+                    atlas.layout = std_layout.clone();
                 }
             }
 

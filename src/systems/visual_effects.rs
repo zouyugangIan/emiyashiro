@@ -5,6 +5,27 @@
 use crate::components::*;
 use bevy::prelude::*;
 
+type VelocityChangedPlayerQuery<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static Transform, &'static Velocity),
+    (With<Player>, Changed<Velocity>),
+>;
+
+type PlayerStateChangedQuery<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static Transform, &'static PlayerState),
+    (With<Player>, Changed<PlayerState>),
+>;
+
+type ButtonHoverTransformQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static mut Transform),
+    (Changed<Interaction>, With<Button>),
+>;
+
 /// 视觉效果组件
 #[derive(Component)]
 pub struct VisualEffect {
@@ -43,10 +64,7 @@ impl VisualEffect {
 }
 
 /// 跳跃视觉效果触发器
-pub fn trigger_jump_effect(
-    mut commands: Commands,
-    mut player_query: Query<(Entity, &Transform, &Velocity), (With<Player>, Changed<Velocity>)>,
-) {
+pub fn trigger_jump_effect(mut commands: Commands, mut player_query: VelocityChangedPlayerQuery) {
     for (entity, _transform, velocity) in player_query.iter_mut() {
         // 检测跳跃（向上的速度突然增加）
         if velocity.y > 300.0 {
@@ -60,13 +78,7 @@ pub fn trigger_jump_effect(
 }
 
 /// 着陆视觉效果触发器
-pub fn trigger_land_effect(
-    mut commands: Commands,
-    mut player_query: Query<
-        (Entity, &Transform, &PlayerState),
-        (With<Player>, Changed<PlayerState>),
-    >,
-) {
+pub fn trigger_land_effect(mut commands: Commands, mut player_query: PlayerStateChangedQuery) {
     for (entity, _transform, player_state) in player_query.iter_mut() {
         // 检测着陆（刚刚接触地面）
         if player_state.is_grounded {
@@ -98,13 +110,7 @@ pub fn trigger_run_effect(
 }
 
 /// 蹲下视觉效果
-pub fn trigger_crouch_effect(
-    mut commands: Commands,
-    mut player_query: Query<
-        (Entity, &Transform, &PlayerState),
-        (With<Player>, Changed<PlayerState>),
-    >,
-) {
+pub fn trigger_crouch_effect(mut commands: Commands, mut player_query: PlayerStateChangedQuery) {
     for (entity, _transform, player_state) in player_query.iter_mut() {
         // 检测蹲下状态变化
         if player_state.is_crouching {
@@ -206,9 +212,7 @@ pub fn cleanup_visual_effects(
 }
 
 /// 简单的UI反馈效果
-pub fn button_hover_effect(
-    mut button_query: Query<(&Interaction, &mut Transform), (Changed<Interaction>, With<Button>)>,
-) {
+pub fn button_hover_effect(mut button_query: ButtonHoverTransformQuery) {
     for (interaction, mut transform) in button_query.iter_mut() {
         match *interaction {
             Interaction::Hovered => {

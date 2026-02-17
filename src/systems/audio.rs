@@ -32,15 +32,16 @@ pub fn play_menu_music(
     mut audio_manager: ResMut<AudioManager>,
 ) {
     // 只有在资源存在且音乐未播放时才播放
-    if let Some(assets) = game_assets {
-        if !audio_manager.menu_music_playing && audio_settings.music_enabled {
-            commands.spawn((
-                AudioPlayer(assets.menu_music.clone()),
-                PlaybackSettings::LOOP,
-            ));
-            audio_manager.menu_music_playing = true;
-            println!("🎵 开始播放菜单音乐");
-        }
+    if let Some(assets) = game_assets
+        && !audio_manager.menu_music_playing
+        && audio_settings.music_enabled
+    {
+        commands.spawn((
+            AudioPlayer(assets.menu_music.clone()),
+            PlaybackSettings::LOOP,
+        ));
+        audio_manager.menu_music_playing = true;
+        crate::debug_log!("🎵 开始播放菜单音乐");
     }
 }
 
@@ -52,15 +53,16 @@ pub fn play_game_music(
     mut audio_manager: ResMut<AudioManager>,
 ) {
     // 只有在资源存在且音乐未播放时才播放
-    if let Some(assets) = game_assets {
-        if !audio_manager.game_music_playing && audio_settings.music_enabled {
-            commands.spawn((
-                AudioPlayer(assets.game_music.clone()),
-                PlaybackSettings::LOOP,
-            ));
-            audio_manager.game_music_playing = true;
-            println!("🎵 开始播放游戏音乐");
-        }
+    if let Some(assets) = game_assets
+        && !audio_manager.game_music_playing
+        && audio_settings.music_enabled
+    {
+        commands.spawn((
+            AudioPlayer(assets.game_music.clone()),
+            PlaybackSettings::LOOP,
+        ));
+        audio_manager.game_music_playing = true;
+        crate::debug_log!("🎵 开始播放游戏音乐");
     }
 }
 
@@ -75,7 +77,7 @@ pub fn stop_all_music(
     }
     audio_manager.menu_music_playing = false;
     audio_manager.game_music_playing = false;
-    println!("🔇 停止所有音乐");
+    crate::debug_log!("🔇 停止所有音乐");
 }
 
 /// 停止菜单音乐
@@ -90,7 +92,7 @@ pub fn stop_menu_music(
             commands.entity(entity).despawn();
         }
         audio_manager.menu_music_playing = false;
-        println!("🔇 停止菜单音乐");
+        crate::debug_log!("🔇 停止菜单音乐");
     }
 }
 
@@ -106,7 +108,7 @@ pub fn stop_game_music(
             commands.entity(entity).despawn();
         }
         audio_manager.game_music_playing = false;
-        println!("🔇 停止游戏音乐");
+        crate::debug_log!("🔇 停止游戏音乐");
     }
 }
 
@@ -125,7 +127,7 @@ pub fn play_game_music_and_stop_menu(
             commands.entity(entity).despawn();
         }
         audio_manager.menu_music_playing = false;
-        println!("🔇 停止菜单音乐");
+        crate::debug_log!("🔇 停止菜单音乐");
     }
 
     // 开始播放游戏音乐序列
@@ -146,23 +148,24 @@ pub fn start_game_music_sequence(
     mut audio_manager: ResMut<AudioManager>,
     _audio_state_manager: ResMut<AudioStateManager>,
 ) {
-    if let Some(assets) = game_assets {
-        if !audio_manager.game_music_playing && audio_settings.music_enabled {
-            // 播放第一首歌：game-whyIfight.ogg（不循环）
-            let entity = commands
-                .spawn((
-                    AudioPlayer(assets.game_whyifight_music.clone()),
-                    PlaybackSettings::DESPAWN, // 播放完后自动销毁
-                    GameMusicMarker,
-                ))
-                .id();
+    if let Some(assets) = game_assets
+        && !audio_manager.game_music_playing
+        && audio_settings.music_enabled
+    {
+        // 播放第一首歌：game-whyIfight.ogg（不循环）
+        let entity = commands
+            .spawn((
+                AudioPlayer(assets.game_whyifight_music.clone()),
+                PlaybackSettings::DESPAWN, // 播放完后自动销毁
+                GameMusicMarker,
+            ))
+            .id();
 
-            audio_manager.game_music_playing = true;
-            audio_manager.current_game_track = GameMusicTrack::WhyIFight;
-            audio_manager.music_entity = Some(entity);
+        audio_manager.game_music_playing = true;
+        audio_manager.current_game_track = GameMusicTrack::WhyIFight;
+        audio_manager.music_entity = Some(entity);
 
-            println!("🎵 开始播放游戏音乐序列 - WhyIFight");
-        }
+        crate::debug_log!("🎵 开始播放游戏音乐序列 - WhyIFight");
     }
 }
 
@@ -183,41 +186,41 @@ pub fn handle_music_transitions(
     }
 
     // 检查当前音乐实体是否还存在
-    if let Some(music_entity) = audio_manager.music_entity {
-        if music_query.get(music_entity).is_err() {
-            // 音乐实体已经被销毁（播放完毕），需要切换到下一首
-            if let Some(assets) = game_assets {
-                match audio_manager.current_game_track {
-                    GameMusicTrack::WhyIFight => {
-                        // WhyIFight 播放完毕，切换到 Game
-                        let entity = commands
-                            .spawn((
-                                AudioPlayer(assets.game_music.clone()),
-                                PlaybackSettings::DESPAWN, // 播放完后自动销毁，不循环
-                                GameMusicMarker,
-                            ))
-                            .id();
+    if let Some(music_entity) = audio_manager.music_entity
+        && music_query.get(music_entity).is_err()
+    {
+        // 音乐实体已经被销毁（播放完毕），需要切换到下一首
+        if let Some(assets) = game_assets {
+            match audio_manager.current_game_track {
+                GameMusicTrack::WhyIFight => {
+                    // WhyIFight 播放完毕，切换到 Game
+                    let entity = commands
+                        .spawn((
+                            AudioPlayer(assets.game_music.clone()),
+                            PlaybackSettings::DESPAWN, // 播放完后自动销毁，不循环
+                            GameMusicMarker,
+                        ))
+                        .id();
 
-                        audio_manager.current_game_track = GameMusicTrack::Game;
-                        audio_manager.music_entity = Some(entity);
+                    audio_manager.current_game_track = GameMusicTrack::Game;
+                    audio_manager.music_entity = Some(entity);
 
-                        println!("🎵 切换到音乐 - Game");
-                    }
-                    GameMusicTrack::Game => {
-                        // Game 播放完毕，切换回 WhyIFight
-                        let entity = commands
-                            .spawn((
-                                AudioPlayer(assets.game_whyifight_music.clone()),
-                                PlaybackSettings::DESPAWN, // 播放完后自动销毁，不循环
-                                GameMusicMarker,
-                            ))
-                            .id();
+                    crate::debug_log!("🎵 切换到音乐 - Game");
+                }
+                GameMusicTrack::Game => {
+                    // Game 播放完毕，切换回 WhyIFight
+                    let entity = commands
+                        .spawn((
+                            AudioPlayer(assets.game_whyifight_music.clone()),
+                            PlaybackSettings::DESPAWN, // 播放完后自动销毁，不循环
+                            GameMusicMarker,
+                        ))
+                        .id();
 
-                        audio_manager.current_game_track = GameMusicTrack::WhyIFight;
-                        audio_manager.music_entity = Some(entity);
+                    audio_manager.current_game_track = GameMusicTrack::WhyIFight;
+                    audio_manager.music_entity = Some(entity);
 
-                        println!("🎵 切换到音乐 - WhyIFight");
-                    }
+                    crate::debug_log!("🎵 切换到音乐 - WhyIFight");
                 }
             }
         }
@@ -236,7 +239,9 @@ pub fn maintain_audio_during_pause(
         // 验证音频实体仍然存在
         let audio_entities_count = audio_query.iter().count();
         if audio_entities_count == 0 {
-            println!("⚠️ Warning: Audio state indicates music playing but no audio entities found");
+            crate::debug_log!(
+                "⚠️ Warning: Audio state indicates music playing but no audio entities found"
+            );
         }
         // 音乐继续播放，不做任何操作
         // Bevy的音频系统会自动处理播放状态
@@ -250,9 +255,9 @@ pub fn resume_audio_after_pause(
 ) {
     // 从暂停恢复时，确保音频状态正确
     if audio_state_manager.music_playing && audio_manager.game_music_playing {
-        println!("🎵 Music continues seamlessly after pause");
+        crate::debug_log!("🎵 Music continues seamlessly after pause");
     } else if audio_state_manager.music_playing && !audio_manager.game_music_playing {
-        println!("⚠️ Audio state mismatch detected - music should be playing");
+        crate::debug_log!("⚠️ Audio state mismatch detected - music should be playing");
         // 可以在这里添加音频恢复逻辑
     }
 }
@@ -260,7 +265,7 @@ pub fn resume_audio_after_pause(
 /// 保存音频状态到游戏状态
 pub fn capture_audio_state(
     audio_manager: Res<AudioManager>,
-    _audio_state_manager: Res<AudioStateManager>,
+    audio_state_manager: Res<AudioStateManager>,
     audio_settings: Res<AudioSettings>,
 ) -> AudioState {
     AudioState {
@@ -269,8 +274,7 @@ pub fn capture_audio_state(
         sfx_volume: audio_settings.sfx_volume,
         master_volume: audio_settings.master_volume,
         music_enabled: audio_settings.music_enabled,
-        // TODO: 实现音频位置跟踪
-        music_position: 0.0,
+        music_position: audio_state_manager.music_position,
     }
 }
 
@@ -309,7 +313,7 @@ pub fn restore_audio_state(
             ));
 
             audio_manager.game_music_playing = true;
-            println!("🎵 Audio state restored - game music playing");
+            crate::debug_log!("🎵 Audio state restored - game music playing");
         }
     }
     // 如果不需要播放音乐但当前在播放
@@ -319,13 +323,13 @@ pub fn restore_audio_state(
             commands.entity(entity).despawn();
         }
         audio_manager.game_music_playing = false;
-        println!("🔇 Audio state restored - music stopped");
+        crate::debug_log!("🔇 Audio state restored - music stopped");
     }
 
-    println!("🔊 Audio state fully restored:");
-    println!("   Music playing: {}", audio_state.music_playing);
-    println!("   Music volume: {:.1}", audio_state.music_volume);
-    println!("   Music enabled: {}", audio_state.music_enabled);
+    crate::debug_log!("🔊 Audio state fully restored:");
+    crate::debug_log!("   Music playing: {}", audio_state.music_playing);
+    crate::debug_log!("   Music volume: {:.1}", audio_state.music_volume);
+    crate::debug_log!("   Music enabled: {}", audio_state.music_enabled);
 }
 
 /// 音频状态结构

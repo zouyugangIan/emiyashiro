@@ -2,6 +2,7 @@
 mod tests {
     use crate::{components::*, resources::*, states::*, systems::*};
     use bevy::prelude::*;
+    use std::fs;
 
     fn create_test_app() -> App {
         let mut app = App::new();
@@ -86,6 +87,170 @@ mod tests {
 
         assert!(save_manager.current_save.is_none());
         assert_eq!(save_manager.save_file_path, "save_data.json");
+    }
+
+    #[test]
+    fn test_save_game_writes_v2_schema() {
+        let temp_path =
+            std::env::temp_dir().join(format!("emiyashiro-save-v2-{}.json", uuid::Uuid::new_v4()));
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<GameStats>()
+            .init_resource::<CharacterSelection>()
+            .init_resource::<SaveManager>()
+            .add_systems(Update, save::save_game);
+
+        app.world_mut().resource_mut::<SaveManager>().save_file_path =
+            temp_path.to_string_lossy().to_string();
+        app.world_mut()
+            .resource_mut::<GameStats>()
+            .distance_traveled = 321.0;
+        app.world_mut().resource_mut::<GameStats>().jump_count = 7;
+        app.world_mut().resource_mut::<GameStats>().play_time = 42.0;
+
+        app.update();
+
+        let json = fs::read_to_string(&temp_path).expect("save file should exist");
+        let v2_save: SaveFileData = serde_json::from_str(&json).expect("should be SaveFileData v2");
+
+        assert_eq!(v2_save.version, "2.0");
+        assert_eq!(v2_save.game_state.distance_traveled, 321.0);
+        assert_eq!(v2_save.game_state.jump_count, 7);
+        assert!(v2_save.verify_checksum());
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_load_game_migrates_legacy_save_data_to_v2() {
+        let temp_path = std::env::temp_dir().join(format!(
+            "emiyashiro-legacy-save-{}.json",
+            uuid::Uuid::new_v4()
+        ));
+
+        let legacy = SaveData {
+            player_name: "LegacyPlayer".to_string(),
+            selected_character: CharacterType::Shirou2,
+            best_distance: 888.0,
+            total_jumps: 99,
+            total_play_time: 123.0,
+            save_time: chrono::Utc::now(),
+        };
+        let legacy_json = serde_json::to_string_pretty(&legacy).expect("serialize legacy save");
+        fs::write(&temp_path, legacy_json.as_bytes()).expect("write legacy save");
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<CharacterSelection>()
+            .init_resource::<SaveManager>()
+            .add_systems(Update, save::load_game);
+
+        app.world_mut().resource_mut::<SaveManager>().save_file_path =
+            temp_path.to_string_lossy().to_string();
+
+        app.update();
+
+        let migrated_json = fs::read_to_string(&temp_path).expect("migrated save should exist");
+        let v2_save: SaveFileData =
+            serde_json::from_str(&migrated_json).expect("legacy save should be migrated to v2");
+
+        assert_eq!(v2_save.version, "2.0");
+        assert_eq!(v2_save.metadata.name, "LegacyPlayer");
+        assert_eq!(
+            v2_save.game_state.selected_character,
+            CharacterType::Shirou2
+        );
+        assert_eq!(v2_save.game_state.distance_traveled, 888.0);
+
+        let loaded_selection = app.world().resource::<CharacterSelection>();
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou2);
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_damage_event_transitions_to_game_over() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(Update, crate::systems::combat::apply_damage_events);
+
+        let player = app.world_mut().spawn((Player, Health::new(10.0))).id();
+
+        app.world_mut()
+            .resource_mut::<Messages<crate::events::DamageEvent>>()
+            .write(crate::events::DamageEvent {
+                target: player,
+                amount: 99.0,
+                source: crate::events::DamageSource::EnemyContact,
+            });
+
+        app.update();
+        app.update();
+
+        let state = app.world().resource::<State<GameState>>();
+        assert_eq!(*state.get(), GameState::GameOver);
+    }
+
+    #[test]
+    fn test_revive_flow_restores_player_state() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .init_resource::<GameStats>()
+            .add_systems(
+                OnEnter(GameState::Reviving),
+                crate::systems::death::revive_player,
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(10.0, -999.0, 0.0),
+                Velocity::new(13.0, -25.0),
+                PlayerState {
+                    is_grounded: false,
+                    is_crouching: true,
+                },
+                Health {
+                    current: 0.0,
+                    max: 100.0,
+                },
+                ShroudState {
+                    is_released: true,
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Reviving);
+        app.update(); // enter Reviving and run revive_player
+        app.update(); // transition to Playing
+
+        let state = app.world().resource::<State<GameState>>();
+        assert_eq!(*state.get(), GameState::Playing);
+
+        let entity = app.world().entity(player);
+        let transform = entity.get::<Transform>().expect("player transform");
+        let velocity = entity.get::<Velocity>().expect("player velocity");
+        let player_state = entity.get::<PlayerState>().expect("player state");
+        let health = entity.get::<Health>().expect("player health");
+        let shroud = entity.get::<ShroudState>().expect("player shroud");
+
+        assert_eq!(transform.translation, GameConfig::PLAYER_START_POS);
+        assert_eq!(velocity.x, 0.0);
+        assert_eq!(velocity.y, 0.0);
+        assert!(player_state.is_grounded);
+        assert!(!player_state.is_crouching);
+        assert_eq!(health.current, health.max);
+        assert!(!shroud.is_released);
     }
 
     // Test system behavior with mock data

@@ -159,7 +159,8 @@ impl SpritesheetValidator {
             ));
         }
 
-        if image_size.x % frame_size.x != 0 || image_size.y % frame_size.y != 0 {
+        if !image_size.x.is_multiple_of(frame_size.x) || !image_size.y.is_multiple_of(frame_size.y)
+        {
             return Err("精灵表尺寸不能被帧尺寸整除".to_string());
         }
 

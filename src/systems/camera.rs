@@ -6,6 +6,9 @@
 use crate::{components::*, resources::*};
 use bevy::prelude::*;
 
+type PlayerMotionQuery<'w, 's> =
+    Query<'w, 's, (&'static Transform, &'static Velocity), (With<Player>, Without<Camera>)>;
+
 /// 摄像机配置资源
 ///
 /// 存储摄像机的各种设置参数，允许运行时调整。
@@ -100,7 +103,7 @@ impl CameraConfig {
 /// * `time` - 时间资源
 pub fn advanced_camera_follow(
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
-    player_query: Query<(&Transform, &Velocity), (With<Player>, Without<Camera>)>,
+    player_query: PlayerMotionQuery,
     mut camera_config: ResMut<CameraConfig>,
     time: Res<Time>,
 ) {
@@ -186,7 +189,7 @@ pub fn advanced_camera_follow(
 /// 包含动态跟随速度、预测性移动和完整的边界限制。
 pub fn camera_follow(
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
-    player_query: Query<(&Transform, &Velocity), (With<Player>, Without<Camera>)>,
+    player_query: PlayerMotionQuery,
     time: Res<Time>,
 ) {
     let delta_time = time.delta_secs();
@@ -358,22 +361,23 @@ pub fn camera_debug_system(
     }
     timer.tick(time.delta());
 
-    if timer.just_finished() {
-        if let (Ok(camera_transform), Ok(player_transform)) =
+    if timer.just_finished()
+        && let (Ok(camera_transform), Ok(player_transform)) =
             (camera_query.single(), player_query.single())
-        {
-            let distance = camera_transform.translation.x - player_transform.translation.x;
-            println!("📷 摄像机调试信息:");
-            println!(
-                "   摄像机位置: ({:.1}, {:.1})",
-                camera_transform.translation.x, camera_transform.translation.y
-            );
-            println!(
-                "   玩家位置: ({:.1}, {:.1})",
-                player_transform.translation.x, player_transform.translation.y
-            );
-            println!("   距离差: {:.1}", distance);
-            println!("   震动强度: {:.1}", camera_config.shake_intensity);
-        }
+    {
+        let distance = camera_transform.translation.x - player_transform.translation.x;
+        crate::debug_log!("📷 摄像机调试信息:");
+        crate::debug_log!(
+            "   摄像机位置: ({:.1}, {:.1})",
+            camera_transform.translation.x,
+            camera_transform.translation.y
+        );
+        crate::debug_log!(
+            "   玩家位置: ({:.1}, {:.1})",
+            player_transform.translation.x,
+            player_transform.translation.y
+        );
+        crate::debug_log!("   距离差: {:.1}", distance);
+        crate::debug_log!("   震动强度: {:.1}", camera_config.shake_intensity);
     }
 }

@@ -14,7 +14,7 @@ pub fn generate_simple_assets(_commands: Commands, mut images: ResMut<Assets<Ima
     let background_image = create_background_texture();
     let _background_handle = images.add(background_image);
 
-    println!("🎨 程序化素材生成完成！");
+    crate::debug_log!("🎨 程序化素材生成完成！");
 }
 
 /// 创建简单的角色纹理

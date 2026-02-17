@@ -1,102 +1,207 @@
-use crate::{resources::*, states::*};
 use bevy::prelude::*;
 use std::fs;
+use std::path::PathBuf;
 
-/// 保存游戏数据
+use crate::{resources::*, states::*};
+
+const AUTOSAVE_NAME: &str = "autosave";
+
+type SaveButtonInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static mut BackgroundColor),
+    (Changed<Interaction>, With<crate::components::SaveButton>),
+>;
+
+/// 保存游戏数据（统一写入 SaveFileData v2）。
 pub fn save_game(
     game_stats: Res<GameStats>,
     character_selection: Res<CharacterSelection>,
     mut save_manager: ResMut<SaveManager>,
 ) {
-    let save_data = SaveData {
-        player_name: "士郎".to_string(),
+    let summary = SaveData {
+        player_name: AUTOSAVE_NAME.to_string(),
         selected_character: character_selection.selected_character.clone(),
         best_distance: game_stats.distance_traveled.max(
             save_manager
                 .current_save
                 .as_ref()
-                .map(|s| s.best_distance)
+                .map(|save| save.best_distance)
                 .unwrap_or(0.0),
         ),
         total_jumps: game_stats.jump_count
             + save_manager
                 .current_save
                 .as_ref()
-                .map(|s| s.total_jumps)
+                .map(|save| save.total_jumps)
                 .unwrap_or(0),
         total_play_time: game_stats.play_time
             + save_manager
                 .current_save
                 .as_ref()
-                .map(|s| s.total_play_time)
+                .map(|save| save.total_play_time)
                 .unwrap_or(0.0),
         save_time: chrono::Utc::now(),
     };
 
-    match serde_json::to_string_pretty(&save_data) {
-        Ok(json_string) => match fs::write(&save_manager.save_file_path, json_string) {
-            Ok(_) => {
-                save_manager.current_save = Some(save_data);
-                println!("💾 游戏已保存！");
-                println!(
-                    "   最佳距离: {:.1}m",
-                    save_manager.current_save.as_ref().unwrap().best_distance
-                );
-                println!(
-                    "   总跳跃次数: {}",
-                    save_manager.current_save.as_ref().unwrap().total_jumps
-                );
-                println!(
-                    "   总游戏时间: {:.1}s",
-                    save_manager.current_save.as_ref().unwrap().total_play_time
-                );
-            }
-            Err(e) => {
-                println!("❌ 保存失败: {}", e);
-            }
-        },
-        Err(e) => {
-            println!("❌ 序列化失败: {}", e);
+    let mut state = CompleteGameState::default();
+    state.selected_character = summary.selected_character.clone();
+    state.distance_traveled = summary.best_distance;
+    state.jump_count = summary.total_jumps;
+    state.play_time = summary.total_play_time;
+    state.score = (state.distance_traveled * 10.0) as u32 + state.jump_count * 50;
+    state.save_timestamp = summary.save_time;
+
+    let save_path = PathBuf::from(&save_manager.save_file_path);
+    let metadata = SaveFileMetadata {
+        name: summary.player_name.clone(),
+        score: state.score,
+        distance: state.distance_traveled,
+        play_time: state.play_time,
+        save_timestamp: state.save_timestamp,
+        file_path: save_path.to_string_lossy().to_string(),
+    };
+
+    let save_data = SaveFileData::new(metadata, state);
+    match write_v2_save(&save_path, &save_data) {
+        Ok(()) => {
+            save_manager.current_save = Some(summary);
+            crate::debug_log!("💾 游戏已保存（SaveFileData v2）");
+        }
+        Err(error) => {
+            crate::debug_log!("❌ 保存失败: {}", error);
         }
     }
 }
 
-/// 加载游戏数据
+/// 加载游戏数据（兼容 legacy，只读导入后自动迁移到 v2）。
 pub fn load_game(
     mut save_manager: ResMut<SaveManager>,
     mut character_selection: ResMut<CharacterSelection>,
 ) {
-    match fs::read_to_string(&save_manager.save_file_path) {
-        Ok(json_string) => match serde_json::from_str::<SaveData>(&json_string) {
-            Ok(save_data) => {
-                character_selection.selected_character = save_data.selected_character.clone();
-                save_manager.current_save = Some(save_data.clone());
-                println!("📂 存档已加载！");
-                println!("   角色: {:?}", save_data.selected_character);
-                println!("   最佳距离: {:.1}m", save_data.best_distance);
-                println!("   总跳跃次数: {}", save_data.total_jumps);
-                println!("   总游戏时间: {:.1}s", save_data.total_play_time);
-                println!(
-                    "   保存时间: {}",
-                    save_data.save_time.format("%Y-%m-%d %H:%M:%S")
-                );
-            }
-            Err(e) => {
-                println!("❌ 存档文件损坏: {}", e);
-            }
-        },
+    let save_path = PathBuf::from(&save_manager.save_file_path);
+    let file_data = match fs::read(&save_path) {
+        Ok(data) => data,
         Err(_) => {
-            println!("📂 没有找到存档文件，将创建新的存档");
+            crate::debug_log!("📂 没有找到存档文件，将创建新的存档");
+            return;
         }
+    };
+
+    let json_data = match crate::systems::shared_utils::decode_file_payload(&file_data) {
+        Ok(data) => data,
+        Err(error) => {
+            crate::debug_log!("❌ 存档读取失败: {}", error);
+            return;
+        }
+    };
+
+    if let Ok(v2_save) = serde_json::from_str::<SaveFileData>(&json_data) {
+        character_selection.selected_character = v2_save.game_state.selected_character.clone();
+        save_manager.current_save = Some(summary_from_v2(&v2_save));
+        crate::debug_log!("📂 已加载 v2 存档: {}", save_path.display());
+        return;
     }
+
+    if let Ok(legacy_save) = serde_json::from_str::<SaveData>(&json_data) {
+        character_selection.selected_character = legacy_save.selected_character.clone();
+        save_manager.current_save = Some(legacy_save.clone());
+        migrate_legacy_save_data(&save_path, legacy_save);
+        return;
+    }
+
+    if let Ok(legacy_state) = serde_json::from_str::<CompleteGameState>(&json_data) {
+        character_selection.selected_character = legacy_state.selected_character.clone();
+        save_manager.current_save =
+            Some(summary_from_state(AUTOSAVE_NAME.to_string(), &legacy_state));
+        migrate_legacy_state(&save_path, legacy_state);
+        return;
+    }
+
+    crate::debug_log!("❌ 存档格式无法识别: {}", save_path.display());
+}
+
+fn summary_from_v2(v2_save: &SaveFileData) -> SaveData {
+    summary_from_state(v2_save.metadata.name.clone(), &v2_save.game_state)
+}
+
+fn summary_from_state(name: String, state: &CompleteGameState) -> SaveData {
+    SaveData {
+        player_name: name,
+        selected_character: state.selected_character.clone(),
+        best_distance: state.distance_traveled,
+        total_jumps: state.jump_count,
+        total_play_time: state.play_time,
+        save_time: state.save_timestamp,
+    }
+}
+
+fn migrate_legacy_save_data(save_path: &PathBuf, legacy_save: SaveData) {
+    let mut state = CompleteGameState::default();
+    state.selected_character = legacy_save.selected_character.clone();
+    state.distance_traveled = legacy_save.best_distance;
+    state.jump_count = legacy_save.total_jumps;
+    state.play_time = legacy_save.total_play_time;
+    state.score = (state.distance_traveled * 10.0) as u32 + state.jump_count * 50;
+    state.save_timestamp = legacy_save.save_time;
+
+    let metadata = SaveFileMetadata {
+        name: legacy_save.player_name.clone(),
+        score: state.score,
+        distance: state.distance_traveled,
+        play_time: state.play_time,
+        save_timestamp: state.save_timestamp,
+        file_path: save_path.to_string_lossy().to_string(),
+    };
+
+    let v2_save = SaveFileData::new(metadata, state);
+    match write_v2_save(save_path, &v2_save) {
+        Ok(()) => crate::debug_log!(
+            "♻️ 已将 legacy SaveData 自动迁移到 v2: {}",
+            save_path.display()
+        ),
+        Err(error) => crate::debug_log!("⚠️ legacy SaveData 迁移失败: {}", error),
+    }
+}
+
+fn migrate_legacy_state(save_path: &PathBuf, legacy_state: CompleteGameState) {
+    let metadata = SaveFileMetadata {
+        name: save_path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or(AUTOSAVE_NAME)
+            .to_string(),
+        score: legacy_state.score,
+        distance: legacy_state.distance_traveled,
+        play_time: legacy_state.play_time,
+        save_timestamp: legacy_state.save_timestamp,
+        file_path: save_path.to_string_lossy().to_string(),
+    };
+
+    let v2_save = SaveFileData::new(metadata, legacy_state);
+    match write_v2_save(save_path, &v2_save) {
+        Ok(()) => crate::debug_log!(
+            "♻️ 已将 legacy CompleteGameState 自动迁移到 v2: {}",
+            save_path.display()
+        ),
+        Err(error) => crate::debug_log!("⚠️ legacy CompleteGameState 迁移失败: {}", error),
+    }
+}
+
+fn write_v2_save(save_path: &PathBuf, save_data: &SaveFileData) -> Result<(), String> {
+    if let Some(parent) = save_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    let json_data = serde_json::to_string_pretty(save_data).map_err(|error| error.to_string())?;
+    fs::write(save_path, json_data).map_err(|error| error.to_string())
 }
 
 /// 处理存档按钮点击
 pub fn handle_save_button_click(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<crate::components::SaveButton>),
-    >,
+    mut interaction_query: SaveButtonInteractionQuery,
     game_stats: Res<GameStats>,
     character_selection: Res<CharacterSelection>,
     save_manager: ResMut<SaveManager>,
@@ -119,7 +224,6 @@ pub fn handle_save_button_click(
     }
 
     if should_save {
-        println!("🎮 存档按钮被点击！");
         save_game(game_stats, character_selection, save_manager);
     }
 }
@@ -133,7 +237,6 @@ pub fn auto_save_system(
     save_manager: ResMut<SaveManager>,
     current_state: Res<State<GameState>>,
 ) {
-    // 每30秒自动保存一次
     if timer.duration().is_zero() {
         timer.set_duration(std::time::Duration::from_secs(30));
         timer.set_mode(bevy::time::TimerMode::Repeating);

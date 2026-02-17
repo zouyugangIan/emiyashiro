@@ -182,8 +182,9 @@ pub fn update_game_input(
     game_input.cleanup_history(current_time, 2.0);
 
     // Send actions to server
-    if net.status == crate::systems::network::NetworkStatus::Connected {
-        if let Some(tx) = &net.action_tx {
+    if net.status == crate::systems::network::NetworkStatus::Connected
+        && let Some(tx) = &net.action_tx
+    {
         // Jump
         if new_jump && !old_jump {
             let _ = tx.send(crate::protocol::PlayerAction::Jump);
@@ -208,7 +209,6 @@ pub fn update_game_input(
             };
             let y = if new_crouch { -1.0 } else { 0.0 };
             let _ = tx.send(crate::protocol::PlayerAction::Move { x, y });
-        }
         }
     }
 }
@@ -500,7 +500,7 @@ pub fn debug_input_system(game_input: Res<GameInput>, mut timer: Local<Timer>, t
             || game_input.action1
             || game_input.action2
         {
-            println!(
+            crate::debug_log!(
                 "🎮 输入状态: 水平={:.1}, 跳跃={}, 蹲下={}, 动作1={}, 动作2={}",
                 horizontal,
                 game_input.jump,
@@ -512,7 +512,7 @@ pub fn debug_input_system(game_input: Res<GameInput>, mut timer: Local<Timer>, t
 
         // 检测连招
         if let Some(combo) = detect_combo_input(&game_input) {
-            println!("⚡ 连招检测: {:?}", combo);
+            crate::debug_log!("⚡ 连招检测: {:?}", combo);
         }
     }
 }

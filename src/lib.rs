@@ -9,6 +9,7 @@ pub mod database {
     pub struct Database;
 }
 pub mod events;
+pub mod plugins;
 pub mod protocol;
 pub mod resources;
 pub mod states;
@@ -23,3 +24,14 @@ pub use components::*;
 pub use events::*;
 pub use resources::*;
 pub use states::*;
+
+#[macro_export]
+macro_rules! debug_log {
+    ($($arg:tt)*) => {
+        {
+            if cfg!(debug_assertions) {
+            println!($($arg)*);
+            }
+        }
+    };
+}
