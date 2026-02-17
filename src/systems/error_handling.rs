@@ -120,16 +120,16 @@ impl SaveSystemError {
 
     /// 判断错误是否可以重试
     pub fn is_retryable(&self) -> bool {
-        match self {
-            SaveSystemError::DiskSpaceInsufficient => false,
-            SaveSystemError::PermissionDenied(_) => false,
-            SaveSystemError::FileCorrupted(_) => false,
-            SaveSystemError::ChecksumMismatch => false,
-            SaveSystemError::VersionMismatch(_) => false,
-            SaveSystemError::InvalidFileName(_) => false,
-            SaveSystemError::NameAlreadyExists(_) => false,
-            _ => true,
-        }
+        !matches!(
+            self,
+            SaveSystemError::DiskSpaceInsufficient
+                | SaveSystemError::PermissionDenied(_)
+                | SaveSystemError::FileCorrupted(_)
+                | SaveSystemError::ChecksumMismatch
+                | SaveSystemError::VersionMismatch(_)
+                | SaveSystemError::InvalidFileName(_)
+                | SaveSystemError::NameAlreadyExists(_)
+        )
     }
 }
 
@@ -172,13 +172,14 @@ impl ErrorRecoveryManager {
             *attempts += 1;
 
             if *attempts <= self.max_retries {
-                println!(
+                crate::debug_log!(
                     "🔄 Retrying save operation (attempt {}/{})",
-                    attempts, self.max_retries
+                    attempts,
+                    self.max_retries
                 );
                 return RecoveryAction::Retry;
             } else {
-                println!("❌ Max retries exceeded for save operation");
+                crate::debug_log!("❌ Max retries exceeded for save operation");
                 self.retry_attempts.remove(operation);
                 return RecoveryAction::ShowError(error.to_user_message().to_string());
             }
@@ -259,7 +260,7 @@ impl ErrorRecoveryManager {
         fs::write(&backup_file, data)
             .map_err(|e| SaveSystemError::SerializationFailed(e.to_string()))?;
 
-        println!("💾 Backup created: {}", backup_file.display());
+        crate::debug_log!("💾 Backup created: {}", backup_file.display());
         Ok(())
     }
 
@@ -280,7 +281,7 @@ impl ErrorRecoveryManager {
         let data = fs::read_to_string(&backup_file)
             .map_err(|e| SaveSystemError::DeserializationFailed(e.to_string()))?;
 
-        println!("📂 Restored from backup: {}", backup_file.display());
+        crate::debug_log!("📂 Restored from backup: {}", backup_file.display());
         Ok(data)
     }
 
@@ -307,7 +308,7 @@ impl ErrorRecoveryManager {
             self.error_history.remove(0);
         }
 
-        println!("❌ Error logged: {} - {}", operation, error.get_details());
+        crate::debug_log!("❌ Error logged: {} - {}", operation, error.get_details());
     }
 
     /// 清除重试计数

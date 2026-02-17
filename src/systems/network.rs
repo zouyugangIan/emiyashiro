@@ -1,4 +1,5 @@
 use crate::protocol::{GamePacket, PlayerAction};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -103,11 +104,10 @@ pub fn setup_network(mut net: ResMut<NetworkResource>) {
                             Some(msg) = read.next() => {
                                 match msg {
                                     Ok(tokio_tungstenite::tungstenite::Message::Binary(bin)) => {
-                                        if let Ok(packet) = bincode::deserialize::<GamePacket>(&bin) {
-                                            if let Ok(mut queue) = packet_rx.lock() {
+                                        if let Ok(packet) = bincode::deserialize::<GamePacket>(&bin)
+                                            && let Ok(mut queue) = packet_rx.lock() {
                                                 queue.push_back(packet);
                                             }
-                                        }
                                     }
                                     Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => {
                                         info!("Server closed WebSocket connection");
@@ -255,20 +255,31 @@ pub struct InterpolationState {
 #[derive(Component)]
 pub struct LocalPlayer;
 
-pub fn handle_network_events(
-    mut commands: Commands,
-    net: ResMut<NetworkResource>,
-    mut entity_map: ResMut<NetworkEntityMap>,
-    mut my_id: ResMut<MyNetworkId>,
-    mut query: Query<(&mut Transform, Option<&mut InterpolationState>)>,
-    mut local_player_query: Query<
-        (Entity, &mut crate::components::network::NetworkId),
+#[derive(SystemParam)]
+pub struct NetworkEventParams<'w, 's> {
+    net: ResMut<'w, NetworkResource>,
+    entity_map: ResMut<'w, NetworkEntityMap>,
+    my_id: ResMut<'w, MyNetworkId>,
+    query: Query<
+        'w,
+        's,
+        (
+            &'static mut Transform,
+            Option<&'static mut InterpolationState>,
+        ),
+    >,
+    local_player_query: Query<
+        'w,
+        's,
+        (Entity, &'static mut crate::components::network::NetworkId),
         With<LocalPlayer>,
     >,
-    asset_server: Res<AssetServer>,
-    time: Res<Time>,
-) {
-    let mut rx = match net.packet_rx.lock() {
+    asset_server: Res<'w, AssetServer>,
+    time: Res<'w, Time>,
+}
+
+pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventParams) {
+    let mut rx = match params.net.packet_rx.lock() {
         Ok(guard) => guard,
         Err(_) => return,
     };
@@ -277,22 +288,22 @@ pub fn handle_network_events(
         match packet {
             GamePacket::Welcome { id, message } => {
                 info!("Server says: {} (My ID: {})", message, id);
-                my_id.0 = Some(id);
+                params.my_id.0 = Some(id);
 
-                if let Ok((entity, mut net_id)) = local_player_query.single_mut() {
+                if let Ok((entity, mut net_id)) = params.local_player_query.single_mut() {
                     net_id.0 = id;
-                    entity_map.0.insert(id, entity);
+                    params.entity_map.0.insert(id, entity);
                     info!("Updated local player NetworkId to {}", id);
                 }
             }
             GamePacket::WorldSnapshot { tick: _, players } => {
-                let current_time = time.elapsed_secs();
+                let current_time = params.time.elapsed_secs();
 
                 for player_state in players {
-                    let is_local = Some(player_state.id) == my_id.0;
+                    let is_local = Some(player_state.id) == params.my_id.0;
 
-                    if let Some(&entity) = entity_map.0.get(&player_state.id) {
-                        if let Ok((transform, interp_state)) = query.get_mut(entity) {
+                    if let Some(&entity) = params.entity_map.0.get(&player_state.id) {
+                        if let Ok((transform, interp_state)) = params.query.get_mut(entity) {
                             if let Some(mut interp) = interp_state {
                                 interp.start_pos = transform.translation;
                                 interp.target_pos = player_state.position;
@@ -311,7 +322,9 @@ pub fn handle_network_events(
                         let entity = commands
                             .spawn((
                                 Sprite {
-                                    image: asset_server.load("images/characters/shirou_idle1.jpg"),
+                                    image: params
+                                        .asset_server
+                                        .load("images/characters/shirou_idle1.jpg"),
                                     ..default()
                                 },
                                 Transform::from_translation(player_state.position)
@@ -325,7 +338,7 @@ pub fn handle_network_events(
                                 },
                             ))
                             .id();
-                        entity_map.0.insert(player_state.id, entity);
+                        params.entity_map.0.insert(player_state.id, entity);
                     }
                 }
             }
@@ -366,39 +379,5 @@ pub fn send_ping_system(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResour
     {
         let _ = tx.send(PlayerAction::Ping(0));
         info!("Sent Ping");
-    }
-}
-
-/// Legacy direct keyboard sender kept for compatibility.
-/// Prefer `systems::input::update_game_input` as the single source of outgoing input actions.
-pub fn send_player_input(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResource>) {
-    if net.status != NetworkStatus::Connected {
-        return;
-    }
-
-    if let Some(tx) = &net.action_tx {
-        let mut move_x = 0.0;
-        let mut move_y = 0.0;
-
-        if input.pressed(KeyCode::KeyA) || input.pressed(KeyCode::ArrowLeft) {
-            move_x -= 1.0;
-        }
-        if input.pressed(KeyCode::KeyD) || input.pressed(KeyCode::ArrowRight) {
-            move_x += 1.0;
-        }
-        if input.pressed(KeyCode::KeyS) || input.pressed(KeyCode::ArrowDown) {
-            move_y -= 1.0;
-        }
-
-        if move_x != 0.0 || move_y != 0.0 {
-            let _ = tx.send(PlayerAction::Move {
-                x: move_x,
-                y: move_y,
-            });
-        }
-
-        if input.just_pressed(KeyCode::KeyW) || input.just_pressed(KeyCode::Space) {
-            let _ = tx.send(PlayerAction::Jump);
-        }
     }
 }

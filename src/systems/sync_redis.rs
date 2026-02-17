@@ -11,20 +11,30 @@ pub fn sync_transform_to_redis(
         &NetworkId,
         Option<&crate::components::physics::Velocity>,
     )>,
+    time: Res<Time>,
+    mut flush_timer: Local<f32>,
 ) {
     let Some(redis) = redis else {
         return; // Redis not available, skip
     };
 
+    *flush_timer += time.delta_secs();
+    if *flush_timer < 0.1 {
+        return;
+    }
+    *flush_timer = 0.0;
+
+    let mut entries = Vec::new();
     for (transform, net_id, velocity) in query.iter() {
         let pos = transform.translation;
         let vel = velocity.map(|v| (v.x, v.y)).unwrap_or((0.0, 0.0));
 
         let key = format!("player:{}:pos", net_id.0);
         let value = format!("{},{},{},{}", pos.x, pos.y, vel.0, vel.1);
+        entries.push((key, value));
+    }
 
-        if let Err(e) = redis.set_key(&key, &value) {
-            eprintln!("Failed to sync player {} to Redis: {}", net_id.0, e);
-        }
+    if let Err(error) = redis.set_many(&entries) {
+        eprintln!("Failed to batch sync player transforms to Redis: {}", error);
     }
 }

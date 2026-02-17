@@ -98,6 +98,12 @@ pub struct InputValidator {
     pub reserved_names: HashSet<String>,
 }
 
+impl Default for InputValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InputValidator {
     pub fn new() -> Self {
         let mut allowed_chars = HashSet::new();
@@ -204,14 +210,14 @@ pub fn handle_keyboard_input(
     // 处理特殊键
     if keyboard_input.just_pressed(KeyCode::Backspace) {
         text_input_state.remove_char();
-        println!(
+        crate::debug_log!(
             "🔤 Backspace pressed, current text: '{}'",
             text_input_state.current_text
         );
     }
 
     if keyboard_input.just_pressed(KeyCode::Enter) {
-        println!(
+        crate::debug_log!(
             "🔤 Enter pressed, confirming input: '{}'",
             text_input_state.current_text
         );
@@ -219,7 +225,7 @@ pub fn handle_keyboard_input(
     }
 
     if keyboard_input.just_pressed(KeyCode::Escape) {
-        println!("🔤 Escape pressed, canceling input");
+        crate::debug_log!("🔤 Escape pressed, canceling input");
         text_input_state.deactivate();
         return;
     }
@@ -228,12 +234,13 @@ pub fn handle_keyboard_input(
     for key in keyboard_input.get_just_pressed() {
         if let Some(character) = map_keycode_to_char(key) {
             if text_input_state.add_char(character) {
-                println!(
+                crate::debug_log!(
                     "🔤 Added character '{}', current text: '{}'",
-                    character, text_input_state.current_text
+                    character,
+                    text_input_state.current_text
                 );
             } else {
-                println!(
+                crate::debug_log!(
                     "🔤 Failed to add character '{}' (max length or invalid)",
                     character
                 );

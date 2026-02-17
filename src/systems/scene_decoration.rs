@@ -75,7 +75,7 @@ pub fn setup_parallax_background(
         ));
     }
 
-    println!("🎨 設置視差背景完成");
+    crate::debug_log!("🎨 設置視差背景完成");
 }
 
 /// 生成地面裝飾物
@@ -144,7 +144,7 @@ pub fn cleanup_offscreen_decorations(
     decoration_query: Query<(Entity, &Transform, &SceneDecoration)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let Some(window) = window_query.iter().next() else {
+    let Some(_window) = window_query.iter().next() else {
         return;
     };
 
@@ -203,7 +203,7 @@ pub fn spawn_enhanced_clouds(
         let alpha = 0.5 + ((pseudo_random % 50) as f32 / 100.0); // 0.5 - 1.0
 
         // 隨機選擇層級（近景或中景）
-        let layer = if pseudo_random % 2 == 0 {
+        let layer = if pseudo_random.is_multiple_of(2) {
             DecorationLayer::NearBackground
         } else {
             DecorationLayer::MidBackground

@@ -13,3 +13,19 @@ pub struct StartSaveGame {
 pub struct StartLoadGame {
     pub file_path: String,
 }
+
+/// Gameplay damage event routed through a single hit pipeline.
+#[derive(Message, Debug, Clone)]
+pub struct DamageEvent {
+    pub target: Entity,
+    pub amount: f32,
+    pub source: DamageSource,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DamageSource {
+    Projectile,
+    EnemyContact,
+    Fall,
+    ShroudDrain,
+}

@@ -3,9 +3,38 @@
 //! 实现完整的游戏状态保存、恢复和管理功能
 
 use crate::{components::*, resources::*, states::*};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use std::fs;
 use std::path::Path;
+
+#[derive(SystemParam)]
+pub struct PauseSnapshotParams<'w, 's> {
+    player_query:
+        Query<'w, 's, (&'static Transform, &'static Velocity, &'static PlayerState), With<Player>>,
+    camera_query: Query<'w, 's, &'static Transform, (With<Camera>, Without<Player>)>,
+    game_stats: Res<'w, GameStats>,
+    character_selection: Res<'w, CharacterSelection>,
+    audio_state_manager: Res<'w, AudioStateManager>,
+}
+
+#[derive(SystemParam)]
+pub struct RestorePausedParams<'w, 's> {
+    player_query: Query<
+        'w,
+        's,
+        (
+            &'static mut Transform,
+            &'static mut Velocity,
+            &'static mut PlayerState,
+        ),
+        With<Player>,
+    >,
+    camera_query: Query<'w, 's, &'static mut Transform, (With<Camera>, Without<Player>)>,
+    game_stats: ResMut<'w, GameStats>,
+    character_selection: ResMut<'w, CharacterSelection>,
+    audio_state_manager: ResMut<'w, AudioStateManager>,
+}
 
 /// 捕获完整游戏状态
 pub fn capture_game_state(
@@ -57,7 +86,7 @@ pub fn capture_game_state(
     // 捕获音频状态
     state.music_playing = audio_state_manager.music_playing;
     state.audio_volume = audio_state_manager.music_volume;
-    state.music_position = 0.0; // TODO: 实现音频位置跟踪
+    state.music_position = audio_state_manager.music_position;
 
     // 捕获实体快照（目前为空，未来可扩展）
     state.entities_snapshot = Vec::new();
@@ -65,16 +94,17 @@ pub fn capture_game_state(
     // 设置时间戳
     state.save_timestamp = chrono::Utc::now();
 
-    println!("🎮 游戏状态已捕获:");
-    println!(
+    crate::debug_log!("🎮 游戏状态已捕获:");
+    crate::debug_log!(
         "   玩家位置: ({:.1}, {:.1})",
-        state.player_position.x, state.player_position.y
+        state.player_position.x,
+        state.player_position.y
     );
-    println!("   动画状态: {}", state.player_animation_state);
-    println!("   分数: {}", state.score);
-    println!("   距离: {:.1}m", state.distance_traveled);
-    println!("   时间: {:.1}s", state.play_time);
-    println!("   音乐播放: {}", state.music_playing);
+    crate::debug_log!("   动画状态: {}", state.player_animation_state);
+    crate::debug_log!("   分数: {}", state.score);
+    crate::debug_log!("   距离: {:.1}m", state.distance_traveled);
+    crate::debug_log!("   时间: {:.1}s", state.play_time);
+    crate::debug_log!("   音乐播放: {}", state.music_playing);
 
     state
 }
@@ -98,18 +128,21 @@ pub fn restore_game_state(
         player_state.is_grounded = state.player_grounded;
         player_state.is_crouching = state.player_crouching;
 
-        println!(
+        crate::debug_log!(
             "🔄 恢复玩家状态: 位置({:.1}, {:.1}), 动画: {}",
-            state.player_position.x, state.player_position.y, state.player_animation_state
+            state.player_position.x,
+            state.player_position.y,
+            state.player_animation_state
         );
     }
 
     // 恢复摄像机状态
     if let Ok(mut camera_transform) = camera_query.single_mut() {
         camera_transform.translation = state.camera_position;
-        println!(
+        crate::debug_log!(
             "🔄 恢复摄像机位置: ({:.1}, {:.1})",
-            state.camera_position.x, state.camera_position.y
+            state.camera_position.x,
+            state.camera_position.y
         );
     }
 
@@ -125,16 +158,17 @@ pub fn restore_game_state(
     audio_state_manager.music_playing = state.music_playing;
     audio_state_manager.music_volume = state.audio_volume;
 
-    println!("🔄 游戏状态已完全恢复:");
-    println!(
+    crate::debug_log!("🔄 游戏状态已完全恢复:");
+    crate::debug_log!(
         "   位置: ({:.1}, {:.1})",
-        state.player_position.x, state.player_position.y
+        state.player_position.x,
+        state.player_position.y
     );
-    println!("   动画状态: {}", state.player_animation_state);
-    println!("   分数: {}", state.score);
-    println!("   距离: {:.1}m", state.distance_traveled);
-    println!("   时间: {:.1}s", state.play_time);
-    println!("   音乐播放: {}", state.music_playing);
+    crate::debug_log!("   动画状态: {}", state.player_animation_state);
+    crate::debug_log!("   分数: {}", state.score);
+    crate::debug_log!("   距离: {:.1}m", state.distance_traveled);
+    crate::debug_log!("   时间: {:.1}s", state.play_time);
+    crate::debug_log!("   音乐播放: {}", state.music_playing);
 }
 
 /// 处理暂停/恢复输入
@@ -143,11 +177,7 @@ pub fn handle_pause_input(
     mut next_state: ResMut<NextState<GameState>>,
     current_state: Res<State<GameState>>,
     mut pause_manager: ResMut<PauseManager>,
-    player_query: Query<(&Transform, &Velocity, &PlayerState), With<Player>>,
-    camera_query: Query<&Transform, (With<Camera>, Without<Player>)>,
-    game_stats: Res<GameStats>,
-    character_selection: Res<CharacterSelection>,
-    audio_state_manager: Res<AudioStateManager>,
+    snapshot: PauseSnapshotParams,
     mut last_esc_state: Local<bool>,
 ) {
     let esc_pressed = keyboard_input.pressed(KeyCode::Escape);
@@ -161,27 +191,27 @@ pub fn handle_pause_input(
             if esc_just_pressed {
                 // 捕获当前游戏状态并暂停
                 let state = capture_game_state(
-                    player_query,
-                    camera_query,
-                    game_stats,
-                    character_selection,
-                    audio_state_manager,
+                    snapshot.player_query,
+                    snapshot.camera_query,
+                    snapshot.game_stats,
+                    snapshot.character_selection,
+                    snapshot.audio_state_manager,
                 );
                 pause_manager.pause_game(state);
                 next_state.set(GameState::Paused);
-                println!("⏸️ Game Paused with enhanced state capture");
+                crate::debug_log!("⏸️ Game Paused with enhanced state capture");
             }
         }
         GameState::Paused => {
             if esc_just_pressed {
                 // ESC键恢复游戏
                 next_state.set(GameState::Playing);
-                println!("▶️ Game Resumed");
+                crate::debug_log!("▶️ Game Resumed");
             } else if q_just_pressed {
                 // Q键返回主菜单
                 pause_manager.resume_game(); // 清理暂停状态
                 next_state.set(GameState::Menu);
-                println!("🏠 Back to Main Menu");
+                crate::debug_log!("🏠 Back to Main Menu");
             }
         }
         _ => {}
@@ -193,11 +223,7 @@ pub fn restore_paused_state(
     commands: Commands,
     mut pause_manager: ResMut<PauseManager>,
     current_state: Res<State<GameState>>,
-    player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
-    camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
-    game_stats: ResMut<GameStats>,
-    character_selection: ResMut<CharacterSelection>,
-    audio_state_manager: ResMut<AudioStateManager>,
+    restore: RestorePausedParams,
 ) {
     if *current_state.get() != GameState::Playing || !pause_manager.is_paused {
         return;
@@ -207,23 +233,23 @@ pub fn restore_paused_state(
         restore_game_state(
             commands,
             state,
-            player_query,
-            camera_query,
-            game_stats,
-            character_selection,
-            audio_state_manager,
+            restore.player_query,
+            restore.camera_query,
+            restore.game_stats,
+            restore.character_selection,
+            restore.audio_state_manager,
         );
     }
 }
 
 /// 扫描保存文件目录
 pub fn scan_save_files(mut save_file_manager: ResMut<SaveFileManager>) {
-    println!("Scanning save files...");
+    crate::debug_log!("Scanning save files...");
     save_file_manager.save_files.clear();
 
     let save_dir = Path::new(&save_file_manager.save_directory);
     if !save_dir.exists() {
-        println!("📁 Save directory does not exist: {}", save_dir.display());
+        crate::debug_log!("📁 Save directory does not exist: {}", save_dir.display());
         return;
     }
 
@@ -232,15 +258,15 @@ pub fn scan_save_files(mut save_file_manager: ResMut<SaveFileManager>) {
 
     if let Ok(entries) = fs::read_dir(save_dir) {
         for entry in entries.flatten() {
-            if let Some(extension) = entry.path().extension() {
-                if extension == "json" {
-                    match process_save_file(&entry, &mut save_file_manager) {
-                        Ok(true) => valid_files += 1,
-                        Ok(false) => corrupted_files += 1,
-                        Err(e) => {
-                            println!("⚠️ Error processing {}: {}", entry.path().display(), e);
-                            corrupted_files += 1;
-                        }
+            if let Some(extension) = entry.path().extension()
+                && extension == "json"
+            {
+                match process_save_file(&entry, &mut save_file_manager) {
+                    Ok(true) => valid_files += 1,
+                    Ok(false) => corrupted_files += 1,
+                    Err(e) => {
+                        crate::debug_log!("⚠️ Error processing {}: {}", entry.path().display(), e);
+                        corrupted_files += 1;
                     }
                 }
             }
@@ -252,12 +278,12 @@ pub fn scan_save_files(mut save_file_manager: ResMut<SaveFileManager>) {
         .save_files
         .sort_by(|a, b| b.save_timestamp.cmp(&a.save_timestamp));
 
-    println!("📁 Scan complete:");
-    println!("   Valid save files: {}", valid_files);
+    crate::debug_log!("📁 Scan complete:");
+    crate::debug_log!("   Valid save files: {}", valid_files);
     if corrupted_files > 0 {
-        println!("   Corrupted/unreadable files: {}", corrupted_files);
+        crate::debug_log!("   Corrupted/unreadable files: {}", corrupted_files);
     }
-    println!(
+    crate::debug_log!(
         "   Total usable saves: {}",
         save_file_manager.save_files.len()
     );
@@ -275,7 +301,7 @@ fn process_save_file(
     if let Ok(save_file_data) = serde_json::from_str::<SaveFileData>(&json_data) {
         // 验证校验和
         if !save_file_data.verify_checksum() {
-            println!(
+            crate::debug_log!(
                 "⚠️ Checksum mismatch for {}, but loading anyway",
                 entry.path().display()
             );
@@ -285,7 +311,7 @@ fn process_save_file(
         metadata.file_path = entry.path().to_string_lossy().to_string();
 
         save_file_manager.save_files.push(metadata);
-        println!("📂 New format loaded: {}", entry.path().display());
+        crate::debug_log!("📂 New format loaded: {}", entry.path().display());
         return Ok(true);
     }
 
@@ -304,12 +330,12 @@ fn process_save_file(
         };
 
         save_file_manager.save_files.push(metadata);
-        println!("📂 Legacy format detected: {}", entry.path().display());
+        crate::debug_log!("📂 Legacy format detected: {}", entry.path().display());
         return Ok(true);
     }
 
     // 文件无法解析
-    println!("❌ Corrupted save file: {}", entry.path().display());
+    crate::debug_log!("❌ Corrupted save file: {}", entry.path().display());
     Ok(false)
 }
 
@@ -318,7 +344,7 @@ pub fn delete_save_file(
     save_name: &str,
     save_file_manager: &mut SaveFileManager,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Deleting save file...");
+    crate::debug_log!("Deleting save file...");
     if let Some(index) = save_file_manager
         .save_files
         .iter()
@@ -339,8 +365,8 @@ pub fn delete_save_file(
         // 从列表中移除
         save_file_manager.save_files.remove(index);
 
-        println!("🗑️ Save file deleted successfully: {}", save_name);
-        println!("   File: {}", file_path);
+        crate::debug_log!("🗑️ Save file deleted successfully: {}", save_name);
+        crate::debug_log!("   File: {}", file_path);
 
         Ok(())
     } else {
@@ -382,7 +408,7 @@ pub fn rename_save_file(
         let new_path = save_dir.join(&new_file_name);
 
         // 重命名文件
-        fs::rename(&old_path, &new_path)
+        fs::rename(old_path, &new_path)
             .map_err(|e| format!("Failed to rename save file: {}", e))?;
 
         // 更新元数据
@@ -390,12 +416,13 @@ pub fn rename_save_file(
         metadata.name = validated_new_name.clone();
         metadata.file_path = new_path.to_string_lossy().to_string();
 
-        println!(
+        crate::debug_log!(
             "✏️ Save file renamed successfully: {} -> {}",
-            old_name, validated_new_name
+            old_name,
+            validated_new_name
         );
-        println!("   Old file: {}", old_path.display());
-        println!("   New file: {}", new_path.display());
+        crate::debug_log!("   Old file: {}", old_path.display());
+        crate::debug_log!("   New file: {}", new_path.display());
 
         Ok(())
     } else {

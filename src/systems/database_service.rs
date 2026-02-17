@@ -5,21 +5,11 @@ use bevy::prelude::*;
 use crate::database::*;
 
 /// 数据库服务系统
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct DatabaseService {
     #[cfg(feature = "server")]
     pub database: Option<Database>,
     pub is_connected: bool,
-}
-
-impl Default for DatabaseService {
-    fn default() -> Self {
-        Self {
-            #[cfg(feature = "server")]
-            database: None,
-            is_connected: false,
-        }
-    }
 }
 
 /// 玩家记录结构
@@ -52,17 +42,17 @@ pub struct GameSession {
 pub async fn initialize_database() -> Result<DatabaseService, Box<dyn std::error::Error>> {
     #[cfg(feature = "server")]
     {
-        println!("🗄️ 正在连接数据库...");
+        crate::debug_log!("🗄️ 正在连接数据库...");
         match Database::new().await {
             Ok(db) => {
-                println!("✅ 数据库连接成功！");
+                crate::debug_log!("✅ 数据库连接成功！");
                 Ok(DatabaseService {
                     database: Some(db),
                     is_connected: true,
                 })
             }
             Err(e) => {
-                println!("❌ 数据库连接失败: {}", e);
+                crate::debug_log!("❌ 数据库连接失败: {}", e);
                 Ok(DatabaseService::default())
             }
         }
@@ -88,7 +78,7 @@ pub fn save_player_to_database(
 
     #[cfg(feature = "server")]
     {
-        println!("💾 [Server] 保存玩家数据到数据库...");
+        crate::debug_log!("💾 [Server] 保存玩家数据到数据库...");
         // Real DB logic here
     }
 }
@@ -102,7 +92,7 @@ pub fn load_player_from_database(
         return;
     }
     #[cfg(feature = "server")]
-    println!("📂 [Server] 从数据库加载玩家数据...");
+    crate::debug_log!("📂 [Server] 从数据库加载玩家数据...");
 }
 
 /// 获取排行榜数据
@@ -133,7 +123,7 @@ pub fn database_stats_system(
     timer.tick(time.delta());
 
     if timer.just_finished() {
-        println!("📊 [Server] 数据库统计...");
+        crate::debug_log!("📊 [Server] 数据库统计...");
     }
 }
 
@@ -166,7 +156,7 @@ pub fn cleanup_old_sessions(
     timer.tick(time.delta());
 
     if timer.just_finished() {
-        println!("🧹 [Server] 清理旧数据...");
+        crate::debug_log!("🧹 [Server] 清理旧数据...");
     }
 }
 

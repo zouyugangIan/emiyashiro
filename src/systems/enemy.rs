@@ -43,7 +43,7 @@ pub fn spawn_mushroom_enemies(
             crate::systems::collision::CollisionBox::new(Vec2::new(40.0, 40.0)),
         ));
 
-        println!("🍄 生成蘑菇敵人 at x={:.1}", spawn_x);
+        crate::debug_log!("🍄 生成蘑菇敵人 at x={:.1}", spawn_x);
     }
 }
 
@@ -92,7 +92,7 @@ pub fn cleanup_dead_enemies(
             if *timer > 1.0 {
                 commands.entity(entity).despawn();
                 death_timer.remove(&entity);
-                println!("💀 清理死亡敵人");
+                crate::debug_log!("💀 清理死亡敵人");
             }
         }
     }
@@ -106,7 +106,7 @@ pub fn cleanup_offscreen_enemies(
     for (entity, transform) in enemy_query.iter() {
         if transform.translation.x < -300.0 {
             commands.entity(entity).despawn();
-            println!("🗑️ 清理離屏敵人");
+            crate::debug_log!("🗑️ 清理離屏敵人");
         }
     }
 }

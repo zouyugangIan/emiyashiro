@@ -101,7 +101,7 @@ pub fn player_jump(
                 should_play: true,
             });
 
-            println!("🗡️ 士郎跳跃！(第{}次)", game_stats.jump_count);
+            crate::debug_log!("🗡️ 士郎跳跃！(第{}次)", game_stats.jump_count);
         }
 
         // 可变跳跃高度 - 如果松开跳跃键，减少向上速度
@@ -181,9 +181,9 @@ fn handle_ground_collision(
 
             // 根据冲击力输出不同的着陆消息
             if impact_velocity > 300.0 {
-                println!("🗡️ 士郎重重着陆！冲击力: {:.1}", impact_velocity);
+                crate::debug_log!("🗡️ 士郎重重着陆！冲击力: {:.1}", impact_velocity);
             } else {
-                println!("🗡️ 士郎轻巧着陆！");
+                crate::debug_log!("🗡️ 士郎轻巧着陆！");
             }
         }
 
@@ -202,7 +202,7 @@ fn handle_player_death(
     velocity: &mut Velocity,
     game_stats: &mut GameStats,
 ) {
-    println!("💀 士郎掉入深渊！游戏结束！");
+    crate::debug_log!("💀 士郎掉入深渊！游戏结束！");
 
     // 重置玩家位置和速度
     transform.translation = GameConfig::PLAYER_START_POS;
@@ -219,10 +219,10 @@ fn handle_player_death(
     game_stats.distance_traveled = 0.0;
     game_stats.play_time = 0.0;
 
-    println!("📊 本次游戏统计:");
-    println!("   距离: {:.1}m", current_distance);
-    println!("   跳跃次数: {}", current_jumps);
-    println!("   游戏时间: {:.1}s", current_time);
+    crate::debug_log!("📊 本次游戏统计:");
+    crate::debug_log!("   距离: {:.1}m", current_distance);
+    crate::debug_log!("   跳跃次数: {}", current_jumps);
+    crate::debug_log!("   游戏时间: {:.1}s", current_time);
 }
 
 /// 物理系统更新
@@ -256,13 +256,13 @@ pub fn physics_update_system(
 
         // 物理积分验证（确保数值稳定性）
         if velocity.x.is_nan() || velocity.y.is_nan() {
-            println!("⚠️ 检测到无效速度，重置为零");
+            crate::debug_log!("⚠️ 检测到无效速度，重置为零");
             velocity.x = 0.0;
             velocity.y = 0.0;
         }
 
         if transform.translation.x.is_nan() || transform.translation.y.is_nan() {
-            println!("⚠️ 检测到无效位置，重置到起始位置");
+            crate::debug_log!("⚠️ 检测到无效位置，重置到起始位置");
             transform.translation = GameConfig::PLAYER_START_POS;
         }
     }
@@ -290,13 +290,13 @@ pub fn player_crouch(
             let _original_x_scale = transform.scale.x;
             transform.scale.y = 0.5; // 压缩高度
             transform.translation.y -= 15.0; // 向下移动一点
-            println!("🗡️ 士郎趴下！");
+            crate::debug_log!("🗡️ 士郎趴下！");
         } else if !is_crouch_pressed && player_state.is_crouching {
             // 停止趴下
             player_state.is_crouching = false;
             transform.scale.y = transform.scale.x; // 恢复Y缩放与X缩放一致
             transform.translation.y += 15.0; // 向上移动回原位
-            println!("🗡️ 士郎站起！");
+            crate::debug_log!("🗡️ 士郎站起！");
         }
     }
 }
@@ -335,9 +335,9 @@ pub fn update_game_stats(
     game_stats.play_time += time.delta_secs();
 
     // 更新移动距离
-    if let Ok(transform) = player_query.single() {
-        if transform.translation.x > game_stats.distance_traveled {
-            game_stats.distance_traveled = transform.translation.x;
-        }
+    if let Ok(transform) = player_query.single()
+        && transform.translation.x > game_stats.distance_traveled
+    {
+        game_stats.distance_traveled = transform.translation.x;
     }
 }

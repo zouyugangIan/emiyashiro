@@ -10,6 +10,7 @@ use crate::{
         ui::{LoadedGameState, SaveLoadUiState},
     },
 };
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::tasks::{ComputeTaskPool, Task};
 use futures_lite::future;
@@ -20,6 +21,15 @@ pub struct SaveTask(Task<Result<(), SaveSystemError>>);
 
 #[derive(Component)]
 pub struct LoadTask(Task<Result<(CompleteGameState, SaveFileMetadata), SaveSystemError>>);
+
+#[derive(SystemParam)]
+pub struct PollAsyncTaskState<'w> {
+    next_state: ResMut<'w, NextState<GameState>>,
+    loaded_game_state: ResMut<'w, LoadedGameState>,
+    pause_manager: ResMut<'w, PauseManager>,
+    operation_progress: ResMut<'w, OperationProgress>,
+    save_load_ui_state: ResMut<'w, SaveLoadUiState>,
+}
 
 /// System to handle save game requests by spawning them on the async compute pool.
 pub fn handle_save_requests(
@@ -79,7 +89,7 @@ pub fn handle_save_requests(
         save_load_ui_state.status_message = format!("Saving '{}'...", save_name);
         operation_progress.start_operation(format!("Saving '{}'", save_name));
 
-        println!("💾 Spawned async save task for '{}'", save_name);
+        crate::debug_log!("馃捑 Spawned async save task for '{}'", save_name);
     }
 }
 
@@ -117,7 +127,7 @@ pub fn handle_load_requests(
         save_load_ui_state.status_message = "Loading save data...".to_string();
         operation_progress.start_operation("Loading save".to_string());
 
-        println!("📂 Spawned async load task for '{}'", ev.file_path);
+        crate::debug_log!("馃搨 Spawned async load task for '{}'", ev.file_path);
     }
 }
 
@@ -126,29 +136,26 @@ pub fn poll_async_tasks(
     mut commands: Commands,
     mut save_tasks: Query<(Entity, &mut SaveTask)>,
     mut load_tasks: Query<(Entity, &mut LoadTask)>,
-    mut next_state: ResMut<NextState<GameState>>,
-    mut loaded_game_state: ResMut<LoadedGameState>,
-    mut pause_manager: ResMut<PauseManager>,
-    mut operation_progress: ResMut<OperationProgress>,
-    mut save_load_ui_state: ResMut<SaveLoadUiState>,
+    mut state: PollAsyncTaskState,
 ) {
     // Poll save tasks
     for (entity, mut task) in &mut save_tasks {
         if let Some(result) = future::block_on(future::poll_once(&mut task.0)) {
             match result {
                 Ok(_) => {
-                    save_load_ui_state.is_busy = false;
-                    save_load_ui_state.error_message.clear();
-                    save_load_ui_state.status_message = "Save completed successfully".to_string();
-                    operation_progress.complete_operation();
-                    println!("✅ Async save task completed successfully.");
+                    state.save_load_ui_state.is_busy = false;
+                    state.save_load_ui_state.error_message.clear();
+                    state.save_load_ui_state.status_message =
+                        "Save completed successfully".to_string();
+                    state.operation_progress.complete_operation();
+                    crate::debug_log!("鉁?Async save task completed successfully.");
                 }
                 Err(e) => {
-                    save_load_ui_state.is_busy = false;
-                    save_load_ui_state.status_message.clear();
-                    save_load_ui_state.error_message = e.to_user_message().to_string();
-                    operation_progress.complete_operation();
-                    println!("❌ Async save task failed: {:?}", e);
+                    state.save_load_ui_state.is_busy = false;
+                    state.save_load_ui_state.status_message.clear();
+                    state.save_load_ui_state.error_message = e.to_user_message().to_string();
+                    state.operation_progress.complete_operation();
+                    crate::debug_log!("鉂?Async save task failed: {:?}", e);
                 }
             }
             commands.entity(entity).despawn();
@@ -160,33 +167,33 @@ pub fn poll_async_tasks(
         if let Some(result) = future::block_on(future::poll_once(&mut task.0)) {
             match result {
                 Ok((game_state, metadata)) => {
-                    println!(
-                        "✅ Async load task for '{}' completed successfully.",
+                    crate::debug_log!(
+                        "鉁?Async load task for '{}' completed successfully.",
                         metadata.name
                     );
 
                     // Prevent paused snapshot from overriding the loaded save
-                    pause_manager.clear_pause_state();
+                    state.pause_manager.clear_pause_state();
 
-                    loaded_game_state.state = Some(game_state);
-                    loaded_game_state.should_restore = true;
-                    loaded_game_state.previous_state = None;
+                    state.loaded_game_state.state = Some(game_state);
+                    state.loaded_game_state.should_restore = true;
+                    state.loaded_game_state.previous_state = None;
 
-                    save_load_ui_state.is_busy = false;
-                    save_load_ui_state.error_message.clear();
-                    save_load_ui_state.pending_load_index = None;
-                    save_load_ui_state.status_message =
+                    state.save_load_ui_state.is_busy = false;
+                    state.save_load_ui_state.error_message.clear();
+                    state.save_load_ui_state.pending_load_index = None;
+                    state.save_load_ui_state.status_message =
                         "Load completed, restoring scene...".to_string();
-                    operation_progress.complete_operation();
+                    state.operation_progress.complete_operation();
 
-                    next_state.set(GameState::Playing);
+                    state.next_state.set(GameState::Playing);
                 }
                 Err(e) => {
-                    save_load_ui_state.is_busy = false;
-                    save_load_ui_state.status_message.clear();
-                    save_load_ui_state.error_message = e.to_user_message().to_string();
-                    operation_progress.complete_operation();
-                    println!("❌ Async load task failed: {:?}", e);
+                    state.save_load_ui_state.is_busy = false;
+                    state.save_load_ui_state.status_message.clear();
+                    state.save_load_ui_state.error_message = e.to_user_message().to_string();
+                    state.operation_progress.complete_operation();
+                    crate::debug_log!("鉂?Async load task failed: {:?}", e);
                     // Here we could fire another event to show an error UI
                 }
             }

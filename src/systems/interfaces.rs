@@ -242,11 +242,11 @@ impl SystemPerformanceMonitor {
             return;
         }
 
-        println!("=== 系统性能报告 ===");
+        crate::debug_log!("=== 系统性能报告 ===");
         for (system_name, &total_time) in &self.execution_times {
             if let Some(&call_count) = self.call_counts.get(system_name) {
                 let avg_time = total_time / call_count as f32;
-                println!(
+                crate::debug_log!(
                     "{}: 总时间 {:.3}ms, 调用次数 {}, 平均时间 {:.3}ms",
                     system_name,
                     total_time * 1000.0,
@@ -255,6 +255,6 @@ impl SystemPerformanceMonitor {
                 );
             }
         }
-        println!("==================");
+        crate::debug_log!("==================");
     }
 }

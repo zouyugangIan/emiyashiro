@@ -71,6 +71,3 @@ pub mod network;
 pub mod save_worker;
 #[cfg(feature = "server")]
 pub mod sync_redis;
-
-// 最终集成
-pub mod final_integration;

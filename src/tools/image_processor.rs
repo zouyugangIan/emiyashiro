@@ -125,8 +125,8 @@ impl ImageProcessor {
         // 头部 (圆形)
         if y < height / 4 {
             let head_radius = char_width / 3;
-            let dx = (x as i32 - center_x as i32).abs() as u32;
-            let dy = (y as i32 - (height / 8) as i32).abs() as u32;
+            let dx = (x as i32 - center_x as i32).unsigned_abs();
+            let dy = (y as i32 - (height / 8) as i32).unsigned_abs();
             return dx * dx + dy * dy < head_radius * head_radius;
         }
 

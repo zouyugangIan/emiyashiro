@@ -28,10 +28,10 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         .map(|path| asset_server.load(*path))
         .collect();
 
-    println!("📦 加载资源:");
-    println!("  - UI封面图片: {} 张", cover_textures.len());
-    println!("  - Shirou动画帧: {} 帧", shirou_animation_frames.len());
-    println!("  - Sakura动画帧: {} 帧", sakura_animation_frames.len());
+    crate::debug_log!("📦 加载资源:");
+    crate::debug_log!("  - UI封面图片: {} 张", cover_textures.len());
+    crate::debug_log!("  - Shirou动画帧: {} 帧", shirou_animation_frames.len());
+    crate::debug_log!("  - Sakura动画帧: {} 帧", sakura_animation_frames.len());
 
     let game_assets = GameAssets {
         cover_textures,
@@ -70,5 +70,5 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
 /// 使用 2D 摄像机配置，适合横版游戏。
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
-    println!("摄像机设置完成");
+    crate::debug_log!("摄像机设置完成");
 }

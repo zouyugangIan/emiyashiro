@@ -1,102 +1,58 @@
-# Fate/stay night Heaven's Feel - Shirou Runner
+# Fate/stay night Heaven's Feel - EmiyaShiro Runner
 
-一个基于 Bevy 引擎开发的 2D 横版跑酷游戏，玩家控制卫宫士郎在游戏世界中奔跑和跳跃。
+基于 Rust + Bevy 的 2D 横版动作跑酷原型，主角为卫宫士郎（1P）与樱（2P）。
 
-## 游戏特色
+## 当前技术基线
 
-- 🎮 流畅的 2D 平台跳跃机制
-- 🏃 基于物理的角色移动系统
-- 📷 智能摄像机跟随
-- ⚡ 使用 Bevy 引擎的高性能 ECS 架构
-- 🎨 简洁的视觉风格
+- 引擎: `Bevy 0.17`
+- 语言: `Rust (edition 2024)`
+- 架构: ECS + 状态机 + 领域插件化
 
-## 操作说明
-
-- **空格键**: 生成卫宫士郎角色
-- **A/D 或 ←/→**: 左右移动
-- **W 或 ↑**: 跳跃
-
-## 技术栈
-
-- **引擎**: Bevy 0.16
-- **语言**: Rust
-- **架构**: Entity Component System (ECS)
-
-## 快速开始
-
-### 环境要求
-
-- Rust 1.70+
-- Cargo
-
-### 运行游戏
+## 运行方式
 
 ```bash
-# 克隆项目
-git clone <repository-url>
-cd shirou-runner
+# 客户端
+cargo run --bin client
 
-# 运行游戏
-cargo run
+# 服务器（需 server feature）
+cargo run --bin server --features server
 ```
 
-### 开发模式
+## 主要按键
 
-```bash
-# 开发模式运行（优化编译速度）
-cargo run --profile dev
+- `A/D` 或 `←/→`: 移动
+- `W` 或 `Space`: 跳跃
+- `S` 或 `↓`: 蹲下
+- `J`: 攻击/投影
+- `K`: 圣骸布开关
+- `Esc`: 暂停
+- `R`: GameOver 后复活
+- `M`: GameOver 返回主菜单
+
+## 目录结构（核心）
+
+```text
+src/
+  bin/
+    client.rs
+    server.rs
+  plugins/
+    core.rs
+    gameplay.rs
+    netcode.rs
+    persistence.rs
+    presentation.rs
+    ui.rs
+  systems/
+  components/
+  resources.rs
+  states.rs
 ```
 
-## 项目结构
+## CI 门禁
 
-```
-├── src/
-│   └── main.rs          # 主游戏逻辑
-├── .kiro/
-│   ├── specs/           # 项目规范文档
-│   └── steering/        # 开发标准和指导原则
-├── Cargo.toml           # 项目配置
-└── README.md           # 项目说明
-```
+项目包含 GitHub Actions 工作流：`.github/workflows/rust-ci.yml`
 
-## 开发规范
-
-本项目遵循以下开发标准：
-
-- [Rust Bevy 开发标准](.kiro/steering/rust-bevy-standards.md)
-- [游戏开发原则](.kiro/steering/game-development-principles.md)
-
-## 项目规范
-
-详细的项目规范文档位于 `.kiro/specs/shirou-runner-game/` 目录：
-
-- [需求文档](requirements.md) - 游戏功能需求和验收标准
-- [设计文档](design.md) - 技术架构和系统设计
-- [任务列表](tasks.md) - 开发任务和实现计划
-
-## 贡献指南
-
-1. Fork 本项目
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建 Pull Request
-
-## 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 致谢
-
-- [Bevy Engine](https://bevyengine.org/) - 优秀的 Rust 游戏引擎
-- [Fate/stay night](https://typemoon.com/) - 原作灵感来源
-
----
-
-**注意**: 本项目仅用于学习和技术演示目的，与 TYPE-MOON 公司无关。
-
-## 跑酷动画资源
-<https://www.bilibili.com/video/BV1YztTeqENR?spm_id_from=333.788.videopod.sections&vd_source=4de32bc000c4310551cc68e6c62b69f9>
-
-
-我的游戏是一个根据卫宫士郎的天之杯为原型的跑酷游戏，卫宫士郎作为1p主角，樱作为2p主角。基于这一设定，采用nanobanana pro生成相关的asset，然后完善我的精灵动画部分的功能。
+- `cargo fmt --check`
+- `cargo clippy --lib --all-features`
+- `cargo test --lib`

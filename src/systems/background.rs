@@ -25,7 +25,7 @@ pub fn spawn_clouds_system(
 ) {
     if cloud_spawn_timer.0.tick(time.delta()).just_finished() {
         let Some(window) = window_query.iter().next() else {
-            println!("⚠️ 無法獲取窗口，跳過雲彩生成");
+            crate::debug_log!("⚠️ 無法獲取窗口，跳過雲彩生成");
             return;
         };
 
@@ -53,7 +53,7 @@ pub fn spawn_clouds_system(
             Cloud,
         ));
 
-        println!(
+        crate::debug_log!(
             "☁️ 生成雲彩 at x={}, y={}, scale={:.2}",
             window.width() + 100.0,
             cloud_y,
@@ -76,7 +76,7 @@ pub fn despawn_offscreen_clouds_system(
         if transform.translation.x < -200.0 {
             // Despawn when off-screen
             commands.entity(entity).despawn();
-            println!("🗑️ 清理離屏雲彩 at x={:.1}", transform.translation.x);
+            crate::debug_log!("🗑️ 清理離屏雲彩 at x={:.1}", transform.translation.x);
         }
     }
 }
@@ -92,11 +92,11 @@ pub fn debug_cloud_count(
     // 每 10 秒報告一次
     if current_time - *last_report > 10.0 {
         let count = cloud_query.iter().count();
-        println!("☁️ 當前雲彩數量: {}", count);
+        crate::debug_log!("☁️ 當前雲彩數量: {}", count);
 
         // 顯示所有雲彩的位置
         for (i, transform) in cloud_query.iter().enumerate() {
-            println!(
+            crate::debug_log!(
                 "  雲彩 #{}: x={:.1}, y={:.1}",
                 i + 1,
                 transform.translation.x,

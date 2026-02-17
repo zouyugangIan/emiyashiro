@@ -5,6 +5,31 @@
 use crate::{components::*, resources::*, states::*, systems::ui::LoadButton};
 use bevy::prelude::*;
 
+type StartButtonInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static mut BackgroundColor),
+    (Changed<Interaction>, With<StartButton>),
+>;
+
+type LoadButtonInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static mut BackgroundColor),
+    (Changed<Interaction>, With<LoadButton>),
+>;
+
+type CoverFadeQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut BackgroundColor,
+        &'static mut ImageNode,
+        &'static mut CoverFadeState,
+    ),
+    Or<(With<CoverImage1>, With<CoverImage2>)>,
+>;
+
 /// 设置主菜单界面
 ///
 /// 创建主菜单的UI元素，包括标题、按钮、背景图片等。
@@ -309,17 +334,14 @@ pub fn setup_menu(
                 });
         });
 
-    println!("=== Fate/stay night Heaven's Feel ===");
-    println!("Shirou Runner game started successfully!");
-    println!("Click Start Game button to begin");
+    crate::debug_log!("=== Fate/stay night Heaven's Feel ===");
+    crate::debug_log!("Shirou Runner game started successfully!");
+    crate::debug_log!("Click Start Game button to begin");
 }
 
 /// 处理开始按钮点击
 pub fn handle_start_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<StartButton>),
-    >,
+    mut interaction_query: StartButtonInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
     mut save_load_ui_state: Option<ResMut<crate::systems::ui::SaveLoadUiState>>,
@@ -352,7 +374,7 @@ pub fn handle_start_button(
                 }
 
                 next_state.set(GameState::Playing);
-                println!("🎮 Starting NEW game! (All states reset)");
+                crate::debug_log!("🎮 Starting NEW game! (All states reset)");
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
@@ -366,10 +388,7 @@ pub fn handle_start_button(
 
 /// 处理加载按钮点击
 pub fn handle_load_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<LoadButton>),
-    >,
+    mut interaction_query: LoadButtonInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
     save_file_manager: Res<SaveFileManager>,
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
@@ -380,8 +399,8 @@ pub fn handle_load_button(
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.05, 0.1, 0.05, 0.8));
 
-                println!("📂 Opening load interface from main menu");
-                println!("   Available saves: {}", save_file_manager.save_files.len());
+                crate::debug_log!("📂 Opening load interface from main menu");
+                crate::debug_log!("   Available saves: {}", save_file_manager.save_files.len());
 
                 // 记录来源状态
                 loaded_game_state.previous_state = Some(GameState::Menu);
@@ -416,7 +435,7 @@ pub fn handle_character_select(
         match *interaction {
             Interaction::Pressed => {
                 character_selection.selected_character = button.character_type.clone();
-                println!("选择角色: {:?}", button.character_type);
+                crate::debug_log!("选择角色: {:?}", button.character_type);
 
                 // 更新按钮颜色表示选中状态
                 match button.character_type {
@@ -457,10 +476,7 @@ pub fn handle_character_select(
 /// - 这样始终保持两张不同的图片在淡入淡出
 pub fn cover_fade_animation(
     mut game_assets: Option<ResMut<GameAssets>>,
-    mut cover_query: Query<
-        (&mut BackgroundColor, &mut ImageNode, &mut CoverFadeState),
-        Or<(With<CoverImage1>, With<CoverImage2>)>,
-    >,
+    mut cover_query: CoverFadeQuery,
     time: Res<Time>,
     mut initialized: Local<bool>,
 ) {
@@ -484,7 +500,7 @@ pub fn cover_fade_animation(
             }
         }
         *initialized = true;
-        println!(
+        crate::debug_log!(
             "🖼️ 初始化封面图片: 当前={}, 下一张={} (共{}张)",
             assets.current_cover_index,
             (assets.current_cover_index + 1) % assets.cover_textures.len(),
@@ -502,7 +518,7 @@ pub fn cover_fade_animation(
 
     if current_cycle > last_cycle {
         assets.next_cover();
-        println!(
+        crate::debug_log!(
             "🖼️ 切换封面: {} (共{}张)",
             assets.current_cover_index,
             assets.cover_textures.len()

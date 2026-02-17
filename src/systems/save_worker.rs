@@ -14,7 +14,7 @@ pub struct SaveGameTask {
 /// 异步存档消费者 (Save Worker)
 /// 从 RabbitMQ 队列 `q_save_game` 消费存档任务，并写入 Postgres
 pub async fn run_save_worker(pool: PgPool) {
-    println!("Starting Save Worker...");
+    crate::debug_log!("Starting Save Worker...");
 
     let rabbitmq_url = env::var("RABBITMQ_URL")
         .unwrap_or_else(|_| "amqp://guest:guest@127.0.0.1:5672/%2f".to_string());
@@ -22,7 +22,7 @@ pub async fn run_save_worker(pool: PgPool) {
     loop {
         match Connection::connect(&rabbitmq_url, ConnectionProperties::default()).await {
             Ok(conn) => {
-                println!("Save Worker connected to RabbitMQ");
+                crate::debug_log!("Save Worker connected to RabbitMQ");
 
                 let channel = conn
                     .create_channel()
@@ -39,7 +39,7 @@ pub async fn run_save_worker(pool: PgPool) {
                     .await
                     .expect("Failed to declare queue");
 
-                println!("Save Worker listening on queue: q_save_game");
+                crate::debug_log!("Save Worker listening on queue: q_save_game");
 
                 let mut consumer = channel
                     .basic_consume(
@@ -55,14 +55,17 @@ pub async fn run_save_worker(pool: PgPool) {
                     if let Ok(delivery) = delivery {
                         match serde_json::from_slice::<SaveGameTask>(&delivery.data) {
                             Ok(task) => {
-                                println!("Processing save task for player: {}", task.player_id);
+                                crate::debug_log!(
+                                    "Processing save task for player: {}",
+                                    task.player_id
+                                );
 
                                 // 保存到数据库
                                 let result = sqlx::query(
                                     r#"
                                     INSERT INTO save_games (player_id, save_name, game_data, created_at, updated_at)
                                     VALUES ($1::uuid, $2, $3, NOW(), NOW())
-                                    ON CONFLICT (player_id, save_name) 
+                                    ON CONFLICT (player_id, save_name)
                                     DO UPDATE SET game_data = $3, updated_at = NOW()
                                     "#
                                 )
@@ -74,7 +77,7 @@ pub async fn run_save_worker(pool: PgPool) {
 
                                 match result {
                                     Ok(_) => {
-                                        println!(
+                                        crate::debug_log!(
                                             "Save task completed for player: {}",
                                             task.player_id
                                         );
@@ -144,6 +147,6 @@ pub async fn publish_save_task(task: SaveGameTask) -> Result<(), Box<dyn std::er
         )
         .await?;
 
-    println!("Published save task for player: {}", task.player_id);
+    crate::debug_log!("Published save task for player: {}", task.player_id);
     Ok(())
 }

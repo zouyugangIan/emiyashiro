@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::components::*;
-    use bevy::prelude::*;
 
     #[test]
     fn test_velocity_creation() {

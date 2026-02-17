@@ -1,18 +1,22 @@
-use crate::{StartLoadGame, StartSaveGame};
+﻿use crate::{StartLoadGame, StartSaveGame};
 use crate::{components::*, resources::*, states::*};
 use bevy::prelude::*;
 
-/// 游戏内 HUD 组件
+/// 娓告垙鍐?HUD 缁勪欢
 #[derive(Component)]
 pub struct GameHUD;
 
-/// 分数显示组件
+/// 鍒嗘暟鏄剧ず缁勪欢
 #[derive(Component)]
 pub struct ScoreDisplay;
 
-/// 距离显示组件
+/// 璺濈鏄剧ず缁勪欢
 #[derive(Component)]
 pub struct DistanceDisplay;
+
+/// 鐢熷懡鍊兼樉绀虹粍浠?
+#[derive(Component)]
+pub struct HealthDisplay;
 
 // Enhanced Pause System UI Components
 #[derive(Component)]
@@ -30,21 +34,21 @@ pub struct ResumeButton;
 #[derive(Component)]
 pub struct MainMenuButton;
 
-// 键盘提示按钮组件
+// 閿洏鎻愮ず鎸夐挳缁勪欢
 #[derive(Component)]
 pub struct EscKeyButton;
 
 #[derive(Component)]
 pub struct QKeyButton;
 
-// 存档名称输入资源
+// 瀛樻。鍚嶇О杈撳叆璧勬簮
 #[derive(Resource, Default)]
 pub struct SaveNameInput {
     pub current_name: String,
     pub is_editing: bool,
 }
 
-// 加载的游戏状态资源
+// 鍔犺浇鐨勬父鎴忕姸鎬佽祫婧?
 #[derive(Resource, Default)]
 pub struct LoadedGameState {
     pub state: Option<CompleteGameState>,
@@ -113,7 +117,7 @@ pub struct ConfirmRenameButton;
 #[derive(Component)]
 pub struct CancelRenameButton;
 
-// 重命名输入资源
+// 閲嶅懡鍚嶈緭鍏ヨ祫婧?
 #[derive(Resource, Default)]
 pub struct RenameInput {
     pub current_name: String,
@@ -122,9 +126,64 @@ pub struct RenameInput {
     pub is_editing: bool,
 }
 
-/// 设置游戏内 HUD
+type SaveDialogInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Interaction,
+        &'static mut BackgroundColor,
+        Option<&'static ConfirmSaveButton>,
+        Option<&'static CancelSaveButton>,
+    ),
+    (Changed<Interaction>, With<Button>),
+>;
+
+type LoadTableInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Interaction,
+        &'static mut BackgroundColor,
+        Option<&'static SaveFileRow>,
+        Option<&'static CancelSaveButton>,
+        Option<&'static LoadButton>,
+        Option<&'static RenameButton>,
+        Option<&'static DeleteButton>,
+    ),
+    (Changed<Interaction>, With<Button>),
+>;
+
+type RenameDialogInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Interaction,
+        &'static mut BackgroundColor,
+        Option<&'static ConfirmRenameButton>,
+        Option<&'static CancelRenameButton>,
+    ),
+    (Changed<Interaction>, With<Button>),
+>;
+
+type PauseMenuInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Interaction,
+        &'static mut BackgroundColor,
+        Option<&'static ResumeButton>,
+        Option<&'static SaveGameButton>,
+        Option<&'static LoadGameButton>,
+        Option<&'static MainMenuButton>,
+        Option<&'static EscKeyButton>,
+        Option<&'static QKeyButton>,
+    ),
+    (Changed<Interaction>, With<Button>),
+>;
+
+/// 璁剧疆娓告垙鍐?HUD
 pub fn setup_game_hud(mut commands: Commands, game_assets: Option<Res<GameAssets>>) {
-    // 创建 HUD 根节点
+    // 鍒涘缓 HUD 鏍硅妭鐐?
     commands
         .spawn((
             Node {
@@ -141,7 +200,7 @@ pub fn setup_game_hud(mut commands: Commands, game_assets: Option<Res<GameAssets
             GameHUD,
         ))
         .with_children(|parent| {
-            // 分数显示
+            // 鍒嗘暟鏄剧ず
             if let Some(assets) = &game_assets {
                 parent.spawn((
                     Text::new(format!(
@@ -179,7 +238,7 @@ pub fn setup_game_hud(mut commands: Commands, game_assets: Option<Res<GameAssets
                 ));
             }
 
-            // 距离显示
+            // 璺濈鏄剧ず
             parent.spawn((
                 Text::new(format!(
                     "{}0{}",
@@ -198,7 +257,22 @@ pub fn setup_game_hud(mut commands: Commands, game_assets: Option<Res<GameAssets
                 DistanceDisplay,
             ));
 
-            // 操作提示
+            // 鐢熷懡鍊兼樉绀?
+            parent.spawn((
+                Text::new("HP: 100/100"),
+                TextFont {
+                    font_size: 20.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.85, 0.95, 0.85)),
+                Node {
+                    margin: UiRect::all(Val::Px(10.0)),
+                    ..default()
+                },
+                HealthDisplay,
+            ));
+
+            // 鎿嶄綔鎻愮ず
             parent.spawn((
                 Text::new(crate::systems::text_constants::PauseMenuText::CONTROLS_HINT),
                 TextFont {
@@ -217,21 +291,23 @@ pub fn setup_game_hud(mut commands: Commands, game_assets: Option<Res<GameAssets
         });
 }
 
-/// 更新游戏 HUD
+/// 鏇存柊娓告垙 HUD
 pub fn update_game_hud(
     mut score_query: Query<&mut Text, (With<ScoreDisplay>, Without<DistanceDisplay>)>,
     mut distance_query: Query<&mut Text, (With<DistanceDisplay>, Without<ScoreDisplay>)>,
+    mut health_query: Query<&mut Text, (With<HealthDisplay>, Without<ScoreDisplay>)>,
+    player_health_query: Query<&Health, With<Player>>,
     game_stats: Res<GameStats>,
 ) {
     use crate::systems::text_constants::GameHUDText;
 
-    // 更新分数显示
+    // 鏇存柊鍒嗘暟鏄剧ず
     if let Ok(mut score_text) = score_query.single_mut() {
         let score = (game_stats.distance_traveled * 10.0) as u32 + game_stats.jump_count * 50;
         **score_text = format!("{}{}", GameHUDText::SCORE_LABEL, score);
     }
 
-    // 更新距离显示
+    // 鏇存柊璺濈鏄剧ず
     if let Ok(mut distance_text) = distance_query.single_mut() {
         **distance_text = format!(
             "{}{}{}",
@@ -240,20 +316,27 @@ pub fn update_game_hud(
             GameHUDText::METERS_UNIT
         );
     }
+
+    // 鏇存柊鐢熷懡鍊兼樉绀?
+    if let (Ok(mut health_text), Ok(player_health)) =
+        (health_query.single_mut(), player_health_query.single())
+    {
+        **health_text = format!("HP: {:.0}/{:.0}", player_health.current, player_health.max);
+    }
 }
 
-/// 清理游戏 HUD
+/// 娓呯悊娓告垙 HUD
 pub fn cleanup_game_hud(mut commands: Commands, hud_query: Query<Entity, With<GameHUD>>) {
     for entity in hud_query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-/// 暂停菜单组件
+/// 鏆傚仠鑿滃崟缁勪欢
 #[derive(Component)]
 pub struct PauseMenu;
 
-/// 设置增强的暂停菜单
+/// 璁剧疆澧炲己鐨勬殏鍋滆彍鍗?
 pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAssets>>) {
     use crate::systems::text_constants::PauseMenuText;
 
@@ -294,7 +377,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                     BorderColor::all(Color::WHITE),
                 ))
                 .with_children(|parent| {
-                    // 游戏暂停标题
+                    // 娓告垙鏆傚仠鏍囬
                     parent.spawn((
                         Text::new(PauseMenuText::TITLE),
                         TextFont {
@@ -309,7 +392,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                         },
                     ));
 
-                    // 继续游戏按钮
+                    // 缁х画娓告垙鎸夐挳
                     parent
                         .spawn((
                             Button,
@@ -338,7 +421,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 保存游戏按钮
+                    // 淇濆瓨娓告垙鎸夐挳
                     parent
                         .spawn((
                             Button,
@@ -367,7 +450,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 加载游戏按钮
+                    // 鍔犺浇娓告垙鎸夐挳
                     parent
                         .spawn((
                             Button,
@@ -396,7 +479,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 主菜单按钮
+                    // 涓昏彍鍗曟寜閽?
                     parent
                         .spawn((
                             Button,
@@ -425,7 +508,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 键盘快捷键按钮
+                    // 閿洏蹇嵎閿寜閽?
                     parent
                         .spawn((Node {
                             width: Val::Percent(100.0),
@@ -437,7 +520,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ..default()
                         },))
                         .with_children(|parent| {
-                            // ESC键按钮
+                            // ESC閿寜閽?
                             parent
                                 .spawn((
                                     Button,
@@ -466,7 +549,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                                     ));
                                 });
 
-                            // Q键按钮
+                            // Q閿寜閽?
                             parent
                                 .spawn((
                                     Button,
@@ -499,14 +582,14 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
         });
 }
 
-/// 清理暂停菜单
+/// 娓呯悊鏆傚仠鑿滃崟
 pub fn cleanup_pause_menu(mut commands: Commands, pause_query: Query<Entity, With<PauseMenuRoot>>) {
     for entity in pause_query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-/// 设置保存对话框
+/// 璁剧疆淇濆瓨瀵硅瘽妗?
 pub fn setup_save_dialog(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
@@ -516,11 +599,11 @@ pub fn setup_save_dialog(
 ) {
     use crate::systems::text_constants::SaveLoadText;
 
-    // 重置输入状态 - 清空输入框
+    // 閲嶇疆杈撳叆鐘舵€?- 娓呯┖杈撳叆妗?
     save_name_input.current_name.clear();
     save_name_input.is_editing = true;
 
-    // 激活新的文本输入系统
+    // 婵€娲绘柊鐨勬枃鏈緭鍏ョ郴缁?
     text_input_state.activate();
 
     save_load_ui_state.pending_load_index = None;
@@ -579,7 +662,7 @@ pub fn setup_save_dialog(
                         .map(|a| a.font.clone())
                         .unwrap_or_default();
 
-                    // 标题
+                    // 鏍囬
                     parent.spawn((
                         Text::new(SaveLoadText::SAVE_DIALOG_TITLE),
                         TextFont {
@@ -590,7 +673,7 @@ pub fn setup_save_dialog(
                         TextColor(Color::WHITE),
                     ));
 
-                    // 输入提示
+                    // 杈撳叆鎻愮ず
                     parent.spawn((
                         Text::new(SaveLoadText::ENTER_SAVE_NAME),
                         TextFont {
@@ -601,7 +684,7 @@ pub fn setup_save_dialog(
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
                     ));
 
-                    // 输入框 (显示当前输入的名称)
+                    // 杈撳叆妗?(鏄剧ず褰撳墠杈撳叆鐨勫悕绉?
                     parent
                         .spawn((
                             Node {
@@ -617,7 +700,7 @@ pub fn setup_save_dialog(
                             BorderColor::all(Color::srgba(0.5, 0.8, 1.0, 1.0)), // Blue border to indicate active input
                         ))
                         .with_children(|parent| {
-                            // 输入文本
+                            // 杈撳叆鏂囨湰
                             parent.spawn((
                                 Text::new(SaveLoadText::NAME_PLACEHOLDER),
                                 TextFont {
@@ -626,10 +709,10 @@ pub fn setup_save_dialog(
                                     ..default()
                                 },
                                 TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)), // Placeholder color
-                                SaveNameInputBox, // 将标记添加到文本组件上
+                                SaveNameInputBox, // 灏嗘爣璁版坊鍔犲埌鏂囨湰缁勪欢涓?
                             ));
 
-                            // 光标
+                            // 鍏夋爣
                             parent.spawn((
                                 Text::new("|"),
                                 TextFont {
@@ -644,13 +727,13 @@ pub fn setup_save_dialog(
                                 },
                                 Node {
                                     position_type: PositionType::Absolute,
-                                    left: Val::Px(15.0), // 初始位置，会根据文本长度动态调整
+                                    left: Val::Px(15.0), // 鍒濆浣嶇疆锛屼細鏍规嵁鏂囨湰闀垮害鍔ㄦ€佽皟鏁?
                                     ..default()
                                 },
                             ));
                         });
 
-                    // 输入提示信息
+                    // 杈撳叆鎻愮ず淇℃伅
                     parent.spawn((
                         Text::new(initial_status_text.clone()),
                         TextFont {
@@ -662,7 +745,7 @@ pub fn setup_save_dialog(
                         SaveLoadStatusText,
                     ));
 
-                    // 按钮容器
+                    // 鎸夐挳瀹瑰櫒
                     parent
                         .spawn((Node {
                             width: Val::Percent(100.0),
@@ -673,7 +756,7 @@ pub fn setup_save_dialog(
                             ..default()
                         },))
                         .with_children(|parent| {
-                            // 确认按钮
+                            // 纭鎸夐挳
                             parent
                                 .spawn((
                                     Button,
@@ -701,7 +784,7 @@ pub fn setup_save_dialog(
                                     ));
                                 });
 
-                            // 取消按钮
+                            // 鍙栨秷鎸夐挳
                             parent
                                 .spawn((
                                     Button,
@@ -733,7 +816,7 @@ pub fn setup_save_dialog(
         });
 }
 
-/// 清理保存对话框
+/// 娓呯悊淇濆瓨瀵硅瘽妗?
 pub fn cleanup_save_dialog(
     mut commands: Commands,
     dialog_query: Query<Entity, With<SaveDialog>>,
@@ -743,7 +826,7 @@ pub fn cleanup_save_dialog(
         commands.entity(entity).despawn();
     }
 
-    // 停用文本输入系统
+    // 鍋滅敤鏂囨湰杈撳叆绯荤粺
     text_input_state.deactivate();
 }
 
@@ -766,7 +849,7 @@ pub fn update_save_load_status_text(
 
     let (message, color) = if !save_load_ui_state.error_message.is_empty() {
         (
-            format!("❌ {}", save_load_ui_state.error_message),
+            format!("鉂?{}", save_load_ui_state.error_message),
             Color::srgba(1.0, 0.45, 0.45, 1.0),
         )
     } else if !save_load_ui_state.status_message.is_empty() {
@@ -806,8 +889,8 @@ pub fn update_text_cursor(
             };
         }
 
-        // 更新光标位置基于当前文本长度
-        // 每个字符大约8像素宽度（16号字体的估算）
+        // 鏇存柊鍏夋爣浣嶇疆鍩轰簬褰撳墠鏂囨湰闀垮害
+        // 姣忎釜瀛楃澶х害8鍍忕礌瀹藉害锛?6鍙峰瓧浣撶殑浼扮畻锛?
         let text_width = save_name_input.current_name.len() as f32 * 8.0;
         node.left = Val::Px(15.0 + text_width);
     }
@@ -819,12 +902,12 @@ pub fn handle_save_name_input(
     mut save_name_input: ResMut<SaveNameInput>,
     mut text_query: Query<&mut Text, With<SaveNameInputBox>>,
 ) {
-    // 同步新的文本输入系统状态到旧的保存名称输入
+    // 鍚屾鏂扮殑鏂囨湰杈撳叆绯荤粺鐘舵€佸埌鏃х殑淇濆瓨鍚嶇О杈撳叆
     if text_input_state.is_active {
         save_name_input.current_name = text_input_state.current_text.clone();
         save_name_input.is_editing = true;
 
-        // 更新显示文本
+        // 鏇存柊鏄剧ず鏂囨湰
         use crate::systems::text_constants::SaveLoadText;
         for mut text in text_query.iter_mut() {
             text.0 = if text_input_state.current_text.is_empty() {
@@ -838,80 +921,9 @@ pub fn handle_save_name_input(
     }
 }
 
-/// Map keyboard input to characters
-fn map_keycode_to_char(keycode: &KeyCode) -> Option<char> {
-    match keycode {
-        // Letters - convert to uppercase
-        KeyCode::KeyA => Some('A'),
-        KeyCode::KeyB => Some('B'),
-        KeyCode::KeyC => Some('C'),
-        KeyCode::KeyD => Some('D'),
-        KeyCode::KeyE => Some('E'),
-        KeyCode::KeyF => Some('F'),
-        KeyCode::KeyG => Some('G'),
-        KeyCode::KeyH => Some('H'),
-        KeyCode::KeyI => Some('I'),
-        KeyCode::KeyJ => Some('J'),
-        KeyCode::KeyK => Some('K'),
-        KeyCode::KeyL => Some('L'),
-        KeyCode::KeyM => Some('M'),
-        KeyCode::KeyN => Some('N'),
-        KeyCode::KeyO => Some('O'),
-        KeyCode::KeyP => Some('P'),
-        KeyCode::KeyQ => Some('Q'),
-        KeyCode::KeyR => Some('R'),
-        KeyCode::KeyS => Some('S'),
-        KeyCode::KeyT => Some('T'),
-        KeyCode::KeyU => Some('U'),
-        KeyCode::KeyV => Some('V'),
-        KeyCode::KeyW => Some('W'),
-        KeyCode::KeyX => Some('X'),
-        KeyCode::KeyY => Some('Y'),
-        KeyCode::KeyZ => Some('Z'),
-        // Numbers
-        KeyCode::Digit0 => Some('0'),
-        KeyCode::Digit1 => Some('1'),
-        KeyCode::Digit2 => Some('2'),
-        KeyCode::Digit3 => Some('3'),
-        KeyCode::Digit4 => Some('4'),
-        KeyCode::Digit5 => Some('5'),
-        KeyCode::Digit6 => Some('6'),
-        KeyCode::Digit7 => Some('7'),
-        KeyCode::Digit8 => Some('8'),
-        KeyCode::Digit9 => Some('9'),
-        // Special characters
-        KeyCode::Space => Some('_'),
-        KeyCode::Minus => Some('-'),
-        _ => None,
-    }
-}
-
-/// Update the input display text
-fn update_input_display(
-    save_name_input: &SaveNameInput,
-    mut text_query: Query<&mut Text, With<SaveNameInputBox>>,
-) {
-    use crate::systems::text_constants::SaveLoadText;
-    for mut text in text_query.iter_mut() {
-        text.0 = if save_name_input.current_name.is_empty() {
-            SaveLoadText::NAME_PLACEHOLDER.to_string()
-        } else {
-            format!("{}|", save_name_input.current_name) // Add cursor indicator
-        };
-    }
-}
-
-/// 处理保存对话框交互
+/// 澶勭悊淇濆瓨瀵硅瘽妗嗕氦浜?
 pub fn handle_save_dialog_interactions(
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &mut BackgroundColor,
-            Option<&ConfirmSaveButton>,
-            Option<&CancelSaveButton>,
-        ),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_query: SaveDialogInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
     pause_manager: Res<PauseManager>,
     mut ev_save: MessageWriter<StartSaveGame>,
@@ -924,24 +936,24 @@ pub fn handle_save_dialog_interactions(
     let mut should_save = false;
     let mut should_cancel = false;
 
-    // 处理键盘快捷键
+    // 澶勭悊閿洏蹇嵎閿?
     if keyboard_input.just_pressed(KeyCode::Enter) && text_input_state.is_active {
         should_save = true;
-        println!("💾 Enter key pressed - saving game");
+        crate::debug_log!("馃捑 Enter key pressed - saving game");
     } else if keyboard_input.just_pressed(KeyCode::Escape) && text_input_state.is_active {
         should_cancel = true;
-        println!("❌ Escape key pressed - canceling save");
+        crate::debug_log!("鉂?Escape key pressed - canceling save");
     }
 
-    // 处理按钮交互
+    // 澶勭悊鎸夐挳浜や簰
     for (interaction, mut color, confirm_btn, cancel_btn) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 if confirm_btn.is_some() {
-                    println!("💾 Save button pressed!");
+                    crate::debug_log!("馃捑 Save button pressed!");
                     should_save = true;
                 } else if cancel_btn.is_some() {
-                    println!("❌ Cancel button pressed!");
+                    crate::debug_log!("鉂?Cancel button pressed!");
                     should_cancel = true;
                 }
                 *color = BackgroundColor(Color::srgba(0.05, 0.05, 0.05, 0.9));
@@ -984,7 +996,7 @@ pub fn handle_save_dialog_interactions(
                     save_load_ui_state.error_message.clear();
                     save_load_ui_state.status_message = format!("Saving '{}'...", save_name);
 
-                    println!("💾 Firing StartSaveGame event with name: '{}'", save_name);
+                    crate::debug_log!("馃捑 Firing StartSaveGame event with name: '{}'", save_name);
                     ev_save.write(StartSaveGame {
                         save_name,
                         state: state.clone(),
@@ -995,13 +1007,13 @@ pub fn handle_save_dialog_interactions(
                     save_load_ui_state.error_message =
                         format!("{}: {}", SaveLoadText::INVALID_NAME_ERROR, error);
                     save_load_ui_state.status_message.clear();
-                    println!("❌ Invalid save name: {}", error);
+                    crate::debug_log!("鉂?Invalid save name: {}", error);
                 }
             }
         } else {
             save_load_ui_state.error_message = "No paused game snapshot to save".to_string();
             save_load_ui_state.status_message.clear();
-            println!("❌ No game state to save! PauseManager preserved_state is None");
+            crate::debug_log!("鉂?No game state to save! PauseManager preserved_state is None");
             next_state.set(GameState::Paused);
         }
     } else if should_cancel {
@@ -1011,13 +1023,13 @@ pub fn handle_save_dialog_interactions(
         }
 
         save_load_ui_state.pending_load_index = None;
-        // 取消保存，返回暂停菜单
+        // 鍙栨秷淇濆瓨锛岃繑鍥炴殏鍋滆彍鍗?
         next_state.set(GameState::Paused);
-        println!("❌ Save canceled");
+        crate::debug_log!("鉂?Save canceled");
     }
 }
 
-/// 设置增强的加载表格界面
+/// 璁剧疆澧炲己鐨勫姞杞借〃鏍肩晫闈?
 pub fn setup_load_table(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
@@ -1035,7 +1047,7 @@ pub fn setup_load_table(
     let (initial_status_text, initial_status_color) =
         if !save_load_ui_state.error_message.is_empty() {
             (
-                format!("❌ {}", save_load_ui_state.error_message),
+                format!("鉂?{}", save_load_ui_state.error_message),
                 Color::srgba(1.0, 0.45, 0.45, 1.0),
             )
         } else if !save_load_ui_state.status_message.is_empty() {
@@ -1079,7 +1091,7 @@ pub fn setup_load_table(
         )).with_children(|parent| {
             let font_handle = game_assets.as_ref().map(|a| a.font.clone()).unwrap_or_default();
 
-            // 标题
+            // 鏍囬
             parent.spawn((
                 Text::new(crate::systems::text_constants::SaveLoadText::LOAD_DIALOG_TITLE),
                 TextFont {
@@ -1094,7 +1106,7 @@ pub fn setup_load_table(
                 },
             ));
 
-            // 操作提示
+            // 鎿嶄綔鎻愮ず
             parent.spawn((
                 Text::new(initial_status_text.clone()),
                 TextFont {
@@ -1110,7 +1122,7 @@ pub fn setup_load_table(
                 },
             ));
 
-            // 表格头部
+            // 琛ㄦ牸澶撮儴
             parent.spawn((
                 Node {
                     width: Val::Percent(100.0),
@@ -1159,7 +1171,7 @@ pub fn setup_load_table(
                 }
             });
 
-            // 滚动区域
+            // 婊氬姩鍖哄煙
             parent.spawn((
                 Node {
                     width: Val::Percent(100.0),
@@ -1169,7 +1181,7 @@ pub fn setup_load_table(
                     ..default()
                 },
             )).with_children(|parent| {
-                // 显示存档文件
+                // 鏄剧ず瀛樻。鏂囦欢
                 if save_file_manager.save_files.is_empty() {
                     parent.spawn((
                         Node {
@@ -1210,16 +1222,17 @@ pub fn setup_load_table(
                             let widths = [18.0, 8.0, 12.0, 12.0, 12.0, 18.0, 20.0];
                             let values = [
                                 save_file.name.clone(),
-                                "1P".to_string(), // 默认单人游戏，未来可从存档数据读取
+                                "1P".to_string(), // 榛樿鍗曚汉娓告垙锛屾湭鏉ュ彲浠庡瓨妗ｆ暟鎹鍙?
                                 save_file.score.to_string(),
                                 format!("{:.1}m", save_file.distance),
                                 format!("{:.1}s", save_file.play_time),
                                 save_file.save_timestamp.format("%m/%d %H:%M").to_string(),
                             ];
 
-                            // 显示存档信息
+                            // 鏄剧ず瀛樻。淇℃伅
                             for (i, (value, width)) in values.iter().zip(widths.iter()).enumerate() {
-                                if i < 6 { // 前6列显示数据
+                                if i < 6 {
+                                    // 鍓?鍒楁樉绀烘暟鎹?
                                     parent.spawn((
                                         Button,
                                         Node {
@@ -1241,7 +1254,8 @@ pub fn setup_load_table(
                                                 font_size: 13.0,
                                                 ..default()
                                             },
-                                            TextColor(if i == 1 { // 玩家数量列使用不同颜色
+                                            TextColor(if i == 1 {
+                                                // 鐜╁鏁伴噺鍒椾娇鐢ㄤ笉鍚岄鑹?
                                                 Color::srgba(0.7, 0.9, 1.0, 1.0)
                                             } else {
                                                 Color::WHITE
@@ -1251,7 +1265,7 @@ pub fn setup_load_table(
                                 }
                             }
 
-                            // 操作按钮列
+                            // 鎿嶄綔鎸夐挳鍒?
                             parent.spawn((
                                 Node {
                                     width: Val::Percent(20.0),
@@ -1263,7 +1277,7 @@ pub fn setup_load_table(
                                     ..default()
                                 },
                             )).with_children(|parent| {
-                                // 重命名按钮
+                                // 閲嶅懡鍚嶆寜閽?
                                 parent.spawn((
                                     Button,
                                     Node {
@@ -1290,7 +1304,7 @@ pub fn setup_load_table(
                                     ));
                                 });
 
-                                // 删除按钮
+                                // 鍒犻櫎鎸夐挳
                                 parent.spawn((
                                     Button,
                                     Node {
@@ -1322,7 +1336,7 @@ pub fn setup_load_table(
                 }
             });
 
-            // 底部按钮
+            // 搴曢儴鎸夐挳
             parent.spawn((
                 Node {
                     width: Val::Percent(100.0),
@@ -1334,7 +1348,7 @@ pub fn setup_load_table(
                     ..default()
                 },
             )).with_children(|parent| {
-                // 刷新按钮
+                // 鍒锋柊鎸夐挳
                 parent.spawn((
                     Button,
                     Node {
@@ -1347,7 +1361,7 @@ pub fn setup_load_table(
                     },
                     BackgroundColor(Color::srgba(0.15, 0.25, 0.35, 0.8)),
                     BorderColor::all(Color::srgba(0.3, 0.5, 0.7, 1.0)),
-                    LoadButton, // 重用加载按钮组件作为刷新
+                    LoadButton, // 閲嶇敤鍔犺浇鎸夐挳缁勪欢浣滀负鍒锋柊
                 )).with_children(|parent| {
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::REFRESH_BUTTON),
@@ -1360,7 +1374,7 @@ pub fn setup_load_table(
                     ));
                 });
 
-                // 返回按钮
+                // 杩斿洖鎸夐挳
                 parent.spawn((
                     Button,
                     Node {
@@ -1373,7 +1387,7 @@ pub fn setup_load_table(
                     },
                     BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8)),
                     BorderColor::all(Color::srgba(0.6, 0.3, 0.3, 1.0)),
-                    CancelSaveButton, // 重用取消按钮组件
+                    CancelSaveButton, // 閲嶇敤鍙栨秷鎸夐挳缁勪欢
                 )).with_children(|parent| {
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::BACK_BUTTON),
@@ -1390,25 +1404,25 @@ pub fn setup_load_table(
     });
 }
 
-/// 清理加载表格
+/// 娓呯悊鍔犺浇琛ㄦ牸
 pub fn cleanup_load_table(mut commands: Commands, table_query: Query<Entity, With<LoadTableRoot>>) {
     for entity in table_query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-/// 设置重命名对话框
+/// 璁剧疆閲嶅懡鍚嶅璇濇
 pub fn setup_rename_dialog(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
     mut rename_input: ResMut<RenameInput>,
     mut text_input_state: ResMut<crate::systems::text_input::TextInputState>,
 ) {
-    // 重置输入状态，使用原始名称作为默认值
+    // 閲嶇疆杈撳叆鐘舵€侊紝浣跨敤鍘熷鍚嶇О浣滀负榛樿鍊?
     rename_input.current_name = rename_input.original_name.clone();
     rename_input.is_editing = true;
 
-    // 激活文本输入系统并设置初始值
+    // 婵€娲绘枃鏈緭鍏ョ郴缁熷苟璁剧疆鍒濆鍊?
     text_input_state.activate();
     text_input_state.current_text = rename_input.original_name.clone();
 
@@ -1449,7 +1463,7 @@ pub fn setup_rename_dialog(
                         .map(|a| a.font.clone())
                         .unwrap_or_default();
 
-                    // 标题
+                    // 鏍囬
                     parent.spawn((
                         Text::new(
                             crate::systems::text_constants::SaveLoadText::RENAME_DIALOG_TITLE,
@@ -1462,7 +1476,7 @@ pub fn setup_rename_dialog(
                         TextColor(Color::WHITE),
                     ));
 
-                    // 原始名称显示
+                    // 鍘熷鍚嶇О鏄剧ず
                     parent.spawn((
                         Text::new(format!("Current name: {}", rename_input.original_name)),
                         TextFont {
@@ -1473,7 +1487,7 @@ pub fn setup_rename_dialog(
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.7)),
                     ));
 
-                    // 输入提示
+                    // 杈撳叆鎻愮ず
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::ENTER_NEW_NAME),
                         TextFont {
@@ -1484,7 +1498,7 @@ pub fn setup_rename_dialog(
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
                     ));
 
-                    // 输入框
+                    // 杈撳叆妗?
                     parent
                         .spawn((
                             Node {
@@ -1512,7 +1526,7 @@ pub fn setup_rename_dialog(
                             ));
                         });
 
-                    // 按钮容器
+                    // 鎸夐挳瀹瑰櫒
                     parent
                         .spawn((Node {
                             width: Val::Percent(100.0),
@@ -1523,7 +1537,7 @@ pub fn setup_rename_dialog(
                             ..default()
                         },))
                         .with_children(|parent| {
-                            // 确认按钮
+                            // 纭鎸夐挳
                             parent
                                 .spawn((
                                     Button,
@@ -1551,7 +1565,7 @@ pub fn setup_rename_dialog(
                     ));
                                 });
 
-                            // 取消按钮
+                            // 鍙栨秷鎸夐挳
                             parent
                                 .spawn((
                                     Button,
@@ -1583,7 +1597,7 @@ pub fn setup_rename_dialog(
         });
 }
 
-/// 清理重命名对话框
+/// 娓呯悊閲嶅懡鍚嶅璇濇
 pub fn cleanup_rename_dialog(
     mut commands: Commands,
     dialog_query: Query<Entity, With<RenameDialog>>,
@@ -1593,24 +1607,13 @@ pub fn cleanup_rename_dialog(
         commands.entity(entity).despawn();
     }
 
-    // 停用文本输入系统
+    // 鍋滅敤鏂囨湰杈撳叆绯荤粺
     text_input_state.deactivate();
 }
 
-/// 处理增强的加载表格交互
+/// 澶勭悊澧炲己鐨勫姞杞借〃鏍间氦浜?
 pub fn handle_load_table_interactions(
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &mut BackgroundColor,
-            Option<&SaveFileRow>,
-            Option<&CancelSaveButton>,
-            Option<&LoadButton>,
-            Option<&RenameButton>,
-            Option<&DeleteButton>,
-        ),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_query: LoadTableInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
     mut save_file_manager: ResMut<SaveFileManager>,
     mut ev_load: MessageWriter<StartLoadGame>,
@@ -1677,7 +1680,7 @@ pub fn handle_load_table_interactions(
         }
     }
 
-    // 处理加载存档
+    // 澶勭悊鍔犺浇瀛樻。
     if let Some(index) = selected_save_index {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message = "Load operation is already running...".to_string();
@@ -1700,8 +1703,8 @@ pub fn handle_load_table_interactions(
             save_load_ui_state.error_message.clear();
             save_load_ui_state.status_message = format!("Loading save '{}'...", save_file.name);
 
-            println!(
-                "📂 Firing StartLoadGame event for path: '{}'",
+            crate::debug_log!(
+                "馃搨 Firing StartLoadGame event for path: '{}'",
                 &save_file.file_path
             );
             ev_load.write(StartLoadGame {
@@ -1713,7 +1716,7 @@ pub fn handle_load_table_interactions(
             // async_file_ops should appear.
         }
     }
-    // 处理重命名
+    // 澶勭悊閲嶅懡鍚?
     else if let Some(index) = rename_index {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message =
@@ -1727,10 +1730,10 @@ pub fn handle_load_table_interactions(
             rename_input.original_name = save_file.name.clone();
             rename_input.save_index = index;
             next_state.set(GameState::RenameDialog);
-            println!("✏️ Renaming save: {}", save_file.name);
+            crate::debug_log!("鉁忥笍 Renaming save: {}", save_file.name);
         }
     }
-    // 处理删除
+    // 澶勭悊鍒犻櫎
     else if let Some(index) = delete_index {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message =
@@ -1745,19 +1748,19 @@ pub fn handle_load_table_interactions(
                     save_load_ui_state.pending_load_index = None;
                     save_load_ui_state.error_message.clear();
                     save_load_ui_state.status_message = format!("Deleted save '{}'", save_name);
-                    println!(
-                        "🗑️ {}: {}",
+                    crate::debug_log!(
+                        "馃棏锔?{}: {}",
                         crate::systems::text_constants::SaveLoadText::DELETE_SUCCESS,
                         save_name
                     );
-                    // 刷新存档列表
+                    // 鍒锋柊瀛樻。鍒楄〃
                     should_refresh = true;
                 }
                 Err(e) => {
                     save_load_ui_state.error_message = e.to_string();
                     save_load_ui_state.status_message.clear();
-                    println!(
-                        "❌ {}: {}",
+                    crate::debug_log!(
+                        "鉂?{}: {}",
                         crate::systems::text_constants::SaveLoadText::DELETE_ERROR,
                         e
                     );
@@ -1765,7 +1768,7 @@ pub fn handle_load_table_interactions(
             }
         }
     }
-    // 处理刷新
+    // 澶勭悊鍒锋柊
     else if should_refresh {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message =
@@ -1777,12 +1780,12 @@ pub fn handle_load_table_interactions(
         save_load_ui_state.error_message.clear();
         save_load_ui_state.status_message = "Save list refreshed".to_string();
 
-        // 触发存档文件扫描并重新加载UI
+        // 瑙﹀彂瀛樻。鏂囦欢鎵弿骞堕噸鏂板姞杞経I
         crate::systems::pause_save::scan_save_files(save_file_manager);
         next_state.set(GameState::LoadTable);
-        println!("🔄 Refreshing save list and reloading UI");
+        crate::debug_log!("馃攧 Refreshing save list and reloading UI");
     }
-    // 处理返回
+    // 澶勭悊杩斿洖
     else if should_cancel {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message = "Load is in progress, please wait...".to_string();
@@ -1795,18 +1798,17 @@ pub fn handle_load_table_interactions(
             save_load_ui_state.error_message.clear();
         }
 
-        // 根据来源状态返回到正确的地方
+        // 鏍规嵁鏉ユ簮鐘舵€佽繑鍥炲埌姝ｇ‘鐨勫湴鏂?
         let target_state = loaded_game_state
             .previous_state
             .clone()
             .unwrap_or(GameState::Menu);
         next_state.set(target_state.clone());
-        loaded_game_state.previous_state = None; // 清理状态
-
+        loaded_game_state.previous_state = None; // 娓呯悊鐘舵€?
         match target_state {
-            GameState::Menu => println!("🏠 Back to main menu"),
-            GameState::Paused => println!("⏸️ Back to pause menu"),
-            _ => println!("🔙 Back to previous state"),
+            GameState::Menu => crate::debug_log!("馃彔 Back to main menu"),
+            GameState::Paused => crate::debug_log!("鈴革笍 Back to pause menu"),
+            _ => crate::debug_log!("馃敊 Back to previous state"),
         }
     }
 
@@ -1825,11 +1827,11 @@ pub fn handle_rename_input(
         return;
     }
 
-    // 同步新的文本输入系统状态到重命名输入
+    // 鍚屾鏂扮殑鏂囨湰杈撳叆绯荤粺鐘舵€佸埌閲嶅懡鍚嶈緭鍏?
     if text_input_state.is_active {
         rename_input.current_name = text_input_state.current_text.clone();
 
-        // 更新显示文本
+        // 鏇存柊鏄剧ず鏂囨湰
         for mut text in text_query.iter_mut() {
             text.0 = if text_input_state.current_text.is_empty() {
                 crate::systems::text_constants::SaveLoadText::NAME_PLACEHOLDER.to_string()
@@ -1839,39 +1841,17 @@ pub fn handle_rename_input(
         }
     }
 
-    // 处理键盘快捷键
+    // 澶勭悊閿洏蹇嵎閿?
     if keyboard_input.just_pressed(KeyCode::Enter) && text_input_state.is_active {
-        println!("✏️ Enter key pressed - confirming rename");
+        crate::debug_log!("鉁忥笍 Enter key pressed - confirming rename");
     } else if keyboard_input.just_pressed(KeyCode::Escape) && text_input_state.is_active {
-        println!("❌ Escape key pressed - canceling rename");
+        crate::debug_log!("鉂?Escape key pressed - canceling rename");
     }
 }
 
-/// Update the rename input display text
-fn update_rename_display(
-    rename_input: &RenameInput,
-    mut text_query: Query<&mut Text, With<RenameInputBox>>,
-) {
-    for mut text in text_query.iter_mut() {
-        text.0 = if rename_input.current_name.is_empty() {
-            "Enter name...".to_string()
-        } else {
-            format!("{}|", rename_input.current_name) // Add cursor indicator
-        };
-    }
-}
-
-/// 处理重命名对话框交互
+/// 澶勭悊閲嶅懡鍚嶅璇濇浜や簰
 pub fn handle_rename_dialog_interactions(
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &mut BackgroundColor,
-            Option<&ConfirmRenameButton>,
-            Option<&CancelRenameButton>,
-        ),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_query: RenameDialogInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
     mut save_file_manager: ResMut<SaveFileManager>,
     mut rename_input: ResMut<RenameInput>,
@@ -1881,16 +1861,16 @@ pub fn handle_rename_dialog_interactions(
     let mut should_confirm = false;
     let mut should_cancel = false;
 
-    // 处理键盘快捷键
+    // 澶勭悊閿洏蹇嵎閿?
     if keyboard_input.just_pressed(KeyCode::Enter) && text_input_state.is_active {
         should_confirm = true;
-        println!("✏️ Enter key pressed - confirming rename");
+        crate::debug_log!("鉁忥笍 Enter key pressed - confirming rename");
     } else if keyboard_input.just_pressed(KeyCode::Escape) && text_input_state.is_active {
         should_cancel = true;
-        println!("❌ Escape key pressed - canceling rename");
+        crate::debug_log!("鉂?Escape key pressed - canceling rename");
     }
 
-    // 处理按钮交互
+    // 澶勭悊鎸夐挳浜や簰
     for (interaction, mut color, confirm_btn, cancel_btn) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
@@ -1919,7 +1899,7 @@ pub fn handle_rename_dialog_interactions(
     }
 
     if should_confirm {
-        // 执行重命名操作
+        // 鎵ц閲嶅懡鍚嶆搷浣?
         let new_name = if text_input_state.current_text.is_empty() {
             rename_input.original_name.clone()
         } else {
@@ -1933,8 +1913,8 @@ pub fn handle_rename_dialog_interactions(
                 save_file_manager.as_mut(),
             ) {
                 Ok(_) => {
-                    println!(
-                        "✅ {}: {} -> {}",
+                    crate::debug_log!(
+                        "鉁?{}: {} -> {}",
                         crate::systems::text_constants::SaveLoadText::RENAME_SUCCESS,
                         rename_input.original_name,
                         new_name
@@ -1943,8 +1923,8 @@ pub fn handle_rename_dialog_interactions(
                     next_state.set(GameState::LoadTable);
                 }
                 Err(e) => {
-                    println!(
-                        "❌ {}: {}",
+                    crate::debug_log!(
+                        "鉂?{}: {}",
                         crate::systems::text_constants::SaveLoadText::RENAME_ERROR,
                         e
                     );
@@ -1953,36 +1933,20 @@ pub fn handle_rename_dialog_interactions(
             }
         }
     } else if should_cancel {
-        // 取消重命名，返回加载表格
+        // 鍙栨秷閲嶅懡鍚嶏紝杩斿洖鍔犺浇琛ㄦ牸
         rename_input.is_editing = false;
         next_state.set(GameState::LoadTable);
-        println!("❌ Rename cancelled");
+        crate::debug_log!("鉂?Rename cancelled");
     }
 }
 
-/// 处理暂停菜单按钮交互
+/// 澶勭悊鏆傚仠鑿滃崟鎸夐挳浜や簰
 pub fn handle_pause_menu_interactions(
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &mut BackgroundColor,
-            Option<&ResumeButton>,
-            Option<&SaveGameButton>,
-            Option<&LoadGameButton>,
-            Option<&MainMenuButton>,
-            Option<&EscKeyButton>,
-            Option<&QKeyButton>,
-        ),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_query: PauseMenuInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
     mut pause_manager: ResMut<PauseManager>,
     mut loaded_game_state: ResMut<LoadedGameState>,
     mut save_load_ui_state: ResMut<SaveLoadUiState>,
-    _player_query: Query<(&Transform, &Velocity, &PlayerState), With<Player>>,
-    _camera_query: Query<&Transform, (With<Camera>, Without<Player>)>,
-    _game_stats: Res<GameStats>,
-    _character_selection: Res<CharacterSelection>,
 ) {
     for (interaction, mut color, resume_btn, save_btn, load_btn, menu_btn, esc_btn, q_btn) in
         &mut interaction_query
@@ -1990,15 +1954,15 @@ pub fn handle_pause_menu_interactions(
         match *interaction {
             Interaction::Pressed => {
                 if resume_btn.is_some() || esc_btn.is_some() {
-                    // 继续游戏
+                    // 缁х画娓告垙
                     next_state.set(GameState::Playing);
-                    println!("▶️ Resume game");
+                    crate::debug_log!("鈻讹笍 Resume game");
                 } else if save_btn.is_some() {
-                    // 进入保存对话框
+                    // 杩涘叆淇濆瓨瀵硅瘽妗?
                     next_state.set(GameState::SaveDialog);
-                    println!("💾 Open save dialog");
+                    crate::debug_log!("馃捑 Open save dialog");
                 } else if load_btn.is_some() {
-                    // 进入加载表格，记录来源状态
+                    // 杩涘叆鍔犺浇琛ㄦ牸锛岃褰曟潵婧愮姸鎬?
                     loaded_game_state.previous_state = Some(GameState::Paused);
                     save_load_ui_state.pending_load_index = None;
                     save_load_ui_state.error_message.clear();
@@ -2006,14 +1970,13 @@ pub fn handle_pause_menu_interactions(
                         save_load_ui_state.status_message.clear();
                     }
                     next_state.set(GameState::LoadTable);
-                    println!("📂 Open load table from pause menu");
+                    crate::debug_log!("馃搨 Open load table from pause menu");
                 } else if menu_btn.is_some() || q_btn.is_some() {
-                    // 返回主菜单
-                    pause_manager.resume_game(); // 清理暂停状态
-                    save_load_ui_state.pending_load_index = None;
+                    // 杩斿洖涓昏彍鍗?
+                    pause_manager.resume_game(); // 娓呯悊鏆傚仠鐘舵€?                    save_load_ui_state.pending_load_index = None;
                     save_load_ui_state.is_busy = false;
                     next_state.set(GameState::Menu);
-                    println!("🏠 Return to main menu");
+                    crate::debug_log!("馃彔 Return to main menu");
                 }
                 *color = BackgroundColor(Color::srgba(0.05, 0.05, 0.05, 0.9));
             }
