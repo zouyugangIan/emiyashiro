@@ -46,7 +46,13 @@ pub fn setup_parallax_background(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     window_query: Query<&Window, With<PrimaryWindow>>,
+    existing_decorations: Query<Entity, With<SceneDecoration>>,
 ) {
+    // Keep this setup idempotent when re-entering Playing from pause/load flows.
+    if !existing_decorations.is_empty() {
+        return;
+    }
+
     let Some(window) = window_query.iter().next() else {
         return;
     };
@@ -79,6 +85,15 @@ pub fn setup_parallax_background(
 }
 
 /// 生成地面裝飾物
+pub fn cleanup_scene_decorations(
+    mut commands: Commands,
+    decorations: Query<Entity, With<SceneDecoration>>,
+) {
+    for entity in decorations.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
 pub fn spawn_ground_decorations(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,

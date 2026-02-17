@@ -15,6 +15,7 @@ impl Plugin for UiPlugin {
             (
                 systems::game::cleanup_game,
                 systems::ui::cleanup_game_hud,
+                systems::scene_decoration::cleanup_scene_decorations,
                 systems::audio::stop_game_music,
                 systems::menu::setup_menu,
             )
@@ -23,9 +24,9 @@ impl Plugin for UiPlugin {
         .add_systems(
             Update,
             (
+                systems::menu::handle_character_select,
                 systems::menu::handle_start_button,
                 systems::menu::handle_load_button,
-                systems::menu::handle_character_select,
                 systems::save::handle_save_button_click,
                 systems::menu::cover_fade_animation,
                 systems::visual_effects::button_hover_effect,

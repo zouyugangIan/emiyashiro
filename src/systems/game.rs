@@ -112,32 +112,6 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
 
     crate::debug_log!("Character spawned in frame fallback mode");
 }
-/// 浣跨敤缁熶竴鐨?GameInput 鎺ュ彛澶勭悊娓告垙鐘舵€佸垏鎹€?/// 鏀寔 ESC 閿殏鍋?鎭㈠娓告垙锛孮 閿繑鍥炰富鑿滃崟銆?
-pub fn handle_game_input(
-    game_input: Res<crate::systems::input::GameInput>,
-    mut next_state: ResMut<NextState<GameState>>,
-    current_state: Res<State<GameState>>,
-) {
-    match current_state.get() {
-        GameState::Playing => {
-            if game_input.pause {
-                next_state.set(GameState::Paused);
-                crate::debug_log!("娓告垙鏆傚仠");
-            }
-        }
-        GameState::Paused => {
-            if game_input.pause {
-                next_state.set(GameState::Playing);
-                crate::debug_log!("缁х画娓告垙");
-            } else if game_input.cancel {
-                next_state.set(GameState::Menu);
-                crate::debug_log!("Back to main menu");
-            }
-        }
-        _ => {}
-    }
-}
-
 /// 鎭㈠鍔犺浇鐨勬父鎴忕姸鎬佷腑鐨勫疄浣撲綅缃?
 pub fn restore_loaded_game_entities(
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,

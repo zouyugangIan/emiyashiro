@@ -5,6 +5,8 @@
 use crate::components::*;
 use bevy::prelude::*;
 
+const BASE_PLAYER_SCALE: f32 = 1.0;
+
 type VelocityChangedPlayerQuery<'w, 's> = Query<
     'w,
     's,
@@ -158,7 +160,11 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
                 // 后70%时间恢复正常
                 effect.intensity - (effect.intensity - 1.0) * ((progress - 0.3) / 0.7)
             };
-            transform.scale = Vec3::new(scale_factor * 0.2, scale_factor * 0.2, 1.0);
+            transform.scale = Vec3::new(
+                scale_factor * BASE_PLAYER_SCALE,
+                scale_factor * BASE_PLAYER_SCALE,
+                1.0,
+            );
         }
 
         EffectType::LandShake => {
@@ -187,7 +193,7 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
                 // 后50%时间恢复
                 effect.intensity + (1.0 - effect.intensity) * ((progress - 0.5) / 0.5)
             };
-            transform.scale.y = squash_factor * 0.2; // 保持与原始缩放一致
+            transform.scale.y = squash_factor * BASE_PLAYER_SCALE; // 保持与原始缩放一致
         }
     }
 }
@@ -195,7 +201,7 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
 /// 重置变换到默认状态
 fn reset_transform(transform: &mut Transform) {
     // 重置缩放到默认的角色缩放
-    transform.scale = Vec3::new(0.2, 0.2, 1.0);
+    transform.scale = Vec3::ONE;
     // 注意：不重置位置，因为位置由其他系统管理
 }
 

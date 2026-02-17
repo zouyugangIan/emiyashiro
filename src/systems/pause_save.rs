@@ -223,8 +223,14 @@ pub fn restore_paused_state(
     commands: Commands,
     mut pause_manager: ResMut<PauseManager>,
     current_state: Res<State<GameState>>,
+    next_state: Res<NextState<GameState>>,
     restore: RestorePausedParams,
 ) {
+    // If this frame already requested a pause transition, do not consume the snapshot yet.
+    if matches!(next_state.as_ref(), NextState::Pending(GameState::Paused)) {
+        return;
+    }
+
     if *current_state.get() != GameState::Playing || !pause_manager.is_paused {
         return;
     }
