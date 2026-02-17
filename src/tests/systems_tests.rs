@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use crate::systems::ui::{GameHUD, setup_game_hud};
     use crate::{components::*, resources::*, states::*, systems::*};
     use bevy::prelude::*;
     use std::fs;
@@ -281,6 +282,106 @@ mod tests {
             .get::<PlayerState>()
             .unwrap();
         assert!(player_state.is_grounded);
+    }
+
+    #[test]
+    fn test_setup_game_hud_is_idempotent() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, setup_game_hud);
+
+        app.update();
+        app.update();
+
+        let hud_count = {
+            let world = app.world_mut();
+            let mut hud_query = world.query_filtered::<Entity, With<GameHUD>>();
+            hud_query.iter(world).count()
+        };
+        assert_eq!(hud_count, 1);
+    }
+
+    #[test]
+    fn test_arrow_up_maps_to_jump_input() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<input::GameInput>()
+            .init_resource::<crate::systems::network::NetworkResource>()
+            .add_systems(Update, input::update_game_input);
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::ArrowUp);
+
+        app.update();
+
+        let game_input = app.world().resource::<input::GameInput>();
+        assert!(game_input.jump);
+    }
+
+    #[test]
+    fn test_escape_pause_toggle_is_edge_triggered() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .init_resource::<CharacterSelection>()
+            .init_resource::<AudioStateManager>()
+            .init_resource::<PauseManager>()
+            .add_systems(
+                Update,
+                pause_save::handle_pause_input
+                    .run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_translation(GameConfig::PLAYER_START_POS),
+            Velocity::default(),
+            PlayerState::default(),
+        ));
+        app.world_mut().spawn((Camera2d,));
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update();
+        app.update();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
+
+        app.update();
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Paused
+        );
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(KeyCode::Escape);
+
+        app.update();
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Paused
+        );
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
+        app.update();
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Playing
+        );
     }
 
     #[test]

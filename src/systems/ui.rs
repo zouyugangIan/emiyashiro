@@ -1,4 +1,4 @@
-﻿use crate::{StartLoadGame, StartSaveGame};
+use crate::{StartLoadGame, StartSaveGame};
 use crate::{components::*, resources::*, states::*};
 use bevy::prelude::*;
 
@@ -181,8 +181,49 @@ type PauseMenuInteractionQuery<'w, 's> = Query<
     (Changed<Interaction>, With<Button>),
 >;
 
+type ScoreTextQuery<'w, 's> = Query<
+    'w,
+    's,
+    &'static mut Text,
+    (
+        With<ScoreDisplay>,
+        Without<DistanceDisplay>,
+        Without<HealthDisplay>,
+    ),
+>;
+
+type DistanceTextQuery<'w, 's> = Query<
+    'w,
+    's,
+    &'static mut Text,
+    (
+        With<DistanceDisplay>,
+        Without<ScoreDisplay>,
+        Without<HealthDisplay>,
+    ),
+>;
+
+type HealthTextQuery<'w, 's> = Query<
+    'w,
+    's,
+    &'static mut Text,
+    (
+        With<HealthDisplay>,
+        Without<ScoreDisplay>,
+        Without<DistanceDisplay>,
+    ),
+>;
+
 /// 璁剧疆娓告垙鍐?HUD
-pub fn setup_game_hud(mut commands: Commands, game_assets: Option<Res<GameAssets>>) {
+pub fn setup_game_hud(
+    mut commands: Commands,
+    game_assets: Option<Res<GameAssets>>,
+    existing_hud: Query<Entity, With<GameHUD>>,
+) {
+    if !existing_hud.is_empty() {
+        return;
+    }
+
     // 鍒涘缓 HUD 鏍硅妭鐐?
     commands
         .spawn((
@@ -293,22 +334,22 @@ pub fn setup_game_hud(mut commands: Commands, game_assets: Option<Res<GameAssets
 
 /// 鏇存柊娓告垙 HUD
 pub fn update_game_hud(
-    mut score_query: Query<&mut Text, (With<ScoreDisplay>, Without<DistanceDisplay>)>,
-    mut distance_query: Query<&mut Text, (With<DistanceDisplay>, Without<ScoreDisplay>)>,
-    mut health_query: Query<&mut Text, (With<HealthDisplay>, Without<ScoreDisplay>)>,
+    mut score_text_query: ScoreTextQuery,
+    mut distance_text_query: DistanceTextQuery,
+    mut health_text_query: HealthTextQuery,
     player_health_query: Query<&Health, With<Player>>,
     game_stats: Res<GameStats>,
 ) {
     use crate::systems::text_constants::GameHUDText;
 
     // 鏇存柊鍒嗘暟鏄剧ず
-    if let Ok(mut score_text) = score_query.single_mut() {
+    if let Ok(mut score_text) = score_text_query.single_mut() {
         let score = (game_stats.distance_traveled * 10.0) as u32 + game_stats.jump_count * 50;
         **score_text = format!("{}{}", GameHUDText::SCORE_LABEL, score);
     }
 
     // 鏇存柊璺濈鏄剧ず
-    if let Ok(mut distance_text) = distance_query.single_mut() {
+    if let Ok(mut distance_text) = distance_text_query.single_mut() {
         **distance_text = format!(
             "{}{}{}",
             GameHUDText::DISTANCE_LABEL,
@@ -319,7 +360,7 @@ pub fn update_game_hud(
 
     // 鏇存柊鐢熷懡鍊兼樉绀?
     if let (Ok(mut health_text), Ok(player_health)) =
-        (health_query.single_mut(), player_health_query.single())
+        (health_text_query.single_mut(), player_health_query.single())
     {
         **health_text = format!("HP: {:.0}/{:.0}", player_health.current, player_health.max);
     }

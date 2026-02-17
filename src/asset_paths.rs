@@ -58,10 +58,10 @@ pub const IMAGE_CHAR_SHIROU_IDLE11: &str = "images/characters/shirou_idle11.png"
 
 // HF Shirou Assets (Timestamped from generation)
 // Note: We are replacing "Normal Shirou" with "Heaven's Feel Shirou" for this implementation
-pub const IMAGE_HF_SHIROU_IDLE: &str = "images/characters/hf_idle.png";
-pub const IMAGE_HF_SHIROU_RUN: &str = "images/characters/hf_run.png";
-pub const IMAGE_HF_SHIROU_JUMP: &str = "images/characters/hf_jump.png";
-pub const IMAGE_HF_SHIROU_CROUCH: &str = "images/characters/hf_crouch.png";
+pub const IMAGE_HF_SHIROU_IDLE: &str = "images/characters/hf_idle.jpg";
+pub const IMAGE_HF_SHIROU_RUN: &str = "images/characters/hf_run.jpg";
+pub const IMAGE_HF_SHIROU_JUMP: &str = "images/characters/hf_jump.jpg";
+pub const IMAGE_HF_SHIROU_CROUCH: &str = "images/characters/hf_crouch.jpg";
 
 // Shirou 待機動畫幀
 pub const SHIROU_IDLE_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_IDLE];
@@ -156,7 +156,7 @@ pub const IMAGE_CHAR_TEACHER_IDLE: &str = "images/characters/teacher_idle02.jpg"
 pub const IMAGE_CHAR_SHIROU_SPRITESHEET: &str = "images/characters/shirou_spritesheet.png";
 pub const IMAGE_CHAR_SAKURA_SPRITESHEET: &str = "images/characters/sakura_spritesheet.png";
 pub const IMAGE_HF_SHIROU_SPRITESHEET: &str =
-    "images/characters/hf_shirou_spritesheet_final_v2_1767279221195.png";
+    "images/characters/hf_shirou_spritesheet_final_v2_1767279221195.jpg";
 
 // CLOUD ASSETS (背景雲彩圖片)
 pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud01.png";

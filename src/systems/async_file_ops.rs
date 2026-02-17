@@ -105,8 +105,14 @@ pub fn display_progress_indicator(
     progress: Res<OperationProgress>,
     asset_server: Res<AssetServer>,
     root_query: Query<Entity, With<ProgressIndicator>>,
-    mut operation_text_query: Query<&mut Text, With<ProgressOperationText>>,
-    mut percent_text_query: Query<&mut Text, With<ProgressPercentText>>,
+    mut operation_text_query: Query<
+        &mut Text,
+        (With<ProgressOperationText>, Without<ProgressPercentText>),
+    >,
+    mut percent_text_query: Query<
+        &mut Text,
+        (With<ProgressPercentText>, Without<ProgressOperationText>),
+    >,
     mut fill_query: Query<&mut Node, With<ProgressBarFill>>,
 ) {
     if !progress.is_active {

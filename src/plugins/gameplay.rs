@@ -32,12 +32,6 @@ impl Plugin for GameplayPlugin {
             )
             .add_systems(
                 Update,
-                systems::game::handle_game_input
-                    .in_set(GameSystemSet::Input)
-                    .run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
-            )
-            .add_systems(
-                Update,
                 (
                     systems::input::update_game_input,
                     systems::shirou::handle_shroud_input,
@@ -50,13 +44,18 @@ impl Plugin for GameplayPlugin {
                 Update,
                 (
                     systems::player::update_game_stats,
-                    systems::camera::camera_follow.in_set(GameSystemSet::Camera),
                     systems::enemy::spawn_mushroom_enemies,
                     systems::enemy::cleanup_dead_enemies,
                     systems::enemy::cleanup_offscreen_enemies,
                     systems::combat::cleanup_expired_projectiles,
                 )
                     .in_set(GameSystemSet::GameLogic)
+                    .run_if(in_state(GameState::Playing)),
+            )
+            .add_systems(
+                Update,
+                systems::camera::camera_follow
+                    .in_set(GameSystemSet::Camera)
                     .run_if(in_state(GameState::Playing)),
             )
             .add_systems(
