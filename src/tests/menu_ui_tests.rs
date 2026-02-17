@@ -21,6 +21,7 @@ fn create_mock_game_assets() -> GameAssets {
         shirou_spritesheet: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
+        shirou_atlas_run: None,
         sakura_atlas: None,
         jump_sound: Handle::default(),
         land_sound: Handle::default(),

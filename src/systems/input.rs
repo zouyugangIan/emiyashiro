@@ -182,7 +182,8 @@ pub fn update_game_input(
     game_input.cleanup_history(current_time, 2.0);
 
     // Send actions to server
-    if let Some(tx) = &net.action_tx {
+    if net.status == crate::systems::network::NetworkStatus::Connected {
+        if let Some(tx) = &net.action_tx {
         // Jump
         if new_jump && !old_jump {
             let _ = tx.send(crate::protocol::PlayerAction::Jump);
@@ -207,6 +208,7 @@ pub fn update_game_input(
             };
             let y = if new_crouch { -1.0 } else { 0.0 };
             let _ = tx.send(crate::protocol::PlayerAction::Move { x, y });
+        }
         }
     }
 }

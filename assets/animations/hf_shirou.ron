@@ -26,7 +26,7 @@
     ),
     Crouching: (
         // Layout 4x4: Row 2 (11)
-        frames: [11],
+        frames: [11, 11],
         frame_duration: 0.2,
         looping: true,
         playback_mode: Loop,
