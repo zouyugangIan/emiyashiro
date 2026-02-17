@@ -13,7 +13,7 @@ use bevy::prelude::*;
 ///
 /// ```rust
 /// use bevy::prelude::*;
-/// use crate::components::Player;
+/// use s_emiyashiro::components::Player;
 ///
 /// fn spawn_player(mut commands: Commands) {
 ///     commands.spawn((
@@ -36,7 +36,7 @@ pub struct Player;
 /// # 示例
 ///
 /// ```rust
-/// use crate::components::PlayerState;
+/// use s_emiyashiro::components::PlayerState;
 ///
 /// let mut player_state = PlayerState::default();
 /// if player_state.can_jump() {

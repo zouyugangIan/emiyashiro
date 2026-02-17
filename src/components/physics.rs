@@ -15,7 +15,7 @@ use bevy::prelude::*;
 /// # 示例
 ///
 /// ```rust
-/// use crate::components::Velocity;
+/// use s_emiyashiro::components::Velocity;
 ///
 /// let velocity = Velocity::new(100.0, 200.0);
 /// let speed = velocity.length();

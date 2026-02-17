@@ -24,8 +24,11 @@ impl Plugin for UiPlugin {
         .add_systems(
             Update,
             (
-                systems::menu::handle_character_select,
-                systems::menu::handle_start_button,
+                (
+                    systems::menu::handle_character_select,
+                    systems::menu::handle_start_button,
+                )
+                    .chain(),
                 systems::menu::handle_load_button,
                 systems::save::handle_save_button_click,
                 systems::menu::cover_fade_animation,

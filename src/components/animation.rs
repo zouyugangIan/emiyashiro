@@ -62,7 +62,7 @@ impl AnimationType {
 /// # 示例
 ///
 /// ```rust
-/// use crate::components::{CharacterAnimation, AnimationType};
+/// use s_emiyashiro::components::{AnimationType, CharacterAnimation};
 ///
 /// let mut animation = CharacterAnimation::new(AnimationType::Running);
 /// animation.set_animation(AnimationType::Jumping);

@@ -9,6 +9,12 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use tokio_tungstenite::accept_async;
 
+type WsMessage = tokio_tungstenite::tungstenite::Message;
+type ClientWsSink =
+    futures_util::stream::SplitSink<tokio_tungstenite::WebSocketStream<TcpStream>, WsMessage>;
+type ClientSinkMap = HashMap<u64, ClientWsSink>;
+type SharedClients = Arc<Mutex<ClientSinkMap>>;
+
 #[tokio::main]
 async fn main() {
     println!("Starting G-Engine Server...");
@@ -33,7 +39,7 @@ async fn main() {
     }
 
     // Shared state for connected clients (id -> sender)
-    let clients = Arc::new(Mutex::new(HashMap::new()));
+    let clients: SharedClients = Arc::new(Mutex::new(HashMap::new()));
     let clients_clone = clients.clone();
 
     // Spawn Network Task
@@ -63,25 +69,16 @@ async fn main() {
             let msg = bincode::serialize(&packet).unwrap();
             let mut clients_guard = clients_broadcast.lock().unwrap();
             // Remove disconnected clients
-            clients_guard.retain(
-                |_,
-                 tx: &mut futures_util::stream::SplitSink<
-                    tokio_tungstenite::WebSocketStream<TcpStream>,
-                    tokio_tungstenite::tungstenite::Message,
-                >| {
-                    let _ = tx.start_send_unpin(tokio_tungstenite::tungstenite::Message::Binary(
-                        msg.clone(),
-                    ));
-                    true // We can't easily detect disconnect here without await, so we rely on the read loop to clean up
-                },
-            );
+            clients_guard.retain(|_, tx| {
+                let _ = tx.start_send_unpin(WsMessage::Binary(msg.clone()));
+                true // We can't easily detect disconnect here without await, so we rely on the read loop to clean up
+            });
             // Flush all
             for tx in clients_guard.values_mut() {
                 let _ = tx.poll_ready_unpin(&mut std::task::Context::from_waker(
                     &futures_util::task::noop_waker(),
                 ));
-                let _ = tx
-                    .start_send_unpin(tokio_tungstenite::tungstenite::Message::Binary(msg.clone()));
+                let _ = tx.start_send_unpin(WsMessage::Binary(msg.clone()));
             }
         }
     });
@@ -142,17 +139,7 @@ async fn main() {
 async fn handle_connection(
     stream: TcpStream,
     client_id: u64,
-    clients: Arc<
-        Mutex<
-            HashMap<
-                u64,
-                futures_util::stream::SplitSink<
-                    tokio_tungstenite::WebSocketStream<TcpStream>,
-                    tokio_tungstenite::tungstenite::Message,
-                >,
-            >,
-        >,
-    >,
+    clients: SharedClients,
     action_tx: mpsc::UnboundedSender<(u64, PlayerAction)>,
 ) {
     let ws_stream = accept_async(stream).await.expect("Error during handshake");
@@ -168,9 +155,7 @@ async fn handle_connection(
 
     match bincode::serialize(&welcome) {
         Ok(binary) => {
-            let _ = tx
-                .send(tokio_tungstenite::tungstenite::Message::Binary(binary))
-                .await;
+            let _ = tx.send(WsMessage::Binary(binary)).await;
         }
         Err(error) => {
             eprintln!("Failed to serialize welcome packet: {}", error);
@@ -185,12 +170,12 @@ async fn handle_connection(
 
     while let Some(msg) = rx.next().await {
         match msg {
-            Ok(tokio_tungstenite::tungstenite::Message::Binary(bin)) => {
+            Ok(WsMessage::Binary(bin)) => {
                 if let Ok(action) = bincode::deserialize::<PlayerAction>(&bin) {
                     let _ = action_tx.send((client_id, action));
                 }
             }
-            Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => break,
+            Ok(WsMessage::Close(_)) => break,
             _ => {}
         }
     }

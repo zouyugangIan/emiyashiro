@@ -22,13 +22,13 @@ mod tests {
     #[test]
     fn test_game_config_constants() {
         // Test that game configuration constants are reasonable
-        assert!(GameConfig::GRAVITY > 0.0);
-        assert!(GameConfig::JUMP_VELOCITY > 0.0);
-        assert!(GameConfig::MOVE_SPEED > 0.0);
-        assert!(GameConfig::CAMERA_FOLLOW_SPEED > 0.0);
+        assert!(std::hint::black_box(GameConfig::GRAVITY) > 0.0);
+        assert!(std::hint::black_box(GameConfig::JUMP_VELOCITY) > 0.0);
+        assert!(std::hint::black_box(GameConfig::MOVE_SPEED) > 0.0);
+        assert!(std::hint::black_box(GameConfig::CAMERA_FOLLOW_SPEED) > 0.0);
 
         // Test ground level is negative (below origin)
-        assert!(GameConfig::GROUND_LEVEL < 0.0);
+        assert!(std::hint::black_box(GameConfig::GROUND_LEVEL) < 0.0);
     }
 
     #[test]
@@ -302,6 +302,53 @@ mod tests {
     }
 
     #[test]
+    fn test_scene_decoration_setup_is_idempotent_when_already_initialized() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::asset::AssetPlugin::default())
+            .add_systems(Update, scene_decoration::setup_parallax_background);
+
+        app.world_mut().spawn(scene_decoration::SceneDecoration {
+            layer: scene_decoration::DecorationLayer::FarBackground,
+            speed_multiplier: 0.2,
+        });
+
+        app.update();
+
+        let decoration_count = {
+            let world = app.world_mut();
+            let mut query = world.query::<&scene_decoration::SceneDecoration>();
+            query.iter(world).count()
+        };
+        assert_eq!(decoration_count, 1);
+    }
+
+    #[test]
+    fn test_cleanup_scene_decorations_removes_all_entities() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, scene_decoration::cleanup_scene_decorations);
+
+        app.world_mut().spawn(scene_decoration::SceneDecoration {
+            layer: scene_decoration::DecorationLayer::FarBackground,
+            speed_multiplier: 0.2,
+        });
+        app.world_mut().spawn(scene_decoration::SceneDecoration {
+            layer: scene_decoration::DecorationLayer::MidBackground,
+            speed_multiplier: 0.5,
+        });
+
+        app.update();
+
+        let decoration_count = {
+            let world = app.world_mut();
+            let mut query = world.query::<&scene_decoration::SceneDecoration>();
+            query.iter(world).count()
+        };
+        assert_eq!(decoration_count, 0);
+    }
+
+    #[test]
     fn test_arrow_up_maps_to_jump_input() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -318,6 +365,51 @@ mod tests {
 
         let game_input = app.world().resource::<input::GameInput>();
         assert!(game_input.jump);
+    }
+
+    #[test]
+    fn test_character_select_and_start_same_frame_prefers_latest_selection() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .init_resource::<CharacterSelection>()
+            .init_resource::<GameStats>()
+            .init_resource::<PauseManager>()
+            .init_resource::<crate::systems::ui::LoadedGameState>()
+            .init_resource::<crate::systems::ui::SaveLoadUiState>()
+            .add_systems(
+                Update,
+                (menu::handle_character_select, menu::handle_start_button)
+                    .chain()
+                    .run_if(in_state(GameState::Menu)),
+            );
+
+        // Bootstrap default state to Menu first.
+        app.update();
+
+        app.world_mut().spawn((
+            CharacterSelectButton {
+                character_type: CharacterType::Shirou2,
+            },
+            Interaction::Pressed,
+            BackgroundColor(Color::NONE),
+        ));
+
+        app.world_mut().spawn((
+            StartButton,
+            Interaction::Pressed,
+            BackgroundColor(Color::NONE),
+        ));
+
+        app.update();
+
+        let selection = app.world().resource::<CharacterSelection>();
+        assert_eq!(selection.selected_character, CharacterType::Shirou2);
+
+        app.update();
+        let state = app.world().resource::<State<GameState>>();
+        assert_eq!(*state.get(), GameState::Playing);
     }
 
     #[test]
@@ -573,11 +665,15 @@ mod tests {
 
         // Test retry logic
         let action = error_manager.handle_save_error(error, "test_operation");
-        match action {
-            error_handling::RecoveryAction::Retry => assert!(true),
-            error_handling::RecoveryAction::ShowError(_) => assert!(true),
-            _ => assert!(false, "Unexpected recovery action"),
-        }
+        assert!(
+            matches!(
+                action,
+                error_handling::RecoveryAction::Retry
+                    | error_handling::RecoveryAction::ShowError(_)
+            ),
+            "Unexpected recovery action: {:?}",
+            action
+        );
     }
 
     #[test]

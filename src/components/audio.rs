@@ -61,7 +61,7 @@ impl SoundType {
 /// # 示例
 ///
 /// ```rust
-/// use crate::components::{AudioTrigger, SoundType};
+/// use s_emiyashiro::components::{AudioTrigger, SoundType};
 ///
 /// let trigger = AudioTrigger::new(SoundType::Jump);
 /// ```

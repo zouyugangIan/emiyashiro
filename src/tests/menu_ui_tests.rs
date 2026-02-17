@@ -69,10 +69,8 @@ mod property_tests {
             .query_filtered::<Entity, With<CoverImage2>>();
         let cover2_entities: Vec<Entity> = cover2_query.iter(app.world()).collect();
 
-        let all_cover_entities: Vec<Entity> = cover1_entities
-            .into_iter()
-            .chain(cover2_entities.into_iter())
-            .collect();
+        let all_cover_entities: Vec<Entity> =
+            cover1_entities.into_iter().chain(cover2_entities).collect();
 
         // For each cover image entity, verify it has Node but not Sprite
         for entity in all_cover_entities {
@@ -137,10 +135,8 @@ mod property_tests {
             "Should have CoverImage2 entities"
         );
 
-        let all_cover_entities: Vec<Entity> = cover1_entities
-            .into_iter()
-            .chain(cover2_entities.into_iter())
-            .collect();
+        let all_cover_entities: Vec<Entity> =
+            cover1_entities.into_iter().chain(cover2_entities).collect();
 
         // For each cover image entity, verify it has Node and ImageNode, but not Sprite
         for entity in all_cover_entities {
@@ -209,10 +205,8 @@ mod property_tests {
             .map(|(e, n)| (e, n.clone()))
             .collect();
 
-        let all_cover_entities: Vec<(Entity, Node)> = cover1_entities
-            .into_iter()
-            .chain(cover2_entities.into_iter())
-            .collect();
+        let all_cover_entities: Vec<(Entity, Node)> =
+            cover1_entities.into_iter().chain(cover2_entities).collect();
 
         assert!(
             !all_cover_entities.is_empty(),
@@ -273,13 +267,13 @@ mod property_tests {
         let mut cover1_query = app
             .world_mut()
             .query_filtered::<&ZIndex, With<CoverImage1>>();
-        let cover1_zindices: Vec<ZIndex> = cover1_query.iter(app.world()).map(|z| *z).collect();
+        let cover1_zindices: Vec<ZIndex> = cover1_query.iter(app.world()).copied().collect();
 
         // Query for CoverImage2 entities with ZIndex component
         let mut cover2_query = app
             .world_mut()
             .query_filtered::<&ZIndex, With<CoverImage2>>();
-        let cover2_zindices: Vec<ZIndex> = cover2_query.iter(app.world()).map(|z| *z).collect();
+        let cover2_zindices: Vec<ZIndex> = cover2_query.iter(app.world()).copied().collect();
 
         assert!(
             !cover1_zindices.is_empty(),
@@ -380,10 +374,8 @@ mod property_tests {
             .query_filtered::<Entity, With<CoverImage2>>();
         let cover2_entities: Vec<Entity> = cover2_query.iter(app.world()).collect();
 
-        let all_cover_entities: Vec<Entity> = cover1_entities
-            .into_iter()
-            .chain(cover2_entities.into_iter())
-            .collect();
+        let all_cover_entities: Vec<Entity> =
+            cover1_entities.into_iter().chain(cover2_entities).collect();
 
         assert!(
             !all_cover_entities.is_empty(),
@@ -440,7 +432,7 @@ mod smoothstep_property_tests {
 
             // Verify smoothstep properties
             // 1. Output should be in [0, 1] for input in [0, 1]
-            prop_assert!(eased_alpha >= 0.0 && eased_alpha <= 1.0,
+            prop_assert!((0.0..=1.0).contains(&eased_alpha),
                 "Smoothstep output {} should be in [0, 1]", eased_alpha);
 
             // 2. Smoothstep(0) = 0
@@ -501,9 +493,9 @@ mod smoothstep_property_tests {
             }
 
             // Verify both alphas are within valid range after clamping
-            prop_assert!(clamped_alpha_1 >= 0.1 && clamped_alpha_1 <= 0.9,
+            prop_assert!((0.1..=0.9).contains(&clamped_alpha_1),
                 "Image1 clamped alpha {} should be in [0.1, 0.9]", clamped_alpha_1);
-            prop_assert!(clamped_alpha_2 >= 0.1 && clamped_alpha_2 <= 0.9,
+            prop_assert!((0.1..=0.9).contains(&clamped_alpha_2),
                 "Image2 clamped alpha {} should be in [0.1, 0.9]", clamped_alpha_2);
         }
     }
@@ -555,7 +547,7 @@ mod button_interaction_tests {
             .query_filtered::<(Entity, &BackgroundColor), With<StartButton>>();
         let start_buttons: Vec<(Entity, BackgroundColor)> = start_button_query
             .iter(app.world())
-            .map(|(e, bg)| (e, bg.clone()))
+            .map(|(e, bg)| (e, *bg))
             .collect();
 
         assert!(
@@ -596,10 +588,8 @@ mod button_interaction_tests {
         let mut start_button_query = app
             .world_mut()
             .query_filtered::<&BackgroundColor, With<StartButton>>();
-        let hovered_colors: Vec<BackgroundColor> = start_button_query
-            .iter(app.world())
-            .map(|bg| bg.clone())
-            .collect();
+        let hovered_colors: Vec<BackgroundColor> =
+            start_button_query.iter(app.world()).copied().collect();
 
         // Verify that BackgroundColor was updated (hovered state should be different)
         for bg_color in &hovered_colors {
@@ -845,7 +835,7 @@ mod responsive_layout_tests {
         let mut cover_query = app
             .world_mut()
             .query_filtered::<&Node, Or<(With<CoverImage1>, With<CoverImage2>)>>();
-        let cover_nodes: Vec<Node> = cover_query.iter(app.world()).map(|n| n.clone()).collect();
+        let cover_nodes: Vec<Node> = cover_query.iter(app.world()).cloned().collect();
 
         assert!(!cover_nodes.is_empty(), "Should have cover image nodes");
 
@@ -878,7 +868,7 @@ mod responsive_layout_tests {
             Without<CoverImage1>,
             Without<CoverImage2>,
         )>();
-        let ui_root_nodes: Vec<Node> = ui_root_query.iter(app.world()).map(|n| n.clone()).collect();
+        let ui_root_nodes: Vec<Node> = ui_root_query.iter(app.world()).cloned().collect();
 
         // Find nodes that are likely the main UI container (100% width/height)
         let full_size_nodes: Vec<&Node> = ui_root_nodes
@@ -1121,7 +1111,7 @@ mod integration_tests {
         // Verify all alphas are within valid range
         for alpha in final_alphas {
             assert!(
-                alpha >= 0.0 && alpha <= 1.0,
+                (0.0..=1.0).contains(&alpha),
                 "Alpha should be in valid range [0, 1], got {}",
                 alpha
             );
