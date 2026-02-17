@@ -1,14 +1,21 @@
 use crate::protocol::{GamePacket, PlayerAction};
 use bevy::prelude::*;
-use futures_util::{SinkExt, StreamExt};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NetworkRuntimeEvent {
+    Connected,
+    Disconnected,
+    ConnectFailed,
+}
 
 #[derive(Resource)]
 pub struct NetworkResource {
     pub action_tx: Option<mpsc::UnboundedSender<PlayerAction>>,
     pub packet_rx: Arc<Mutex<VecDeque<GamePacket>>>,
+    pub runtime_events: Arc<Mutex<VecDeque<NetworkRuntimeEvent>>>,
     pub status: NetworkStatus,
 }
 
@@ -24,8 +31,18 @@ impl Default for NetworkResource {
         Self {
             action_tx: None,
             packet_rx: Arc::new(Mutex::new(VecDeque::new())),
+            runtime_events: Arc::new(Mutex::new(VecDeque::new())),
             status: NetworkStatus::Disconnected,
         }
+    }
+}
+
+fn push_runtime_event(
+    runtime_events: &Arc<Mutex<VecDeque<NetworkRuntimeEvent>>>,
+    event: NetworkRuntimeEvent,
+) {
+    if let Ok(mut events) = runtime_events.lock() {
+        events.push_back(event);
     }
 }
 
@@ -35,69 +52,191 @@ pub fn setup_network(mut net: ResMut<NetworkResource>) {
         return;
     }
 
-    println!("Connecting to server...");
+    info!("Connecting to server...");
     net.status = NetworkStatus::Connecting;
 
     let (action_tx, mut action_rx) = mpsc::unbounded_channel::<PlayerAction>();
     let packet_rx = net.packet_rx.clone();
+    let runtime_events = net.runtime_events.clone();
     net.action_tx = Some(action_tx);
 
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
+        let rt = match tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .unwrap();
+        {
+            Ok(runtime) => runtime,
+            Err(error) => {
+                error!("Failed to build network runtime: {}", error);
+                push_runtime_event(&runtime_events, NetworkRuntimeEvent::ConnectFailed);
+                push_runtime_event(&runtime_events, NetworkRuntimeEvent::Disconnected);
+                return;
+            }
+        };
 
         rt.block_on(async move {
+            use futures_util::{SinkExt, StreamExt};
+
             let url = "ws://127.0.0.1:8080";
             match tokio_tungstenite::connect_async(url).await {
                 Ok((ws_stream, _)) => {
-                    println!("Connected to server!");
+                    info!("Connected to server: {}", url);
+                    push_runtime_event(&runtime_events, NetworkRuntimeEvent::Connected);
+
                     let (mut write, mut read) = ws_stream.split();
 
                     loop {
                         tokio::select! {
                             Some(action) = action_rx.recv() => {
-                                let bin = bincode::serialize(&action).unwrap();
-                                if let Err(e) = write.send(tokio_tungstenite::tungstenite::Message::Binary(bin)).await {
-                                    println!("Send error: {}", e);
-                                    break;
+                                match bincode::serialize(&action) {
+                                    Ok(bin) => {
+                                        if let Err(error) = write.send(tokio_tungstenite::tungstenite::Message::Binary(bin)).await {
+                                            warn!("Network send error: {}", error);
+                                            break;
+                                        }
+                                    }
+                                    Err(error) => {
+                                        warn!("Serialize PlayerAction failed: {}", error);
+                                    }
                                 }
                             }
                             Some(msg) = read.next() => {
                                 match msg {
                                     Ok(tokio_tungstenite::tungstenite::Message::Binary(bin)) => {
                                         if let Ok(packet) = bincode::deserialize::<GamePacket>(&bin) {
-                                            packet_rx.lock().unwrap().push_back(packet);
+                                            if let Ok(mut queue) = packet_rx.lock() {
+                                                queue.push_back(packet);
+                                            }
                                         }
                                     }
-                                    Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => break,
-                                    Err(e) => {
-                                        println!("Read error: {}", e);
+                                    Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => {
+                                        info!("Server closed WebSocket connection");
+                                        break;
+                                    }
+                                    Err(error) => {
+                                        warn!("Network read error: {}", error);
                                         break;
                                     }
                                     _ => {}
                                 }
                             }
+                            else => {
+                                break;
+                            }
                         }
                     }
+
+                    push_runtime_event(&runtime_events, NetworkRuntimeEvent::Disconnected);
                 }
-                Err(e) => {
-                    println!("Failed to connect: {}", e);
+                Err(error) => {
+                    warn!("Failed to connect to {}: {}", url, error);
+                    push_runtime_event(&runtime_events, NetworkRuntimeEvent::ConnectFailed);
+                    push_runtime_event(&runtime_events, NetworkRuntimeEvent::Disconnected);
                 }
             }
         });
     });
-
-    net.status = NetworkStatus::Connected;
 }
 
 #[cfg(target_arch = "wasm32")]
 pub fn setup_network(mut net: ResMut<NetworkResource>) {
-    // WASM implementation using gloo-net
+    use futures_util::{FutureExt, SinkExt, StreamExt, select};
+    use gloo_net::websocket::{Message, futures::WebSocket};
+    use wasm_bindgen_futures::spawn_local;
+
+    if net.status != NetworkStatus::Disconnected {
+        return;
+    }
+
+    net.status = NetworkStatus::Connecting;
+
+    let (action_tx, mut action_rx) = mpsc::unbounded_channel::<PlayerAction>();
+    let packet_rx = net.packet_rx.clone();
+    let runtime_events = net.runtime_events.clone();
+    net.action_tx = Some(action_tx);
+
+    spawn_local(async move {
+        let url = "ws://127.0.0.1:8080";
+        match WebSocket::open(url) {
+            Ok(socket) => {
+                push_runtime_event(&runtime_events, NetworkRuntimeEvent::Connected);
+                let (mut write, mut read) = socket.split();
+
+                loop {
+                    let action_future = action_rx.recv().fuse();
+                    let read_future = read.next().fuse();
+                    futures_util::pin_mut!(action_future, read_future);
+
+                    select! {
+                        action = action_future => {
+                            match action {
+                                Some(action) => {
+                                    if let Ok(bin) = bincode::serialize(&action) {
+                                        if write.send(Message::Bytes(bin)).await.is_err() {
+                                            break;
+                                        }
+                                    }
+                                }
+                                None => break,
+                            }
+                        }
+                        msg = read_future => {
+                            match msg {
+                                Some(Ok(Message::Bytes(bin))) => {
+                                    if let Ok(packet) = bincode::deserialize::<GamePacket>(&bin) {
+                                        if let Ok(mut queue) = packet_rx.lock() {
+                                            queue.push_back(packet);
+                                        }
+                                    }
+                                }
+                                Some(Ok(Message::Text(_))) => {}
+                                Some(Err(_)) | None => break,
+                            }
+                        }
+                    }
+                }
+
+                push_runtime_event(&runtime_events, NetworkRuntimeEvent::Disconnected);
+            }
+            Err(_) => {
+                push_runtime_event(&runtime_events, NetworkRuntimeEvent::ConnectFailed);
+                push_runtime_event(&runtime_events, NetworkRuntimeEvent::Disconnected);
+            }
+        }
+    });
 }
 
-use std::collections::HashMap;
+pub fn update_network_status(mut net: ResMut<NetworkResource>) {
+    let mut last_event = None;
+    if let Ok(mut events) = net.runtime_events.lock() {
+        while let Some(event) = events.pop_front() {
+            last_event = Some(event);
+        }
+    }
+
+    if let Some(event) = last_event {
+        match event {
+            NetworkRuntimeEvent::Connected => {
+                if net.status != NetworkStatus::Connected {
+                    info!("Network status: Connected");
+                }
+                net.status = NetworkStatus::Connected;
+            }
+            NetworkRuntimeEvent::Disconnected => {
+                if net.status != NetworkStatus::Disconnected {
+                    info!("Network status: Disconnected");
+                }
+                net.status = NetworkStatus::Disconnected;
+                net.action_tx = None;
+            }
+            NetworkRuntimeEvent::ConnectFailed => {
+                warn!("Network status: ConnectFailed");
+                net.status = NetworkStatus::Disconnected;
+                net.action_tx = None;
+            }
+        }
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct NetworkEntityMap(pub HashMap<u64, Entity>);
@@ -129,38 +268,37 @@ pub fn handle_network_events(
     asset_server: Res<AssetServer>,
     time: Res<Time>,
 ) {
-    let mut rx = net.packet_rx.lock().unwrap();
+    let mut rx = match net.packet_rx.lock() {
+        Ok(guard) => guard,
+        Err(_) => return,
+    };
+
     while let Some(packet) = rx.pop_front() {
         match packet {
             GamePacket::Welcome { id, message } => {
-                println!("Server says: {} (My ID: {})", message, id);
+                info!("Server says: {} (My ID: {})", message, id);
                 my_id.0 = Some(id);
 
-                // Update local player's NetworkId if it exists
                 if let Ok((entity, mut net_id)) = local_player_query.single_mut() {
                     net_id.0 = id;
                     entity_map.0.insert(id, entity);
-                    println!("Updated local player NetworkId to {}", id);
+                    info!("Updated local player NetworkId to {}", id);
                 }
             }
             GamePacket::WorldSnapshot { tick: _, players } => {
                 let current_time = time.elapsed_secs();
 
                 for player_state in players {
-                    // Check if this is the local player
                     let is_local = Some(player_state.id) == my_id.0;
 
                     if let Some(&entity) = entity_map.0.get(&player_state.id) {
-                        // Update existing entity with interpolation
                         if let Ok((transform, interp_state)) = query.get_mut(entity) {
                             if let Some(mut interp) = interp_state {
-                                // Update interpolation target
                                 interp.start_pos = transform.translation;
                                 interp.target_pos = player_state.position;
                                 interp.start_time = current_time;
-                                interp.duration = 0.1; // 100ms interpolation
+                                interp.duration = 0.1;
                             } else {
-                                // No interpolation component, add it
                                 commands.entity(entity).insert(InterpolationState {
                                     start_pos: transform.translation,
                                     target_pos: player_state.position,
@@ -170,8 +308,6 @@ pub fn handle_network_events(
                             }
                         }
                     } else if !is_local {
-                        // Spawn new remote player entity
-                        println!("Spawning remote player {}", player_state.id);
                         let entity = commands
                             .spawn((
                                 Sprite {
@@ -191,19 +327,16 @@ pub fn handle_network_events(
                             .id();
                         entity_map.0.insert(player_state.id, entity);
                     }
-                    // If is_local and not in entity_map, the local player hasn't been spawned yet
-                    // This should be handled by the game setup
                 }
             }
             GamePacket::Pong(id) => {
-                println!("Pong from server: {}", id);
+                info!("Pong from server: {}", id);
             }
             _ => {}
         }
     }
 }
 
-// Interpolation system
 pub fn interpolate_positions(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Transform, &mut InterpolationState)>,
@@ -215,10 +348,8 @@ pub fn interpolate_positions(
         let elapsed = current_time - interp.start_time;
         let t = (elapsed / interp.duration).min(1.0);
 
-        // Lerp position
         transform.translation = interp.start_pos.lerp(interp.target_pos, t);
 
-        // Remove interpolation component when done
         if t >= 1.0 {
             commands.entity(entity).remove::<InterpolationState>();
         }
@@ -226,18 +357,26 @@ pub fn interpolate_positions(
 }
 
 pub fn send_ping_system(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResource>) {
-    if input.just_pressed(KeyCode::KeyP) {
-        if let Some(tx) = &net.action_tx {
-            let _ = tx.send(PlayerAction::Ping(0));
-            println!("Sent Ping");
-        }
+    if net.status != NetworkStatus::Connected {
+        return;
+    }
+
+    if input.just_pressed(KeyCode::KeyP)
+        && let Some(tx) = &net.action_tx
+    {
+        let _ = tx.send(PlayerAction::Ping(0));
+        info!("Sent Ping");
     }
 }
 
-/// 将键盘输入转换为 PlayerAction 并发送到服务器
+/// Legacy direct keyboard sender kept for compatibility.
+/// Prefer `systems::input::update_game_input` as the single source of outgoing input actions.
 pub fn send_player_input(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResource>) {
+    if net.status != NetworkStatus::Connected {
+        return;
+    }
+
     if let Some(tx) = &net.action_tx {
-        // 计算移动方向
         let mut move_x = 0.0;
         let mut move_y = 0.0;
 
@@ -251,7 +390,6 @@ pub fn send_player_input(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResou
             move_y -= 1.0;
         }
 
-        // 发送移动输入
         if move_x != 0.0 || move_y != 0.0 {
             let _ = tx.send(PlayerAction::Move {
                 x: move_x,
@@ -259,7 +397,6 @@ pub fn send_player_input(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResou
             });
         }
 
-        // 发送跳跃输入
         if input.just_pressed(KeyCode::KeyW) || input.just_pressed(KeyCode::Space) {
             let _ = tx.send(PlayerAction::Jump);
         }

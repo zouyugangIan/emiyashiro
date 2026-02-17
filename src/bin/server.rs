@@ -158,20 +158,30 @@ async fn handle_connection(
     let ws_stream = accept_async(stream).await.expect("Error during handshake");
     println!("New client connected: {}", client_id);
 
-    let (tx, mut rx) = ws_stream.split();
+    let (mut tx, mut rx) = ws_stream.split();
 
-    // Register client
+    // Send Welcome
+    let welcome = GamePacket::Welcome {
+        id: client_id,
+        message: "Connected to G-Engine Server".to_string(),
+    };
+
+    match bincode::serialize(&welcome) {
+        Ok(binary) => {
+            let _ = tx
+                .send(tokio_tungstenite::tungstenite::Message::Binary(binary))
+                .await;
+        }
+        Err(error) => {
+            eprintln!("Failed to serialize welcome packet: {}", error);
+        }
+    }
+
+    // Register client after successful handshake/write path has started
     {
         let mut clients_guard = clients.lock().unwrap();
         clients_guard.insert(client_id, tx);
     }
-
-    // Send Welcome
-    let _welcome = GamePacket::Welcome {
-        id: client_id,
-        message: "Connected to G-Engine Server".to_string(),
-    };
-    let _ = action_tx.send((client_id, PlayerAction::Ping(0))); // Simulate initial ping
 
     while let Some(msg) = rx.next().await {
         match msg {

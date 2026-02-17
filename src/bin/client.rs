@@ -58,9 +58,9 @@ fn main() {
     .add_systems(
         Update,
         (
+            systems::network::update_network_status,
             systems::network::handle_network_events,
             systems::network::send_ping_system,
-            systems::network::send_player_input,
             systems::network::interpolate_positions,
         ),
     )
