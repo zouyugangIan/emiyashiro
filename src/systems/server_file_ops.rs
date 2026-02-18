@@ -100,6 +100,7 @@ pub async fn load_game_state_internal(
             play_time: state.play_time,
             save_timestamp: state.save_timestamp,
             file_path: save_path.to_string_lossy().to_string(),
+            selected_character: state.selected_character.clone(),
         };
 
         return Ok((state, metadata));
@@ -180,6 +181,7 @@ async fn load_save_metadata_internal(
             play_time: state.play_time,
             save_timestamp: state.save_timestamp,
             file_path: save_path.to_string_lossy().to_string(),
+            selected_character: state.selected_character.clone(),
         });
     }
 
@@ -206,6 +208,7 @@ mod tests {
             play_time: 6.0,
             save_timestamp: chrono::Utc::now(),
             file_path: "stale/path.json".to_string(),
+            selected_character: crate::states::CharacterType::Shirou1,
         };
 
         let mut save_data = SaveFileData::new(metadata, CompleteGameState::default());

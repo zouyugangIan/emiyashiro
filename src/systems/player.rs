@@ -81,7 +81,8 @@ pub fn player_movement(
 /// 包含改进的物理计算和更精确的碰撞处理。
 pub fn player_jump(
     mut commands: Commands,
-    game_input: Res<crate::systems::input::GameInput>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut game_input: ResMut<crate::systems::input::GameInput>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &PlayerState), With<Player>>,
     time: Res<Time>,
     mut game_stats: ResMut<GameStats>,
@@ -90,10 +91,26 @@ pub fn player_jump(
         let was_grounded = player_state.is_grounded;
         let delta_time = time.delta_secs();
 
-        // 跳跃输入处理（改进的跳跃检测）
-        if game_input.jump && player_state.can_jump() {
+        // 同时读取实时按键与输入资源，避免 Update/FixedUpdate 时序导致丢跳
+        let direct_jump_pressed = keyboard_input.pressed(KeyCode::KeyW)
+            || keyboard_input.pressed(KeyCode::ArrowUp)
+            || keyboard_input.pressed(KeyCode::Numpad8)
+            || keyboard_input.pressed(KeyCode::Space);
+        let direct_jump_just_pressed = keyboard_input.just_pressed(KeyCode::KeyW)
+            || keyboard_input.just_pressed(KeyCode::ArrowUp)
+            || keyboard_input.just_pressed(KeyCode::Numpad8)
+            || keyboard_input.just_pressed(KeyCode::Space);
+        let wants_jump = direct_jump_pressed
+            || direct_jump_just_pressed
+            || game_input.jump
+            || game_input.jump_pressed_this_frame
+            || game_input.jump_buffer_seconds > 0.0;
+
+        if wants_jump && player_state.can_jump() {
             velocity.y = GameConfig::JUMP_VELOCITY;
             game_stats.jump_count += 1;
+            game_input.jump_pressed_this_frame = false;
+            game_input.jump_buffer_seconds = 0.0;
 
             // 触发跳跃音效
             commands.spawn(AudioTrigger {
@@ -105,7 +122,7 @@ pub fn player_jump(
         }
 
         // 可变跳跃高度 - 如果松开跳跃键，减少向上速度
-        if !game_input.jump && velocity.y > 0.0 {
+        if !direct_jump_pressed && !game_input.jump && velocity.y > 0.0 {
             velocity.y *= 0.5; // 减少50%的向上速度，实现可变跳跃高度
         }
 

@@ -102,24 +102,24 @@ impl GameAssets {
         self.get_current_cover()
     }
 
-    /// 获取当前Shirou动画帧
+    /// 获取当前 Shirou 动画帧
     pub fn get_current_shirou_frame(&self) -> Handle<Image> {
         self.shirou_animation_frames[self.current_shirou_frame].clone()
     }
 
-    /// 切换到下一个Shirou动画帧
+    /// 切换到下一个 Shirou 动画帧
     pub fn next_shirou_frame(&mut self) -> Handle<Image> {
         self.current_shirou_frame =
             (self.current_shirou_frame + 1) % self.shirou_animation_frames.len();
         self.get_current_shirou_frame()
     }
 
-    /// 获取当前Sakura动画帧
+    /// 获取当前 Sakura 动画帧
     pub fn get_current_sakura_frame(&self) -> Handle<Image> {
         self.sakura_animation_frames[self.current_sakura_frame].clone()
     }
 
-    /// 切换到下一个Sakura动画帧
+    /// 切换到下一个 Sakura 动画帧
     pub fn next_sakura_frame(&mut self) -> Handle<Image> {
         self.current_sakura_frame =
             (self.current_sakura_frame + 1) % self.sakura_animation_frames.len();
@@ -182,7 +182,7 @@ pub struct SaveData {
 impl Default for SaveData {
     fn default() -> Self {
         Self {
-            player_name: "士郎".to_string(),
+            player_name: "DefaultSave".to_string(),
             selected_character: crate::states::CharacterType::Shirou1,
             best_distance: 0.0,
             total_jumps: 0,
@@ -409,6 +409,8 @@ pub struct SaveFileMetadata {
     pub play_time: f32,
     pub save_timestamp: chrono::DateTime<chrono::Utc>,
     pub file_path: String,
+    #[serde(default)]
+    pub selected_character: crate::states::CharacterType,
 }
 
 /// 暂停管理器

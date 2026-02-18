@@ -64,16 +64,32 @@ pub const IMAGE_HF_SHIROU_JUMP: &str = "images/characters/hf_jump.jpg";
 pub const IMAGE_HF_SHIROU_CROUCH: &str = "images/characters/hf_crouch.jpg";
 
 // Shirou 待機動畫幀
-pub const SHIROU_IDLE_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_IDLE];
+pub const SHIROU_IDLE_FRAMES: &[&str] = &[
+    IMAGE_CHAR_SHIROU_IDLE1,
+    IMAGE_CHAR_SHIROU_IDLE2,
+    IMAGE_CHAR_SHIROU_IDLE3,
+    IMAGE_CHAR_SHIROU_IDLE2,
+];
 
 // Shirou 跑步動畫幀
-pub const SHIROU_RUNNING_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_RUN];
+pub const SHIROU_RUNNING_FRAMES: &[&str] = &[
+    IMAGE_CHAR_SHIROU_IDLE4,
+    IMAGE_CHAR_SHIROU_IDLE5,
+    IMAGE_CHAR_SHIROU_IDLE6,
+    IMAGE_CHAR_SHIROU_IDLE7,
+    IMAGE_CHAR_SHIROU_IDLE6,
+    IMAGE_CHAR_SHIROU_IDLE5,
+];
 
 // Shirou 跳躍動畫幀
-pub const SHIROU_JUMPING_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_JUMP];
+pub const SHIROU_JUMPING_FRAMES: &[&str] = &[
+    IMAGE_CHAR_SHIROU_IDLE8,
+    IMAGE_CHAR_SHIROU_IDLE9,
+    IMAGE_CHAR_SHIROU_IDLE10,
+];
 
 // Shirou 蹲下動畫幀
-pub const SHIROU_CROUCHING_FRAMES: &[&str] = &[IMAGE_HF_SHIROU_CROUCH];
+pub const SHIROU_CROUCHING_FRAMES: &[&str] = &[IMAGE_CHAR_SHIROU_IDLE11, IMAGE_CHAR_SHIROU_IDLE11];
 
 // Shirou所有动画帧的数组（向後兼容）
 pub const SHIROU_ANIMATION_FRAMES: &[&str] = &[

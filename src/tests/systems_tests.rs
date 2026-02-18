@@ -75,7 +75,7 @@ mod tests {
     fn test_save_data_default() {
         let save_data = crate::resources::SaveData::default();
 
-        assert_eq!(save_data.player_name, "士郎");
+        assert_eq!(save_data.player_name, "DefaultSave");
         assert_eq!(save_data.selected_character, CharacterType::Shirou1);
         assert_eq!(save_data.best_distance, 0.0);
         assert_eq!(save_data.total_jumps, 0);
@@ -627,6 +627,7 @@ mod tests {
             play_time: 60.0,
             save_timestamp: chrono::Utc::now(),
             file_path: "test.json".to_string(),
+            selected_character: CharacterType::Shirou1,
         };
 
         assert_eq!(metadata.name, "TestSave");

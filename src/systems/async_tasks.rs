@@ -32,22 +32,41 @@ pub struct PollAsyncTaskState<'w> {
     save_load_ui_state: ResMut<'w, SaveLoadUiState>,
 }
 
-fn resolve_unique_save_target(
+fn resolve_save_target(
     save_dir: &Path,
     requested_name: &str,
-    existing_names: &HashSet<String>,
-) -> (String, PathBuf) {
+    existing_saves: &[SaveFileMetadata],
+) -> (String, PathBuf, bool) {
+    if let Some(existing) = existing_saves
+        .iter()
+        .find(|save| save.name == requested_name)
+    {
+        let existing_path = PathBuf::from(&existing.file_path);
+        let target_path = if existing_path.as_os_str().is_empty() {
+            save_dir.join(format!("{}.json", requested_name))
+        } else {
+            existing_path
+        };
+
+        return (requested_name.to_string(), target_path, true);
+    }
+
+    let existing_names: HashSet<&str> = existing_saves
+        .iter()
+        .map(|save| save.name.as_str())
+        .collect();
+
     let mut resolved_name = requested_name.to_string();
     let mut candidate_path = save_dir.join(format!("{}.json", resolved_name));
 
     let mut suffix = 2u32;
-    while existing_names.contains(&resolved_name) || candidate_path.exists() {
+    while existing_names.contains(resolved_name.as_str()) || candidate_path.exists() {
         resolved_name = format!("{}_{}", requested_name, suffix);
         candidate_path = save_dir.join(format!("{}.json", resolved_name));
         suffix += 1;
     }
 
-    (resolved_name, candidate_path)
+    (resolved_name, candidate_path, false)
 }
 
 /// System to handle save game requests by spawning them on the async compute pool.
@@ -77,13 +96,8 @@ pub fn handle_save_requests(
         let compression_level = file_manager.compression_level;
 
         let save_dir = PathBuf::from(&save_file_manager.save_directory);
-        let existing_names: HashSet<String> = save_file_manager
-            .save_files
-            .iter()
-            .map(|save| save.name.clone())
-            .collect();
-        let (resolved_name, file_path) =
-            resolve_unique_save_target(&save_dir, &save_name, &existing_names);
+        let (resolved_name, file_path, is_overwrite) =
+            resolve_save_target(&save_dir, &save_name, &save_file_manager.save_files);
 
         let metadata = SaveFileMetadata {
             name: resolved_name.clone(),
@@ -92,6 +106,7 @@ pub fn handle_save_requests(
             play_time: state.play_time,
             save_timestamp: state.save_timestamp,
             file_path: file_path.to_string_lossy().to_string(),
+            selected_character: state.selected_character.clone(),
         };
 
         let task = ComputeTaskPool::get().spawn(async move {
@@ -111,10 +126,18 @@ pub fn handle_save_requests(
         save_load_ui_state.is_busy = true;
         save_load_ui_state.pending_load_index = None;
         save_load_ui_state.error_message.clear();
-        save_load_ui_state.status_message = format!("Saving '{}'...", resolved_name);
+        save_load_ui_state.status_message = if is_overwrite {
+            format!("Saving '{}' (overwriting existing save)...", resolved_name)
+        } else {
+            format!("Saving '{}'...", resolved_name)
+        };
         operation_progress.start_operation(format!("Saving '{}'", resolved_name));
 
-        crate::debug_log!("馃捑 Spawned async save task for '{}'", save_name);
+        crate::debug_log!(
+            "Spawned async save task for '{}' (overwrite: {})",
+            resolved_name,
+            is_overwrite
+        );
     }
 }
 
@@ -152,7 +175,7 @@ pub fn handle_load_requests(
         save_load_ui_state.status_message = "Loading save data...".to_string();
         operation_progress.start_operation("Loading save".to_string());
 
-        crate::debug_log!("馃搨 Spawned async load task for '{}'", ev.file_path);
+        crate::debug_log!("Spawned async load task for '{}'", ev.file_path);
     }
 }
 
@@ -173,14 +196,14 @@ pub fn poll_async_tasks(
                     state.save_load_ui_state.status_message =
                         "Save completed successfully".to_string();
                     state.operation_progress.complete_operation();
-                    crate::debug_log!("鉁?Async save task completed successfully.");
+                    crate::debug_log!("Async save task completed successfully.");
                 }
                 Err(e) => {
                     state.save_load_ui_state.is_busy = false;
                     state.save_load_ui_state.status_message.clear();
                     state.save_load_ui_state.error_message = e.to_user_message().to_string();
                     state.operation_progress.complete_operation();
-                    crate::debug_log!("鉂?Async save task failed: {:?}", e);
+                    crate::debug_log!("Async save task failed: {:?}", e);
                 }
             }
             commands.entity(entity).despawn();
@@ -193,7 +216,7 @@ pub fn poll_async_tasks(
             match result {
                 Ok((game_state, metadata)) => {
                     crate::debug_log!(
-                        "鉁?Async load task for '{}' completed successfully.",
+                        "Async load task for '{}' completed successfully.",
                         metadata.name
                     );
 
@@ -218,7 +241,7 @@ pub fn poll_async_tasks(
                     state.save_load_ui_state.status_message.clear();
                     state.save_load_ui_state.error_message = e.to_user_message().to_string();
                     state.operation_progress.complete_operation();
-                    crate::debug_log!("鉂?Async load task failed: {:?}", e);
+                    crate::debug_log!("Async load task failed: {:?}", e);
                     // Here we could fire another event to show an error UI
                 }
             }
@@ -233,28 +256,59 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn resolve_unique_save_target_reuses_requested_name_when_available() {
+    fn resolve_save_target_reuses_requested_name_when_available() {
         let temp_dir = std::env::temp_dir().join(format!(
             "emiyashiro-save-target-test-{}",
             uuid::Uuid::new_v4()
         ));
         fs::create_dir_all(&temp_dir).expect("create temp save dir");
 
-        let existing_names = HashSet::new();
-        let (resolved_name, resolved_path) =
-            resolve_unique_save_target(&temp_dir, "slot", &existing_names);
+        let existing_saves = Vec::new();
+        let (resolved_name, resolved_path, is_overwrite) =
+            resolve_save_target(&temp_dir, "slot", &existing_saves);
 
         assert_eq!(resolved_name, "slot");
         assert_eq!(
             resolved_path.file_name().and_then(|name| name.to_str()),
             Some("slot.json")
         );
+        assert!(!is_overwrite);
 
         let _ = fs::remove_dir_all(temp_dir);
     }
 
     #[test]
-    fn resolve_unique_save_target_appends_suffix_for_conflicts() {
+    fn resolve_save_target_overwrites_when_name_exists() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "emiyashiro-save-target-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        fs::create_dir_all(&temp_dir).expect("create temp save dir");
+        let existing_path = temp_dir.join("slot.json");
+        fs::write(&existing_path, b"{}").expect("write existing slot");
+
+        let existing_saves = vec![SaveFileMetadata {
+            name: "slot".to_string(),
+            score: 0,
+            distance: 0.0,
+            play_time: 0.0,
+            save_timestamp: chrono::Utc::now(),
+            file_path: existing_path.to_string_lossy().to_string(),
+            selected_character: crate::states::CharacterType::Shirou1,
+        }];
+
+        let (resolved_name, resolved_path, is_overwrite) =
+            resolve_save_target(&temp_dir, "slot", &existing_saves);
+
+        assert_eq!(resolved_name, "slot");
+        assert_eq!(resolved_path, existing_path);
+        assert!(is_overwrite);
+
+        let _ = fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn resolve_save_target_appends_suffix_for_filesystem_conflicts() {
         let temp_dir = std::env::temp_dir().join(format!(
             "emiyashiro-save-target-test-{}",
             uuid::Uuid::new_v4()
@@ -262,17 +316,17 @@ mod tests {
         fs::create_dir_all(&temp_dir).expect("create temp save dir");
         fs::write(temp_dir.join("slot.json"), b"{}").expect("write existing slot");
 
-        let mut existing_names = HashSet::new();
-        existing_names.insert("slot".to_string());
+        let existing_saves = Vec::new();
 
-        let (resolved_name, resolved_path) =
-            resolve_unique_save_target(&temp_dir, "slot", &existing_names);
+        let (resolved_name, resolved_path, is_overwrite) =
+            resolve_save_target(&temp_dir, "slot", &existing_saves);
 
         assert_eq!(resolved_name, "slot_2");
         assert_eq!(
             resolved_path.file_name().and_then(|name| name.to_str()),
             Some("slot_2.json")
         );
+        assert!(!is_overwrite);
 
         let _ = fs::remove_dir_all(temp_dir);
     }

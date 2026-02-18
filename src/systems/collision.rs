@@ -93,7 +93,6 @@ pub fn collision_detection_system(
         With<Player>,
     >,
     ground_query: GroundCollisionQuery,
-    mut commands: Commands,
 ) {
     if let Ok((mut player_transform, mut player_velocity, mut player_state, player_collision)) =
         player_query.single_mut()
@@ -116,14 +115,6 @@ pub fn collision_detection_system(
                 // 检查是否在地面上
                 if collision.normal.y > 0.5 {
                     on_ground = true;
-
-                    // 如果刚着地，触发着地音效
-                    if !player_state.is_grounded && player_velocity.y < -50.0 {
-                        commands.spawn(AudioTrigger {
-                            sound_type: SoundType::Land,
-                            should_play: true,
-                        });
-                    }
                 }
             }
         }

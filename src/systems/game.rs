@@ -1,4 +1,4 @@
-﻿//! 鏍稿績娓告垙绯荤粺
+//! 鏍稿績娓告垙绯荤粺
 //!
 //! 鍖呭惈娓告垙鍦烘櫙鐨勮缃€佹竻鐞嗗拰鏍稿績娓告垙閫昏緫绠＄悊銆?
 use crate::{components::*, resources::*, states::*};
@@ -38,15 +38,24 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         ));
     }
 
+    let mut should_rebuild_player = false;
     if params.loaded_game_state.should_restore
         && let Some(state) = &params.loaded_game_state.state
     {
         params.character_selection.selected_character = state.selected_character.clone();
+        should_rebuild_player = true;
     }
 
     if !params.player_query.is_empty() {
-        crate::debug_log!("Player already exists, continuing game");
-        return;
+        if should_rebuild_player {
+            for entity in params.player_query.iter() {
+                commands.entity(entity).despawn();
+            }
+            crate::debug_log!("Rebuilding player entity from loaded save");
+        } else {
+            crate::debug_log!("Player already exists, continuing game");
+            return;
+        }
     }
 
     let texture = match params.character_selection.selected_character {

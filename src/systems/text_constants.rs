@@ -61,7 +61,8 @@ impl SaveLoadText {
     pub const ENTER_SAVE_NAME: &'static str = "Enter save name:";
     pub const ENTER_NEW_NAME: &'static str = "Enter new name:";
     pub const NAME_PLACEHOLDER: &'static str = "Enter name...";
-    pub const INPUT_HINT: &'static str = "Use A-Z, 0-9, space, and hyphen. Max 25 characters.";
+    pub const INPUT_HINT: &'static str =
+        "Use A-Z, 0-9, space, and hyphen. Max 25 characters. Existing names overwrite.";
 
     // 状态消息
     pub const NO_SAVES_FOUND: &'static str = "No save files found";

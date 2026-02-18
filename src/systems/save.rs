@@ -60,16 +60,17 @@ pub fn save_game(
         play_time: state.play_time,
         save_timestamp: state.save_timestamp,
         file_path: save_path.to_string_lossy().to_string(),
+        selected_character: state.selected_character.clone(),
     };
 
     let save_data = SaveFileData::new(metadata, state);
     match write_v2_save(&save_path, &save_data) {
         Ok(()) => {
             save_manager.current_save = Some(summary);
-            crate::debug_log!("💾 游戏已保存（SaveFileData v2）");
+            crate::debug_log!("Game saved (SaveFileData v2)");
         }
         Err(error) => {
-            crate::debug_log!("❌ 保存失败: {}", error);
+            crate::debug_log!("Save failed: {}", error);
         }
     }
 }
@@ -83,7 +84,7 @@ pub fn load_game(
     let file_data = match fs::read(&save_path) {
         Ok(data) => data,
         Err(_) => {
-            crate::debug_log!("📂 没有找到存档文件，将创建新的存档");
+            crate::debug_log!("No save file found, a new save will be created");
             return;
         }
     };
@@ -91,7 +92,7 @@ pub fn load_game(
     let json_data = match crate::systems::shared_utils::decode_file_payload(&file_data) {
         Ok(data) => data,
         Err(error) => {
-            crate::debug_log!("❌ 存档读取失败: {}", error);
+            crate::debug_log!("Failed to decode save file: {}", error);
             return;
         }
     };
@@ -99,7 +100,7 @@ pub fn load_game(
     if let Ok(v2_save) = serde_json::from_str::<SaveFileData>(&json_data) {
         character_selection.selected_character = v2_save.game_state.selected_character.clone();
         save_manager.current_save = Some(summary_from_v2(&v2_save));
-        crate::debug_log!("📂 已加载 v2 存档: {}", save_path.display());
+        crate::debug_log!("Loaded v2 save: {}", save_path.display());
         return;
     }
 
@@ -118,7 +119,7 @@ pub fn load_game(
         return;
     }
 
-    crate::debug_log!("❌ 存档格式无法识别: {}", save_path.display());
+    crate::debug_log!("Unknown save format: {}", save_path.display());
 }
 
 fn summary_from_v2(v2_save: &SaveFileData) -> SaveData {
@@ -152,15 +153,14 @@ fn migrate_legacy_save_data(save_path: &PathBuf, legacy_save: SaveData) {
         play_time: state.play_time,
         save_timestamp: state.save_timestamp,
         file_path: save_path.to_string_lossy().to_string(),
+        selected_character: state.selected_character.clone(),
     };
 
     let v2_save = SaveFileData::new(metadata, state);
     match write_v2_save(save_path, &v2_save) {
-        Ok(()) => crate::debug_log!(
-            "♻️ 已将 legacy SaveData 自动迁移到 v2: {}",
-            save_path.display()
-        ),
-        Err(error) => crate::debug_log!("⚠️ legacy SaveData 迁移失败: {}", error),
+        Ok(()) => crate::debug_log!("Migrated legacy SaveData to v2: {}", save_path.display()),
+
+        Err(error) => crate::debug_log!("Legacy SaveData migration failed: {}", error),
     }
 }
 
@@ -176,15 +176,16 @@ fn migrate_legacy_state(save_path: &PathBuf, legacy_state: CompleteGameState) {
         play_time: legacy_state.play_time,
         save_timestamp: legacy_state.save_timestamp,
         file_path: save_path.to_string_lossy().to_string(),
+        selected_character: legacy_state.selected_character.clone(),
     };
 
     let v2_save = SaveFileData::new(metadata, legacy_state);
     match write_v2_save(save_path, &v2_save) {
         Ok(()) => crate::debug_log!(
-            "♻️ 已将 legacy CompleteGameState 自动迁移到 v2: {}",
+            "Migrated legacy CompleteGameState to v2: {}",
             save_path.display()
         ),
-        Err(error) => crate::debug_log!("⚠️ legacy CompleteGameState 迁移失败: {}", error),
+        Err(error) => crate::debug_log!("Legacy CompleteGameState migration failed: {}", error),
     }
 }
 
