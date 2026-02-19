@@ -25,6 +25,8 @@ pub struct GameInput {
     // 特殊输入
     pub action1: bool, // 投影魔术
     pub action2: bool, // 特殊技能
+    pub jump_pressed_this_frame: bool,
+    pub jump_buffer_seconds: f32,
 
     // 输入历史（用于连招检测）
     pub input_history: Vec<InputEvent>,
@@ -64,7 +66,10 @@ pub fn update_game_input(
     time: Res<Time>,
     net: Res<crate::systems::network::NetworkResource>,
 ) {
+    const JUMP_BUFFER_DURATION: f32 = 0.15;
+
     let current_time = time.elapsed_secs();
+    let delta_seconds = time.delta_secs();
 
     // 验证当前输入状态（静默处理错误，避免日志污染）
     if let Err(error) = game_input.validate_input_state() {
@@ -90,6 +95,9 @@ pub fn update_game_input(
     let new_jump = keyboard_input.pressed(KeyCode::KeyW)
         || keyboard_input.pressed(KeyCode::ArrowUp)
         || keyboard_input.pressed(KeyCode::Space);
+    let new_jump_just_pressed = keyboard_input.just_pressed(KeyCode::KeyW)
+        || keyboard_input.just_pressed(KeyCode::ArrowUp)
+        || keyboard_input.just_pressed(KeyCode::Space);
     let new_crouch =
         keyboard_input.pressed(KeyCode::KeyS) || keyboard_input.pressed(KeyCode::ArrowDown);
 
@@ -119,6 +127,13 @@ pub fn update_game_input(
     let old_crouch = game_input.crouch;
     let old_action1 = game_input.action1;
     let old_action2 = game_input.action2;
+
+    game_input.jump_pressed_this_frame = new_jump_just_pressed || (new_jump && !old_jump);
+    if game_input.jump_pressed_this_frame {
+        game_input.jump_buffer_seconds = JUMP_BUFFER_DURATION;
+    } else {
+        game_input.jump_buffer_seconds = (game_input.jump_buffer_seconds - delta_seconds).max(0.0);
+    }
 
     record_input_change(
         &mut game_input,
@@ -378,6 +393,8 @@ impl GameInput {
         self.pause = false;
         self.action1 = false;
         self.action2 = false;
+        self.jump_pressed_this_frame = false;
+        self.jump_buffer_seconds = 0.0;
         self.input_history.clear();
         self.input_filter.reset();
     }
