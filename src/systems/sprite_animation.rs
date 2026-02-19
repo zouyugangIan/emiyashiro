@@ -18,7 +18,7 @@ pub struct AnimationRuntimeConfig {
 impl Default for AnimationRuntimeConfig {
     fn default() -> Self {
         Self {
-            run_speed_threshold: 30.0,
+            run_speed_threshold: 10.0,
             airborne_vertical_threshold: 0.5,
         }
     }
@@ -83,6 +83,7 @@ fn resolve_target_animation(
     animation: &mut SpriteAnimation,
     player_state: &PlayerState,
     velocity: &Velocity,
+    has_move_input: bool,
     runtime: &AnimationRuntimeConfig,
 ) -> AnimationType {
     let was_grounded = animation.previous_grounded;
@@ -96,10 +97,8 @@ fn resolve_target_animation(
         AnimationType::Landing
     } else if player_state.is_crouching {
         AnimationType::Crouching
-    } else if velocity.x.abs() > runtime.run_speed_threshold {
+    } else if has_move_input || velocity.x.abs() > runtime.run_speed_threshold {
         AnimationType::Running
-    } else if velocity.y.abs() > runtime.airborne_vertical_threshold {
-        AnimationType::Jumping
     } else {
         AnimationType::Idle
     }
@@ -339,14 +338,24 @@ pub fn update_sprite_animations(
 pub fn update_character_animation_state(
     mut query: Query<(&mut SpriteAnimation, &mut Sprite, &PlayerState, &Velocity), With<Player>>,
     game_assets: Option<Res<GameAssets>>,
+    game_input: Option<Res<crate::systems::input::GameInput>>,
     runtime_config: Option<Res<AnimationRuntimeConfig>>,
 ) {
     let default_runtime = AnimationRuntimeConfig::default();
     let runtime = runtime_config.as_deref().unwrap_or(&default_runtime);
+    let has_move_input = game_input
+        .as_deref()
+        .map(|input| input.move_left || input.move_right)
+        .unwrap_or(false);
 
     for (mut animation, mut sprite, player_state, velocity) in query.iter_mut() {
-        let new_animation =
-            resolve_target_animation(&mut animation, player_state, velocity, runtime);
+        let new_animation = resolve_target_animation(
+            &mut animation,
+            player_state,
+            velocity,
+            has_move_input,
+            runtime,
+        );
 
         let clip_blocks_switch = current_clip_is_blocking(&animation);
         if clip_blocks_switch && new_animation != animation.current_animation {

@@ -106,13 +106,10 @@ fn setup_game_resources(
     let layout_4x4 = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 4, None, None);
     let layout_4x4_handle = texture_atlases.add(layout_4x4);
 
-    let layout_5x4 = TextureAtlasLayout::from_grid(UVec2::new(204, 256), 5, 4, None, None);
-    let layout_5x4_handle = texture_atlases.add(layout_5x4);
-
     let mut assets = game_assets;
     assets.shirou_spritesheet = Some(texture_handle);
     assets.shirou_atlas = Some(layout_4x4_handle);
-    assets.shirou_atlas_run = Some(layout_5x4_handle);
+    assets.shirou_atlas_run = assets.shirou_atlas.clone();
 
     commands.insert_resource(assets);
 }
