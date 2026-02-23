@@ -31,10 +31,18 @@ impl Plugin for PresentationPlugin {
                 systems::frame_animation::update_character_animations,
                 systems::frame_animation::setup_player_animation,
                 systems::frame_animation::debug_animations,
-                systems::sprite_animation::update_sprite_animations,
-                systems::sprite_animation::update_character_animation_state,
                 systems::audio::handle_music_transitions,
             )
+                .in_set(GameSystemSet::Animation)
+                .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            Update,
+            (
+                systems::sprite_animation::update_character_animation_state,
+                systems::sprite_animation::update_sprite_animations,
+            )
+                .chain()
                 .in_set(GameSystemSet::Animation)
                 .run_if(in_state(GameState::Playing)),
         )

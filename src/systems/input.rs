@@ -102,11 +102,12 @@ pub fn update_game_input(
     let new_crouch =
         keyboard_input.pressed(KeyCode::KeyS) || keyboard_input.pressed(KeyCode::ArrowDown);
 
-    // 检查输入冲突（同时按下相反方向）
-    if new_move_left && new_move_right {
-        // 保持之前的状态，忽略冲突输入
-        return;
-    }
+    // 同时按下左右时仅清空水平移动，不中断本帧其它输入更新（避免丢失跳跃/起身）。
+    let (resolved_move_left, resolved_move_right) = if new_move_left && new_move_right {
+        (false, false)
+    } else {
+        (new_move_left, new_move_right)
+    };
 
     // 更新动作输入
     let new_action1 =
@@ -141,14 +142,14 @@ pub fn update_game_input(
         &mut game_input,
         InputType::MoveLeft,
         old_move_left,
-        new_move_left,
+        resolved_move_left,
         current_time,
     );
     record_input_change(
         &mut game_input,
         InputType::MoveRight,
         old_move_right,
-        new_move_right,
+        resolved_move_right,
         current_time,
     );
     record_input_change(
@@ -181,8 +182,8 @@ pub fn update_game_input(
     );
 
     // 更新输入状态
-    game_input.move_left = new_move_left;
-    game_input.move_right = new_move_right;
+    game_input.move_left = resolved_move_left;
+    game_input.move_right = resolved_move_right;
     game_input.jump = new_jump;
     game_input.crouch = new_crouch;
     game_input.action1 = new_action1;
@@ -213,13 +214,13 @@ pub fn update_game_input(
         }
 
         // Move
-        if (new_move_left != old_move_left)
-            || (new_move_right != old_move_right)
+        if (resolved_move_left != old_move_left)
+            || (resolved_move_right != old_move_right)
             || (new_crouch != old_crouch)
         {
-            let x = if new_move_right {
+            let x = if resolved_move_right {
                 1.0
-            } else if new_move_left {
+            } else if resolved_move_left {
                 -1.0
             } else {
                 0.0

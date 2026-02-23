@@ -368,6 +368,33 @@ mod tests {
     }
 
     #[test]
+    fn test_horizontal_conflict_keeps_jump_update() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<input::GameInput>()
+            .init_resource::<crate::systems::network::NetworkResource>()
+            .add_systems(Update, input::update_game_input);
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.press(KeyCode::KeyA);
+            keyboard.press(KeyCode::ArrowRight);
+            keyboard.press(KeyCode::ArrowUp);
+        }
+
+        app.update();
+
+        let game_input = app.world().resource::<input::GameInput>();
+        assert!(
+            game_input.jump,
+            "jump input should not be dropped on left/right conflict"
+        );
+        assert!(!game_input.move_left);
+        assert!(!game_input.move_right);
+    }
+
+    #[test]
     fn test_character_select_and_start_same_frame_prefers_latest_selection() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)

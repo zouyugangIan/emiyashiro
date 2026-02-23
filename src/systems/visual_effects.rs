@@ -35,6 +35,8 @@ pub struct VisualEffect {
     pub duration: f32,
     pub elapsed: f32,
     pub intensity: f32,
+    pub base_translation: Option<Vec3>,
+    pub base_scale: Option<Vec3>,
 }
 
 /// 效果类型
@@ -53,6 +55,8 @@ impl VisualEffect {
             duration,
             elapsed: 0.0,
             intensity,
+            base_translation: None,
+            base_scale: None,
         }
     }
 
@@ -132,11 +136,18 @@ pub fn update_visual_effects(
     time: Res<Time>,
 ) {
     for (entity, mut effect, mut transform) in effect_query.iter_mut() {
+        if effect.base_translation.is_none() {
+            effect.base_translation = Some(transform.translation);
+        }
+        if effect.base_scale.is_none() {
+            effect.base_scale = Some(transform.scale);
+        }
+
         effect.elapsed += time.delta_secs();
 
         if effect.is_finished() {
             // 重置变换并移除效果
-            reset_transform(&mut transform);
+            reset_transform(&effect, &mut transform);
             commands.entity(entity).remove::<VisualEffect>();
             continue;
         }
@@ -149,6 +160,8 @@ pub fn update_visual_effects(
 /// 应用视觉效果到变换
 fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
     let progress = effect.progress();
+    let base_translation = effect.base_translation.unwrap_or(transform.translation);
+    let base_scale = effect.base_scale.unwrap_or(transform.scale);
 
     match effect.effect_type {
         EffectType::JumpScale => {
@@ -161,10 +174,11 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
                 effect.intensity - (effect.intensity - 1.0) * ((progress - 0.3) / 0.7)
             };
             transform.scale = Vec3::new(
-                scale_factor * BASE_PLAYER_SCALE,
-                scale_factor * BASE_PLAYER_SCALE,
-                1.0,
+                base_scale.x * scale_factor * BASE_PLAYER_SCALE,
+                base_scale.y * scale_factor * BASE_PLAYER_SCALE,
+                base_scale.z,
             );
+            transform.translation = base_translation;
         }
 
         EffectType::LandShake => {
@@ -173,15 +187,16 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
             let shake_x = (effect.elapsed * 50.0).sin() * shake_intensity;
             let shake_y = (effect.elapsed * 60.0).cos() * shake_intensity;
 
-            // 在原始位置基础上添加震动
-            transform.translation.x += shake_x;
-            transform.translation.y += shake_y;
+            // 使用基准位移，避免累加漂移
+            transform.translation = base_translation + Vec3::new(shake_x, shake_y, 0.0);
+            transform.scale = base_scale;
         }
 
         EffectType::RunBob => {
             // 跑步时的上下摆动
             let bob_offset = (effect.elapsed * 8.0).sin() * effect.intensity;
-            transform.translation.y += bob_offset;
+            transform.translation = base_translation + Vec3::new(0.0, bob_offset, 0.0);
+            transform.scale = base_scale;
         }
 
         EffectType::CrouchSquash => {
@@ -193,16 +208,24 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
                 // 后50%时间恢复
                 effect.intensity + (1.0 - effect.intensity) * ((progress - 0.5) / 0.5)
             };
-            transform.scale.y = squash_factor * BASE_PLAYER_SCALE; // 保持与原始缩放一致
+            transform.scale = Vec3::new(
+                base_scale.x,
+                base_scale.y * squash_factor * BASE_PLAYER_SCALE,
+                base_scale.z,
+            );
+            transform.translation = base_translation;
         }
     }
 }
 
 /// 重置变换到默认状态
-fn reset_transform(transform: &mut Transform) {
-    // 重置缩放到默认的角色缩放
-    transform.scale = Vec3::ONE;
-    // 注意：不重置位置，因为位置由其他系统管理
+fn reset_transform(effect: &VisualEffect, transform: &mut Transform) {
+    if let Some(base_scale) = effect.base_scale {
+        transform.scale = base_scale;
+    }
+    if let Some(base_translation) = effect.base_translation {
+        transform.translation = base_translation;
+    }
 }
 
 /// 清理过期的视觉效果

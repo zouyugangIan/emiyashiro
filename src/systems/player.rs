@@ -83,11 +83,11 @@ pub fn player_jump(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut game_input: ResMut<crate::systems::input::GameInput>,
-    mut player_query: Query<(&mut Transform, &mut Velocity, &PlayerState), With<Player>>,
+    mut player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
-    if let Ok((mut transform, mut velocity, player_state)) = player_query.single_mut() {
+    if let Ok((mut transform, mut velocity, mut player_state)) = player_query.single_mut() {
         let was_grounded = player_state.is_grounded;
         let delta_time = time.delta_secs();
 
@@ -105,6 +105,13 @@ pub fn player_jump(
             || game_input.jump
             || game_input.jump_pressed_this_frame
             || game_input.jump_buffer_seconds > 0.0;
+
+        // 提升容错：若角色处于蹲伏且玩家请求跳跃，先自动起身再进入跳跃判定。
+        if wants_jump && player_state.is_grounded && player_state.is_crouching {
+            player_state.is_crouching = false;
+            transform.scale.y = transform.scale.x;
+            transform.translation.y += 15.0;
+        }
 
         if wants_jump && player_state.can_jump() {
             velocity.y = GameConfig::JUMP_VELOCITY;
@@ -127,7 +134,7 @@ pub fn player_jump(
         }
 
         // 应用重力（改进的重力系统）
-        apply_gravity(&mut velocity, player_state, delta_time);
+        apply_gravity(&mut velocity, &player_state, delta_time);
 
         // 更新垂直位置（使用改进的物理积分）
         let old_y = transform.translation.y;
