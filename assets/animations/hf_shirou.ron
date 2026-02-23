@@ -1,15 +1,15 @@
 // assets/animations/hf_shirou.ron
 {
     Idle: (
-        // 4x4 atlas row 0
+        // core sheet row 0 (4x2 atlas)
         frames: [0, 1, 2, 3],
         frame_duration: 0.15,
         looping: true,
         playback_mode: PingPong,
     ),
     Running: (
-        // 4x4 atlas row 1 (repeat one keyframe to keep 5-frame cadence)
-        frames: [4, 5, 6, 7, 6],
+        // run sheet row 0 (5x1 atlas)
+        frames: [0, 1, 2, 3, 4],
         frame_duration: 0.09,
         looping: true,
         playback_mode: Loop,
@@ -17,23 +17,30 @@
         speed_reference: 180.0,
         min_frame_duration: 0.05,
     ),
+    Attacking: (
+        // attack sheet row 0 (4x1 atlas)
+        frames: [0, 1, 2, 3],
+        frame_duration: 0.08,
+        looping: false,
+        playback_mode: Once,
+    ),
     Jumping: (
-        // use verified full-body frames (8 was partially stripped by chroma cleanup)
-        frames: [9, 10, 9],
+        // core sheet row 1 (jump start -> apex -> descend)
+        frames: [4, 5, 6],
         frame_duration: 0.12,
         looping: false,
         playback_mode: Once,
     ),
     Crouching: (
-        // keep a stable full-body fallback frame for crouch state
-        frames: [10, 10],
+        // keep a stable crouch frame
+        frames: [7, 7],
         frame_duration: 0.2,
         looping: true,
         playback_mode: Loop,
     ),
     Landing: (
         // short landing settle
-        frames: [10, 0],
+        frames: [7, 0],
         frame_duration: 0.1,
         looping: false,
         playback_mode: Once,

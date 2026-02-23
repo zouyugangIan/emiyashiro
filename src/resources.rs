@@ -75,9 +75,12 @@ pub struct GameAssets {
     pub font: Handle<Font>,
     // 精灵表资源
     pub shirou_spritesheet: Option<Handle<Image>>,
+    pub shirou_spritesheet_run: Option<Handle<Image>>,
+    pub shirou_spritesheet_attack: Option<Handle<Image>>,
     pub sakura_spritesheet: Option<Handle<Image>>,
     pub shirou_atlas: Option<Handle<TextureAtlasLayout>>,
     pub shirou_atlas_run: Option<Handle<TextureAtlasLayout>>,
+    pub shirou_atlas_attack: Option<Handle<TextureAtlasLayout>>,
     pub sakura_atlas: Option<Handle<TextureAtlasLayout>>,
     // 音效资源
     pub jump_sound: Handle<AudioSource>,

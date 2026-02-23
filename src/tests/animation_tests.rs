@@ -69,4 +69,16 @@ mod tests {
         assert!(running_clip.speed_reference > 0.0);
         assert!(running_clip.min_frame_duration > 0.0);
     }
+
+    #[test]
+    fn test_hf_shirou_has_attacking_clip() {
+        let profile = load_profile("hf_shirou.ron");
+        let attack_clip = profile
+            .animations
+            .get(&AnimationType::Attacking)
+            .expect("Attacking clip should exist");
+
+        assert_eq!(attack_clip.playback_mode(), PlaybackMode::Once);
+        assert!(!attack_clip.frames.is_empty());
+    }
 }

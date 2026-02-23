@@ -65,6 +65,7 @@ fn get_animation_frames<'a>(
     match animation_type {
         AnimationType::Idle => &frames.idle_frames,
         AnimationType::Running => &frames.running_frames,
+        AnimationType::Attacking => &frames.running_frames,
         AnimationType::Jumping => &frames.jumping_frames,
         AnimationType::Crouching => &frames.crouching_frames,
         AnimationType::Landing => &frames.jumping_frames, // 复用跳跃帧

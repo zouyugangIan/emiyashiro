@@ -18,7 +18,7 @@ use bevy::prelude::*;
 pub fn player_movement(
     game_input: Res<crate::systems::input::GameInput>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &PlayerState), With<Player>>,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
     if let Ok((mut transform, mut velocity, player_state)) = player_query.single_mut() {
@@ -84,7 +84,7 @@ pub fn player_jump(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut game_input: ResMut<crate::systems::input::GameInput>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &PlayerState), With<Player>>,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
     if let Ok((mut transform, mut velocity, player_state)) = player_query.single_mut() {
@@ -247,7 +247,7 @@ fn handle_player_death(
 /// 统一处理所有物理相关的计算，确保物理模拟的一致性。
 pub fn physics_update_system(
     mut player_query: Query<(&mut Transform, &mut Velocity), With<Player>>,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
 ) {
     if let Ok((mut transform, mut velocity)) = player_query.single_mut() {
         let _delta_time = time.delta_secs();

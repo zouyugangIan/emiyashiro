@@ -56,6 +56,7 @@ pub fn frame_count_guideline(animation_type: &AnimationType) -> (usize, usize) {
     match animation_type {
         AnimationType::Idle => (4, 8),
         AnimationType::Running => (5, 10),
+        AnimationType::Attacking => (4, 8),
         AnimationType::Jumping => (3, 5),
         AnimationType::Crouching => (2, 4),
         AnimationType::Landing => (2, 3),
@@ -83,6 +84,7 @@ fn resolve_target_animation(
     animation: &mut SpriteAnimation,
     player_state: &PlayerState,
     velocity: &Velocity,
+    has_attack_input: bool,
     has_move_input: bool,
     runtime: &AnimationRuntimeConfig,
 ) -> AnimationType {
@@ -91,7 +93,12 @@ fn resolve_target_animation(
 
     let just_landed = !was_grounded && player_state.is_grounded;
 
-    if !player_state.is_grounded {
+    if has_attack_input
+        && player_state.is_grounded
+        && animation.animations.contains_key(&AnimationType::Attacking)
+    {
+        AnimationType::Attacking
+    } else if !player_state.is_grounded {
         AnimationType::Jumping
     } else if just_landed && animation.animations.contains_key(&AnimationType::Landing) {
         AnimationType::Landing
@@ -343,16 +350,22 @@ pub fn update_character_animation_state(
 ) {
     let default_runtime = AnimationRuntimeConfig::default();
     let runtime = runtime_config.as_deref().unwrap_or(&default_runtime);
-    let has_move_input = game_input
+    let (has_move_input, has_attack_input) = game_input
         .as_deref()
-        .map(|input| input.move_left || input.move_right)
-        .unwrap_or(false);
+        .map(|input| {
+            (
+                input.move_left || input.move_right,
+                input.action1_pressed_this_frame,
+            )
+        })
+        .unwrap_or((false, false));
 
     for (mut animation, mut sprite, player_state, velocity) in query.iter_mut() {
         let new_animation = resolve_target_animation(
             &mut animation,
             player_state,
             velocity,
+            has_attack_input,
             has_move_input,
             runtime,
         );
@@ -366,17 +379,26 @@ pub fn update_character_animation_state(
         if animation.current_animation != new_animation {
             apply_animation_change(&mut animation, new_animation.clone(), velocity.x.abs());
 
-            // === Dynamic Layout Switching for Mixed-Grid Sprite Sheets ===
-            if let Some(assets) = &game_assets
-                && let Some(ref mut atlas) = sprite.texture_atlas
-            {
-                // Check if we need the 5-column layout (Run) or 4-column (Rest)
-                if new_animation == AnimationType::Running {
-                    if let Some(run_layout) = &assets.shirou_atlas_run {
-                        atlas.layout = run_layout.clone();
-                    }
-                } else if let Some(std_layout) = &assets.shirou_atlas {
-                    atlas.layout = std_layout.clone();
+            // Running/attacking use dedicated sheets; others use the core sheet.
+            if let Some(assets) = &game_assets {
+                let (target_texture, target_layout) = if new_animation == AnimationType::Running {
+                    (&assets.shirou_spritesheet_run, &assets.shirou_atlas_run)
+                } else if new_animation == AnimationType::Attacking {
+                    (
+                        &assets.shirou_spritesheet_attack,
+                        &assets.shirou_atlas_attack,
+                    )
+                } else {
+                    (&assets.shirou_spritesheet, &assets.shirou_atlas)
+                };
+
+                if let Some(texture) = target_texture {
+                    sprite.image = texture.clone();
+                }
+                if let Some(layout) = target_layout
+                    && let Some(ref mut atlas) = sprite.texture_atlas
+                {
+                    atlas.layout = layout.clone();
                 }
             }
 
@@ -409,6 +431,7 @@ mod tests {
         let all_types = [
             AnimationType::Idle,
             AnimationType::Running,
+            AnimationType::Attacking,
             AnimationType::Jumping,
             AnimationType::Crouching,
             AnimationType::Landing,

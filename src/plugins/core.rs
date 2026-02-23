@@ -89,9 +89,12 @@ fn setup_game_resources(
         current_sakura_frame: 0,
         font: asset_server.load(asset_paths::FONT_FIRA_SANS),
         shirou_spritesheet: None,
+        shirou_spritesheet_run: None,
+        shirou_spritesheet_attack: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
         shirou_atlas_run: None,
+        shirou_atlas_attack: None,
         sakura_atlas: None,
         jump_sound: asset_server.load(asset_paths::SOUND_JUMP),
         land_sound: asset_server.load(asset_paths::SOUND_LAND),
@@ -102,14 +105,21 @@ fn setup_game_resources(
         background_music: asset_server.load(asset_paths::SOUND_BACKGROUND_MUSIC),
     };
 
-    let texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_SPRITESHEET);
-    let layout_4x4 = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 4, None, None);
-    let layout_4x4_handle = texture_atlases.add(layout_4x4);
+    let core_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_CORE_SHEET);
+    let run_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_RUN_SHEET);
+    let attack_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_SHEET);
+
+    let core_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 2, None, None);
+    let run_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 5, 1, None, None);
+    let attack_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 1, None, None);
 
     let mut assets = game_assets;
-    assets.shirou_spritesheet = Some(texture_handle);
-    assets.shirou_atlas = Some(layout_4x4_handle);
-    assets.shirou_atlas_run = assets.shirou_atlas.clone();
+    assets.shirou_spritesheet = Some(core_texture_handle);
+    assets.shirou_spritesheet_run = Some(run_texture_handle);
+    assets.shirou_spritesheet_attack = Some(attack_texture_handle);
+    assets.shirou_atlas = Some(texture_atlases.add(core_layout));
+    assets.shirou_atlas_run = Some(texture_atlases.add(run_layout));
+    assets.shirou_atlas_attack = Some(texture_atlases.add(attack_layout));
 
     commands.insert_resource(assets);
 }

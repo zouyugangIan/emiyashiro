@@ -173,6 +173,9 @@ pub const IMAGE_CHAR_SHIROU_SPRITESHEET: &str = "images/characters/shirou_sprite
 pub const IMAGE_CHAR_SAKURA_SPRITESHEET: &str = "images/characters/sakura_spritesheet.png";
 pub const IMAGE_HF_SHIROU_SPRITESHEET: &str =
     "images/characters/hf_shirou_spritesheet_final_v2_1767279221195.png";
+pub const IMAGE_HF_SHIROU_CORE_SHEET: &str = "images/characters/hf_shirou_core_sheet.png";
+pub const IMAGE_HF_SHIROU_RUN_SHEET: &str = "images/characters/hf_shirou_run_sheet.png";
+pub const IMAGE_HF_SHIROU_ATTACK_SHEET: &str = "images/characters/hf_shirou_attack_sheet.png";
 
 // CLOUD ASSETS (背景雲彩圖片)
 pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud01.png";

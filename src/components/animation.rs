@@ -11,6 +11,7 @@ use bevy::prelude::*;
 /// # 变体
 /// * `Idle` - 待机动画
 /// * `Running` - 跑步动画
+/// * `Attacking` - 攻击动画
 /// * `Jumping` - 跳跃动画
 /// * `Crouching` - 蹲下动画
 /// * `Landing` - 着陆动画
@@ -18,6 +19,7 @@ use bevy::prelude::*;
 pub enum AnimationType {
     Idle,
     Running,
+    Attacking,
     Jumping,
     Crouching,
     Landing,
@@ -32,6 +34,7 @@ impl AnimationType {
         match self {
             AnimationType::Idle => 0.2,
             AnimationType::Running => 0.1,
+            AnimationType::Attacking => 0.08,
             AnimationType::Jumping => 0.15,
             AnimationType::Crouching => 0.1,
             AnimationType::Landing => 0.08,
@@ -45,7 +48,7 @@ impl AnimationType {
     pub fn is_looping(&self) -> bool {
         match self {
             AnimationType::Idle | AnimationType::Running | AnimationType::Crouching => true,
-            AnimationType::Jumping | AnimationType::Landing => false,
+            AnimationType::Attacking | AnimationType::Jumping | AnimationType::Landing => false,
         }
     }
 }
@@ -188,6 +191,7 @@ impl AnimationFrames {
         match animation_type {
             AnimationType::Idle => &self.idle_frames,
             AnimationType::Running => &self.running_frames,
+            AnimationType::Attacking => &self.running_frames,
             AnimationType::Jumping => &self.jumping_frames,
             AnimationType::Crouching => &self.crouching_frames,
             AnimationType::Landing => &self.idle_frames, // 使用待机帧作为着陆帧
@@ -205,6 +209,7 @@ impl AnimationFrames {
         match animation_type {
             AnimationType::Idle => &mut self.idle_frames,
             AnimationType::Running => &mut self.running_frames,
+            AnimationType::Attacking => &mut self.running_frames,
             AnimationType::Jumping => &mut self.jumping_frames,
             AnimationType::Crouching => &mut self.crouching_frames,
             AnimationType::Landing => &mut self.idle_frames,
