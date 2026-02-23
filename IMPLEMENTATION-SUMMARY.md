@@ -1,244 +1,100 @@
-# G-Engine 实现总结
+# G-Engine 实现总结（Phase 3-5，归档）
 
-## 已完成任务
+> 文档类型：历史归档（用于回顾实现，不作为实时功能承诺）  
+> 最后对齐日期：2026-02-23  
+> 对齐方式：源码静态核对（`src/bin/server.rs`、`src/systems/*`、`src/plugins/*`）
 
-### ✅ Phase 3: Infrastructure Integration
+## 归档范围
 
-#### 3.1 Redis 集成
-- **文件**: `src/systems/sync_redis.rs`
-- **功能**: 
-  - 实现 `sync_transform_to_redis` 系统
-  - 每帧同步所有玩家的 Transform 和 Velocity 到 Redis
-  - Key Schema: `player:{id}:pos` -> `x,y,vx,vy`
-- **集成**: 已在 `server.rs` 中添加到 Update 系统
+本文件总结 Phase 3-5 的落地结果：
 
-#### 3.2 RabbitMQ & Postgres
-- **文件**: `src/systems/save_worker.rs`
-- **功能**:
-  - 实现异步存档消费者 `run_save_worker`
-  - 从 RabbitMQ 队列 `q_save_game` 消费存档任务
-  - 将存档数据写入 PostgreSQL
-  - 实现 `publish_save_task` 用于发布存档任务
-- **Docker**: `docker-compose.yml` 已配置 Redis, RabbitMQ, PostgreSQL
-- **集成**: Save Worker 在 `server.rs` 启动时自动运行
+- Phase 3: Infrastructure Integration
+- Phase 4: Gameplay Adaptation
+- Phase 5: AI Preparation
 
-### ✅ Phase 4: Gameplay Adaptation
+## 已落地能力（与当前代码一致）
 
-#### 4.1 输入重构
-- **文件**: `src/systems/network.rs`
-- **功能**:
-  - 实现 `send_player_input` 系统
-  - 将键盘输入 (WASD/方向键/空格) 转换为 `PlayerAction`
-  - 客户端通过 WebSocket 发送 `PlayerAction` 到服务器
-  - 服务器接收并应用到 `PlayerInputState`
-- **协议**: 
-  - `PlayerAction::Move { x, y }`
-  - `PlayerAction::Jump`
-- **集成**: 已在 `client.rs` 中添加到 Update 系统
+### Phase 3: Infrastructure Integration
 
-#### 4.2 状态同步
-- **服务端**: `src/bin/server.rs`
-  - `broadcast_snapshot_system` 每帧下发 `WorldSnapshot`
-  - 包含所有玩家的位置、速度、朝向、动画状态
-- **客户端**: `src/systems/network.rs`
-  - `handle_network_events` 接收 `WorldSnapshot`
-  - `interpolate_positions` 实现平滑插值渲染
-  - 插值持续时间: 100ms
-- **集成**: 已在 `client.rs` 和 `server.rs` 中完整集成
+#### 1) Redis 集成
 
-### ✅ Phase 5: AI Preparation
+- 文件：`src/systems/sync_redis.rs`
+- 系统：`sync_transform_to_redis`
+- 行为：将 `Transform + Velocity` 写入 `player:{id}:pos`
+- 频率：节流写入（约每 `100ms`，非每帧）
+- 接线：`src/bin/server.rs` 的 `Update` 系统中启用
 
-#### 5.1 AI 接口
-- **文件**: 
-  - `src/systems/ai.rs` - AI 系统实现
-  - `src/components/ai.rs` - BotController 组件
-- **功能**:
-  - 定义 `Controller` trait - 输入源抽象接口
-  - 实现 `BotController` - 自动巡逻和随机跳跃
-  - `bot_control_system` - 每帧更新 Bot 输入
-- **特性**:
-  - 巡逻范围可配置 (patrol_min_x, patrol_max_x)
-  - 随机跳跃间隔可配置 (jump_interval)
-  - 自动方向切换
-- **集成**: 
-  - 已在 `server.rs` 中添加到 Update 系统
-  - 服务器启动时自动生成一个 Bot (ID: 9999)
+#### 2) RabbitMQ + PostgreSQL 存档链路
 
-## 技术架构
+- 文件：`src/systems/save_worker.rs`
+- 能力：
+  - `run_save_worker` 消费 `q_save_game`
+  - 解析 `SaveGameTask` 并写入 PostgreSQL
+  - `publish_save_task` 发布存档消息
+- 接线：`src/bin/server.rs` 启动时 `tokio::spawn` Save Worker
+- 基础设施：`docker-compose.yml` 提供 Redis/RabbitMQ/PostgreSQL
 
-### 网络层
-```
-Client (WebGPU)          Server (Native)
-     |                        |
-     | PlayerAction          |
-     |---------------------->|
-     |                        | Game Logic (ECS)
-     |                        | Physics Simulation
-     |                        |
-     | WorldSnapshot         |
-     |<----------------------|
-     |                        |
-  Interpolation          Broadcast
+### Phase 4: Gameplay Adaptation
+
+#### 1) 输入上报链路
+
+- 输入采样与发送位于：`src/systems/input.rs` 的 `update_game_input`
+- 协议类型：`PlayerAction::{Move, Jump, Attack, Ping}`
+- 客户端网络资源：`src/systems/network.rs` 的 `NetworkResource`
+- 接线：通过客户端插件（`src/plugins/netcode.rs` + `src/plugins/gameplay.rs`）
+
+#### 2) 状态同步与插值
+
+- 服务端广播：`src/bin/server.rs` 中 `broadcast_snapshot_system`
+- 客户端消费：`src/systems/network.rs` 中 `handle_network_events`
+- 插值渲染：`src/systems/network.rs` 中 `interpolate_positions`
+- 插值窗口：`100ms`
+
+### Phase 5: AI Preparation
+
+- 文件：
+  - `src/systems/ai.rs`
+  - `src/components/ai.rs`
+- 能力：
+  - `Controller` 抽象输入来源
+  - `BotController` 巡逻/跳跃逻辑
+  - `bot_control_system` 每帧驱动 Bot 输入
+- 服务端默认 Bot：`NetworkId = 9999`
+
+## 当前数据流（简化）
+
+```text
+Client Input -> WebSocket -> Server ECS -> WorldSnapshot -> Client Interpolation
+                                       -> Redis (player:{id}:pos)
+                                       -> RabbitMQ(q_save_game) -> Save Worker -> PostgreSQL
 ```
 
-### 数据流
-```
-Server ECS
-    |
-    ├─> Redis (每帧)
-    |   └─> player:{id}:pos
-    |
-    ├─> RabbitMQ (异步)
-    |   └─> q_save_game
-    |       └─> Save Worker
-    |           └─> PostgreSQL
-    |
-    └─> WebSocket (每帧)
-        └─> WorldSnapshot
-            └─> Clients
-```
+## 与旧版描述的修订点
 
-## 代码统计
+- “`send_player_input` 位于 `network.rs`”已修订为：
+  - 当前输入发送逻辑在 `src/systems/input.rs` 的 `update_game_input`。
+- “Redis 每帧同步”已修订为：
+  - 当前为节流批量同步（约每 `100ms`）。
+- “`client.rs` 直接挂载所有网络系统”已修订为：
+  - 现为插件化挂载（`EmiyaShiroClientPlugin`）。
 
-### 新增文件
-1. `src/systems/sync_redis.rs` - Redis 同步系统
-2. `src/systems/save_worker.rs` - RabbitMQ 存档消费者
-3. `src/systems/ai.rs` - AI 控制系统
-4. `G-ENGINE-SETUP.md` - 设置指南
-5. `IMPLEMENTATION-SUMMARY.md` - 本文档
+## 验证状态说明
 
-### 修改文件
-1. `src/systems/network.rs` - 添加输入发送系统
-2. `src/components/ai.rs` - 更新 BotController 组件
-3. `src/bin/client.rs` - 启用网络系统
-4. `src/bin/server.rs` - 已包含所有系统
+由于当前执行环境无法访问 `crates.io`，无法完成联网依赖拉取，因此以下命令未能在本次审计中复跑成功：
 
-## 编译状态
+- `cargo check`
+- `cargo check --all-features`
+- `cargo test --lib`
 
-### 服务端
-```bash
-cargo check --bin server --features server
-✅ 编译成功 (5 个警告，非关键)
-```
+建议在可联网 CI 或开发机上执行上述命令作为发布前门禁。
 
-### 客户端
-```bash
-cargo check --bin client --features client
-✅ 编译成功 (6 个警告，非关键)
-```
+## 后续工作（与代码状态一致）
 
-## 运行指南
+- [ ] 客户端预测与服务器校正
+- [ ] 差量快照/压缩同步
+- [ ] 断线重连与恢复
+- [ ] 更完整的 AI 行为模式
 
-### 1. 启动基础设施
-```bash
-docker-compose up -d
-```
+## 归档结论
 
-### 2. 设置环境变量
-```bash
-export REDIS_URL="redis://127.0.0.1:6379/"
-export RABBITMQ_URL="amqp://guest:guest@127.0.0.1:5672/%2f"
-export DATABASE_URL="postgresql://username:password@localhost/shirou_runner"
-```
-
-### 3. 启动服务端
-```bash
-cargo run --bin server --features server
-```
-
-### 4. 启动客户端
-```bash
-cargo run --bin client --features client
-```
-
-## 测试场景
-
-### 多人联机测试
-1. 启动 1 个服务端
-2. 启动 2+ 个客户端
-3. 观察玩家同步效果
-4. 测试插值渲染平滑度
-
-### AI Bot 测试
-1. 启动服务端 (自动生成 Bot)
-2. 启动客户端
-3. 观察 Bot 巡逻和跳跃行为
-4. Bot ID: 9999, 巡逻范围: 0-500
-
-### Redis 同步测试
-```bash
-redis-cli
-GET player:1:pos
-GET player:9999:pos
-```
-
-### RabbitMQ 测试
-- 访问: http://localhost:15672
-- 用户名: guest
-- 密码: guest
-- 查看 `q_save_game` 队列
-
-## 性能指标
-
-### 服务端
-- 更新频率: 60 Hz
-- Redis 同步: 每帧 (60 次/秒)
-- WorldSnapshot 广播: 每帧 (60 次/秒)
-- 物理模拟: 每帧
-
-### 客户端
-- 渲染频率: 60 FPS
-- 插值持续时间: 100ms
-- 网络延迟容忍: ~200ms
-
-## 下一步优化
-
-### 性能优化
-- [ ] 实现 WorldSnapshot 差量更新
-- [ ] 添加 Redis 批量写入
-- [ ] 优化序列化性能 (考虑 MessagePack)
-- [ ] 实现客户端预测和服务器校正
-
-### 功能扩展
-- [ ] 添加更多 AI 行为模式
-- [ ] 实现地图状态同步
-- [ ] 添加聊天系统
-- [ ] 实现观战模式
-- [ ] 添加玩家认证
-
-### 可靠性
-- [ ] 添加断线重连机制
-- [ ] 实现状态快照和恢复
-- [ ] 添加错误处理和日志
-- [ ] 实现负载均衡
-
-## 依赖项
-
-### 服务端专用
-- `tokio` - 异步运行时
-- `sqlx` - PostgreSQL 客户端
-- `redis` - Redis 客户端
-- `lapin` - RabbitMQ 客户端
-- `tokio-tungstenite` - WebSocket 服务器
-
-### 客户端专用
-- `gloo-net` - WASM WebSocket 客户端
-- `tokio-tungstenite` - Native WebSocket 客户端
-
-### 共享
-- `bevy` - 游戏引擎
-- `serde` - 序列化
-- `bincode` - 二进制序列化
-
-## 总结
-
-所有 Phase 3-5 的任务已全部完成并通过编译验证。系统现在支持：
-
-1. ✅ Redis 实时状态同步
-2. ✅ RabbitMQ 异步任务处理
-3. ✅ PostgreSQL 数据持久化
-4. ✅ 客户端-服务器输入同步
-5. ✅ 平滑插值渲染
-6. ✅ AI Bot 自动控制
-
-G-Engine 现在是一个功能完整的云原生多人游戏引擎！
+Phase 3-5 的“基础能力”已落地，但项目尚未达到“功能完全完成”的状态。该结论与 `docs/2026-bevy-upgrade-assessment-zh.md` 的总体方向一致。
