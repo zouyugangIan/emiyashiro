@@ -3,3 +3,6 @@ linker = "rust-lld.exe"
 
 [profile.dev]
 codegen-units = 12
+
+[future-incompat-report]
+frequency = "always"

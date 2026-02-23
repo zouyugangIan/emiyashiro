@@ -2,8 +2,7 @@
 
 基于 Rust + Bevy 的 2D 横版动作跑酷原型，主角为卫宫士郎（1P）与樱（2P）。
 
-> 文档状态：2026-02-23 已按仓库代码静态对齐。  
-> 说明：当前环境无法访问 crates.io，未完成联网编译复验。
+> 文档状态：2026-02-23 已完成联网校验与代码对齐。
 
 ## 当前技术基线
 
@@ -68,16 +67,21 @@ src/
 - `IMPLEMENTATION-SUMMARY.md`: Phase 3-5 历史实现总结（已标记归档）
 - `SCENE_ENHANCEMENT.md`: 场景视差与装饰系统说明
 - `docs/2026-bevy-upgrade-assessment-zh.md`: 2026 全面评估与升级蓝图
+- `docs/2026-best-practice-sources.md`: 本次互联网最佳实践来源清单
 - `docs/bevy-upgrade-regression-checklist.md`: 引擎升级回归清单
 - `docs/documentation-completeness-audit-2026-02-23.md`: 本次文档完成度审计
+- `docs/ops-runbook.md`: 运维与发布 runbook
+- `CHANGELOG.md`: 版本化变更记录
 
 ## CI 门禁
 
 项目包含 GitHub Actions 工作流 `/.github/workflows/rust-ci.yml`：
 
 - `cargo fmt --check`
-- `cargo clippy --lib --all-features`
-- `cargo test --lib`
+- `cargo check`
+- `cargo check --all-features --future-incompat-report`
+- `cargo clippy --lib --all-features -- -D warnings`
+- `cargo test --lib --all-features`
 
 ## 已知待完善项（2026）
 

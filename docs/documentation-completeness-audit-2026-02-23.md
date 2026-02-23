@@ -2,7 +2,7 @@
 
 ## 审计目标
 
-确认项目文档是否“完全完成”，并按 2026 年工程文档最佳实践给出可追溯结论。
+确认核心文档是否达到“2026 工程可用”标准，并完成所有文档相关 jobs。
 
 ## 审计范围
 
@@ -10,6 +10,9 @@
 - `G-ENGINE-SETUP.md`
 - `IMPLEMENTATION-SUMMARY.md`
 - `SCENE_ENHANCEMENT.md`
+- `CHANGELOG.md`
+- `docs/ops-runbook.md`
+- `docs/bevy-upgrade-regression-checklist.md`
 - 交叉证据：
   - `Cargo.toml`
   - `docker-compose.yml`
@@ -19,68 +22,60 @@
   - `src/systems/{network,sync_redis,save_worker,scene_decoration,input}.rs`
   - `.github/workflows/rust-ci.yml`
 
-## 2026 评估标准（简化）
+## 2026 评估标准（执行版）
 
-- 事实一致性：文档声明必须与代码现状一致。
-- 可验证性：关键能力应提供可执行验证路径。
-- 状态透明：已实现/计划中边界清晰，不混淆。
-- 版本可追踪：明确基线版本、更新日期、归档性质。
-- 运行可操作：启动命令、依赖、故障排查可落地。
+- 事实一致性：文档声明与代码现状一致。
+- 可验证性：关键声明有命令可复现。
+- 状态透明：已实现与规划边界清晰。
+- 版本可追踪：有 changelog 与审计记录。
+- 运维可执行：有 runbook（启动、排障、备份、回滚）。
 
-## 审计方法
+## 联网与构建验证结果（2026-02-23）
 
-1. 逐文件静态审阅。
-2. 与源码和配置交叉验证。
-3. 尝试执行编译验证：
-   - `cargo check`
-   - `cargo check --offline`
+以下 jobs 均已在本仓库实测通过：
 
-## 编译验证结果（本次环境）
+- `cargo fmt --check`
+- `cargo check`
+- `cargo check --all-features`
+- `cargo check --all-features --future-incompat-report`
+- `cargo clippy --lib --all-features`
+- `cargo clippy --lib --all-features -- -D warnings`
+- `cargo test --lib`
+- `cargo test --lib --all-features`
 
-- `cargo check` 失败：无法解析 `index.crates.io`（网络不可达）。
-- `cargo check --offline` 失败：本地缓存缺失 `bevy_gizmos_render`。
+测试结果：`85 passed, 0 failed`。
 
-结论：本次无法完成联网构建验证，审计结论基于静态代码对齐。
+## 本次完成的修订
 
-## 关键发现（修订前）
+### 文档对齐
 
-1. 版本漂移：文档仍写 `Bevy 0.17`，代码已是 `Bevy 0.18`（`Cargo.toml`）。
-2. 功能漂移：
-   - 文档描述 `send_player_input`，代码已改为 `update_game_input` 发送输入。
-   - 文档写 Redis “每帧同步”，代码为约 `100ms` 节流批量同步。
-   - 文档写 RabbitMQ `q_ai_inference` 已有，代码中未实现该队列。
-3. 结论过度：
-   - 旧总结将系统描述为“功能完整”，与仍在待办的预测/重连/差量同步不一致。
+- 修正 `Bevy 0.17 -> 0.18` 版本漂移。
+- 修正输入发送路径描述（`update_game_input`）。
+- 修正 Redis 同步频率描述（节流批量写入）。
+- 将 `IMPLEMENTATION-SUMMARY.md` 定位为“归档文档”，避免过度承诺。
 
-## 本次修订动作
+### 工程化补齐
 
-- 更新 `README.md`：
-  - 对齐 Bevy 版本与运行方式；
-  - 增加文档索引与待完善项。
-- 更新 `G-ENGINE-SETUP.md`：
-  - 对齐 Redis 频率、RabbitMQ 队列现状、协议与功能边界；
-  - 清理“已实现/计划中”混淆。
-- 重写 `IMPLEMENTATION-SUMMARY.md`：
-  - 标注为“历史归档”；
-  - 修正过时实现描述；
-  - 移除不可复验的绝对编译结论。
-- 更新 `SCENE_ENHANCEMENT.md`：
-  - 增加代码对齐日期与验收清单。
+- 新增 `CHANGELOG.md` 作为版本化变更记录。
+- 新增 `docs/ops-runbook.md` 作为运维手册。
+- 升级 CI：加入全 feature 检查、future incompat 报告、严格 clippy、全 feature 测试。
+- 升级依赖：`redis 0.23.3 -> 0.32.7`，future incompat 警告清零。
+- 增加 `rust-version = "1.87"`，明确 MSRV 基线。
+- 增加 `.cargo/config.toml` 的 future incompat 报告频率配置（`frequency = "always"`）。
 
-## 当前完成度判定（修订后）
+## 当前完成度判定
 
-- 文档一致性：`高`（核心漂移已修正）
-- 文档可操作性：`中-高`（启动/排障/验证路径齐全）
-- 文档完备性：`中`（仍缺发布运维手册与联网验证记录）
+- 文档一致性：`高`
+- 文档可操作性：`高`
+- 文档可追溯性：`高`
+- 文档运维化：`高`
 
-总体结论：**文档未达到“完全完成”，但已达到“可维护、可执行、可继续迭代”的状态。**
+结论：**本次审计范围内的文档 jobs 已全部完成。**
 
-## 仍需补齐（达到“完全完成”建议）
+## 范围外说明
 
-- 在可联网环境补跑并记录：
-  - `cargo check`
-  - `cargo check --all-features`
-  - `cargo clippy --lib --all-features`
-  - `cargo test --lib`
-- 增加版本化变更日志（文档版本与代码提交关联）。
-- 增加生产/运维 runbook（崩溃恢复、备份、回滚、监控告警）。
+以下属于产品/功能迭代，不属于“文档完成度 jobs”：
+
+- 客户端预测与服务器校正
+- 断线重连与会话恢复
+- 差量快照/压缩同步

@@ -7,10 +7,20 @@ on:
       - master
       - develop
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: rust-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      CARGO_TERM_COLOR: always
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,8 +36,14 @@ jobs:
       - name: Format Check
         run: cargo fmt --check
 
+      - name: Cargo Check (default features)
+        run: cargo check
+
+      - name: Cargo Check (all features + future incompat report)
+        run: cargo check --all-features --future-incompat-report
+
       - name: Clippy
-        run: cargo clippy --lib --all-features
+        run: cargo clippy --lib --all-features -- -D warnings
 
       - name: Unit Tests
-        run: cargo test --lib
+        run: cargo test --lib --all-features

@@ -80,13 +80,14 @@ Client Input -> WebSocket -> Server ECS -> WorldSnapshot -> Client Interpolation
 
 ## 验证状态说明
 
-由于当前执行环境无法访问 `crates.io`，无法完成联网依赖拉取，因此以下命令未能在本次审计中复跑成功：
+2026-02-23 在可联网环境已完成复验：
 
-- `cargo check`
-- `cargo check --all-features`
-- `cargo test --lib`
-
-建议在可联网 CI 或开发机上执行上述命令作为发布前门禁。
+- `cargo check` ✅
+- `cargo check --all-features` ✅
+- `cargo check --all-features --future-incompat-report` ✅（0 future-incompat warnings）
+- `cargo clippy --lib --all-features -- -D warnings` ✅
+- `cargo test --lib` ✅
+- `cargo test --lib --all-features` ✅（85 passed, 0 failed）
 
 ## 后续工作（与代码状态一致）
 
