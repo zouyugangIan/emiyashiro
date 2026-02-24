@@ -38,6 +38,19 @@ type ButtonHoverTransformQuery<'w, 's> = Query<
     (Changed<Interaction>, With<Button>),
 >;
 
+type RunEffectPlayerQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static Transform,
+        &'static Velocity,
+        &'static PlayerState,
+        Option<&'static VisualEffect>,
+    ),
+    With<Player>,
+>;
+
 /// 视觉效果组件
 #[derive(Component)]
 pub struct VisualEffect {
@@ -117,19 +130,7 @@ pub fn trigger_land_effect(mut commands: Commands, mut player_query: PlayerState
 }
 
 /// 跑步视觉效果
-pub fn trigger_run_effect(
-    mut commands: Commands,
-    mut player_query: Query<
-        (
-            Entity,
-            &Transform,
-            &Velocity,
-            &PlayerState,
-            Option<&VisualEffect>,
-        ),
-        With<Player>,
-    >,
-) {
+pub fn trigger_run_effect(mut commands: Commands, mut player_query: RunEffectPlayerQuery) {
     for (entity, _transform, velocity, player_state, active_effect) in player_query.iter_mut() {
         // 检测跑步（在地面上且有水平速度）
         if player_state.is_grounded

@@ -27,6 +27,31 @@ pub enum NetworkStatus {
     Connected,
 }
 
+#[derive(Resource, Debug, Clone)]
+pub struct NetworkConfig {
+    pub server_url: String,
+    pub reconnect_enabled: bool,
+    pub reconnect_interval_secs: f32,
+    pub heartbeat_interval_secs: f32,
+}
+
+impl Default for NetworkConfig {
+    fn default() -> Self {
+        Self {
+            server_url: "ws://127.0.0.1:8080".to_string(),
+            reconnect_enabled: true,
+            reconnect_interval_secs: 2.0,
+            heartbeat_interval_secs: 5.0,
+        }
+    }
+}
+
+#[derive(Resource, Debug, Default)]
+pub struct NetworkReconnectState {
+    pub cooldown_remaining_secs: f32,
+    pub attempt_count: u32,
+}
+
 impl Default for NetworkResource {
     fn default() -> Self {
         Self {
@@ -48,17 +73,18 @@ fn push_runtime_event(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn setup_network(mut net: ResMut<NetworkResource>) {
+fn start_network_connection(net: &mut NetworkResource, server_url: &str) {
     if net.status != NetworkStatus::Disconnected {
         return;
     }
 
-    info!("Connecting to server...");
+    info!("Connecting to server: {}", server_url);
     net.status = NetworkStatus::Connecting;
 
     let (action_tx, mut action_rx) = mpsc::unbounded_channel::<PlayerAction>();
     let packet_rx = net.packet_rx.clone();
     let runtime_events = net.runtime_events.clone();
+    let url = server_url.to_string();
     net.action_tx = Some(action_tx);
 
     std::thread::spawn(move || {
@@ -78,8 +104,7 @@ pub fn setup_network(mut net: ResMut<NetworkResource>) {
         rt.block_on(async move {
             use futures_util::{SinkExt, StreamExt};
 
-            let url = "ws://127.0.0.1:8080";
-            match tokio_tungstenite::connect_async(url).await {
+            match tokio_tungstenite::connect_async(&url).await {
                 Ok((ws_stream, _)) => {
                     info!("Connected to server: {}", url);
                     push_runtime_event(&runtime_events, NetworkRuntimeEvent::Connected);
@@ -139,7 +164,7 @@ pub fn setup_network(mut net: ResMut<NetworkResource>) {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn setup_network(mut net: ResMut<NetworkResource>) {
+fn start_network_connection(net: &mut NetworkResource, server_url: &str) {
     use futures_util::{FutureExt, SinkExt, StreamExt, select};
     use gloo_net::websocket::{Message, futures::WebSocket};
     use wasm_bindgen_futures::spawn_local;
@@ -153,11 +178,11 @@ pub fn setup_network(mut net: ResMut<NetworkResource>) {
     let (action_tx, mut action_rx) = mpsc::unbounded_channel::<PlayerAction>();
     let packet_rx = net.packet_rx.clone();
     let runtime_events = net.runtime_events.clone();
+    let url = server_url.to_string();
     net.action_tx = Some(action_tx);
 
     spawn_local(async move {
-        let url = "ws://127.0.0.1:8080";
-        match WebSocket::open(url) {
+        match WebSocket::open(&url) {
             Ok(socket) => {
                 push_runtime_event(&runtime_events, NetworkRuntimeEvent::Connected);
                 let (mut write, mut read) = socket.split();
@@ -206,6 +231,10 @@ pub fn setup_network(mut net: ResMut<NetworkResource>) {
     });
 }
 
+pub fn setup_network(mut net: ResMut<NetworkResource>, config: Res<NetworkConfig>) {
+    start_network_connection(&mut net, &config.server_url);
+}
+
 pub fn update_network_status(mut net: ResMut<NetworkResource>) {
     let mut last_event = None;
     if let Ok(mut events) = net.runtime_events.lock() {
@@ -236,6 +265,71 @@ pub fn update_network_status(mut net: ResMut<NetworkResource>) {
             }
         }
     }
+}
+
+pub fn auto_reconnect_network(
+    time: Res<Time>,
+    config: Res<NetworkConfig>,
+    mut reconnect_state: ResMut<NetworkReconnectState>,
+    mut net: ResMut<NetworkResource>,
+) {
+    if !config.reconnect_enabled {
+        return;
+    }
+
+    match net.status {
+        NetworkStatus::Connected | NetworkStatus::Connecting => {
+            reconnect_state.cooldown_remaining_secs = 0.0;
+        }
+        NetworkStatus::Disconnected => {
+            reconnect_state.cooldown_remaining_secs =
+                (reconnect_state.cooldown_remaining_secs - time.delta_secs()).max(0.0);
+
+            if reconnect_state.cooldown_remaining_secs > 0.0 {
+                return;
+            }
+
+            reconnect_state.attempt_count = reconnect_state.attempt_count.wrapping_add(1);
+            reconnect_state.cooldown_remaining_secs = config.reconnect_interval_secs.max(0.2);
+            start_network_connection(&mut net, &config.server_url);
+        }
+    }
+}
+
+pub fn send_heartbeat_ping_system(
+    time: Res<Time>,
+    config: Res<NetworkConfig>,
+    net: Res<NetworkResource>,
+    mut heartbeat_timer: Local<Option<Timer>>,
+    mut next_ping_id: Local<u64>,
+) {
+    if heartbeat_timer.is_none() {
+        *heartbeat_timer = Some(Timer::from_seconds(
+            config.heartbeat_interval_secs.max(0.5),
+            TimerMode::Repeating,
+        ));
+    }
+
+    let Some(timer) = heartbeat_timer.as_mut() else {
+        return;
+    };
+
+    if net.status != NetworkStatus::Connected {
+        timer.reset();
+        return;
+    }
+
+    timer.tick(time.delta());
+    if !timer.just_finished() {
+        return;
+    }
+
+    let Some(tx) = &net.action_tx else {
+        return;
+    };
+
+    *next_ping_id = next_ping_id.wrapping_add(1);
+    let _ = tx.send(PlayerAction::Ping(*next_ping_id));
 }
 
 #[derive(Resource, Default)]

@@ -2,13 +2,13 @@
 
 基于 Rust + Bevy 的 2D 横版动作跑酷原型，主角为卫宫士郎（1P）与樱（2P）。
 
-> 文档状态：2026-02-23 已完成联网校验与代码对齐。
+> 文档状态：2026-02-24 已完成门禁复验与架构升级对齐。
 
 ## 当前技术基线
 
 - 引擎: `Bevy 0.18`
 - 语言: `Rust (edition 2024)`
-- 架构: ECS + 状态机 + 领域插件化（`core/gameplay/netcode/persistence/presentation/ui`）
+- 架构: ECS + 状态机 + 领域插件化（`core/gameplay/netcode/persistence/presentation/ui/server`）
 
 ## 快速启动
 
@@ -54,6 +54,7 @@ src/
     netcode.rs
     persistence.rs
     presentation.rs
+    server.rs
     ui.rs
   systems/
   components/
@@ -64,12 +65,12 @@ src/
 ## 文档索引
 
 - `G-ENGINE-SETUP.md`: 联机与基础设施部署指南
-- `IMPLEMENTATION-SUMMARY.md`: Phase 3-5 历史实现总结（已标记归档）
 - `SCENE_ENHANCEMENT.md`: 场景视差与装饰系统说明
 - `docs/2026-bevy-upgrade-assessment-zh.md`: 2026 全面评估与升级蓝图
 - `docs/2026-best-practice-sources.md`: 本次互联网最佳实践来源清单
+- `docs/2026-upgrade-status.md`: 2026 升级状态总览（文档完成状态 SSOT）
+- `docs/2026-architecture-upgrade-tasks.md`: 架构升级任务排期与验收标准
 - `docs/bevy-upgrade-regression-checklist.md`: 引擎升级回归清单
-- `docs/documentation-completeness-audit-2026-02-23.md`: 本次文档完成度审计
 - `docs/ops-runbook.md`: 运维与发布 runbook
 - `CHANGELOG.md`: 版本化变更记录
 

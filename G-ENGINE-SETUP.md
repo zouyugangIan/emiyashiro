@@ -1,6 +1,6 @@
 # G-Engine 设置指南
 
-> 文档状态：2026-02-23 已按当前代码对齐。  
+> 文档状态：2026-02-24 已按当前代码对齐。  
 > 作用：说明联机与基础设施能力的“已实现范围 + 启动方式 + 验证方法”。
 
 ## 概述
@@ -64,7 +64,8 @@ cargo run --bin server --features server
 服务端当前行为：
 
 - WebSocket 监听 `127.0.0.1:8080`
-- 60Hz 主循环广播 `WorldSnapshot`
+- 运行时通过 `src/plugins/server.rs` 接线
+- `FixedUpdate` 60Hz 主循环（物理、输入处理、快照广播）
 - Redis 节流批量同步
 - Save Worker 消费 `q_save_game`
 - 启动时生成 1 个 Bot（`NetworkId = 9999`）
@@ -80,6 +81,8 @@ cargo run --bin client --features client
 - WebGPU 渲染
 - 连接 `ws://127.0.0.1:8080`
 - 接收 `WorldSnapshot` 并执行插值渲染（100ms）
+- 断连后自动重连（冷却窗口）
+- 周期性心跳 `Ping`
 
 ### 5. 客户端（WASM）构建
 
@@ -91,19 +94,20 @@ cargo build --bin client --target wasm32-unknown-unknown --features client
 
 说明：WASM 路径可编译目标已配置，运行时链路仍需按部署环境单独验证。
 
-## 功能状态（2026-02-23）
+## 功能状态（2026-02-24）
 
 ### 已完成
 
-- Redis 状态同步（节流 + 批量队列）
+- Redis 状态同步（节流 + 批量写入）
 - RabbitMQ/Postgres 存档链路（`q_save_game`）
 - 基础输入上报与快照同步
 - Bot 控制基础行为
+- 自动重连与心跳保活
 
 ### 计划中
 
 - 客户端预测与服务器校正
-- 断线重连与会话恢复
+- 会话恢复（重连后状态续接）
 - 差量快照/压缩同步
 - AI 推理任务队列（`q_ai_inference`）
 

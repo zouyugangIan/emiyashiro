@@ -8,14 +8,21 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 
 ### Added
 
+- Added server runtime plugin: `src/plugins/server.rs`.
 - Added operations runbook: `docs/ops-runbook.md`.
 - Added documentation completeness audit: `docs/documentation-completeness-audit-2026-02-23.md`.
+- Added upgrade status SSOT: `docs/2026-upgrade-status.md`.
+- Added architecture task board: `docs/2026-architecture-upgrade-tasks.md`.
 
 ### Changed
 
 - Upgraded `redis` dependency from `0.23.3` to `0.32.7` to eliminate future-incompat warnings.
 - Added `rust-version = "1.87"` to `Cargo.toml`.
 - Added `[future-incompat-report] frequency = "always"` in `.cargo/config.toml`.
+- Refactored `src/bin/server.rs` into network bootstrap + plugin-wired ECS runtime.
+- Moved server game loop systems to `FixedUpdate` with explicit `60Hz` fixed timestep.
+- Added client auto-reconnect and heartbeat ping systems in `src/systems/network.rs`.
+- Reworked server broadcast path to per-client writer channels.
 - Upgraded CI workflow in `.github/workflows/rust-ci.yml`:
   - Added `cargo check` (default features).
   - Added `cargo check --all-features --future-incompat-report`.
@@ -29,6 +36,8 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Reworked `G-ENGINE-SETUP.md` to reflect implemented vs planned capabilities.
 - Reframed `IMPLEMENTATION-SUMMARY.md` as an archival summary aligned with current code.
 - Added verification checklist section to `SCENE_ENHANCEMENT.md`.
+- Merged completed docs into `docs/2026-upgrade-status.md` and removed duplicated completed docs.
+- Removed completed docs `IMPLEMENTATION-SUMMARY.md` and `docs/documentation-completeness-audit-2026-02-23.md` from active index.
 
 ## [2026-02-23]
 

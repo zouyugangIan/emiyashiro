@@ -60,3 +60,19 @@
 
 - 文档基线统一为 Bevy `0.18`
 - 与 `docs/bevy-upgrade-regression-checklist.md` 形成可执行回归闭环
+
+## 6) 运行时调度与网络稳态
+
+- Bevy `FixedUpdate` 调度（官方 API 文档）  
+  https://docs.rs/bevy/latest/bevy/app/struct.FixedUpdate.html
+- Bevy `App::add_plugins`（官方 API 文档）  
+  https://docs.rs/bevy/latest/bevy/prelude/struct.App.html#method.add_plugins
+- Tokio `mpsc`（官方 API 文档）  
+  https://docs.rs/tokio/latest/tokio/sync/mpsc/
+
+对应落地：
+
+- 服务端运行时逻辑迁入 `FixedUpdate` 并固定 `60Hz`
+- 服务端 ECS 逻辑迁移到插件（`src/plugins/server.rs`）
+- WebSocket 广播链路改为“每连接 writer task + channel”模型，降低耦合
+- 客户端增加自动重连与心跳探活机制

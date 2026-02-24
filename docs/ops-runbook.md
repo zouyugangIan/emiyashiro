@@ -1,6 +1,6 @@
 # G-Engine Ops Runbook
 
-> Last verified: 2026-02-23  
+> Last verified: 2026-02-24  
 > Scope: local/dev and single-node staging operations for `client` + `server`.
 
 ## 1. Preconditions
@@ -41,6 +41,7 @@ cargo fmt --check
 cargo check
 cargo check --all-features --future-incompat-report
 cargo clippy --lib --all-features -- -D warnings
+cargo clippy --all-features --all-targets -- -D warnings
 cargo test --lib --all-features
 ```
 

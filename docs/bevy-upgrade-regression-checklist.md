@@ -2,6 +2,8 @@
 
 用于每次引擎升级分支（如 `upgrade/bevy-0.18`）的标准回归流程，确保“先可编译，再行为一致”。
 
+> 最近一次门禁复验：2026-02-24
+
 ## 1. 编译与静态检查
 
 - [x] `cargo fmt --check`
@@ -26,10 +28,10 @@
 
 ## 4. 联机回归
 
-- [ ] 服务端发送 `Welcome` 包
-- [ ] 客户端握手后拿到 `MyNetworkId`
-- [ ] `NetworkStatus` 按连接事件变化（`Connecting/Connected/Disconnected`）
-- [ ] 输入发送单通道（`update_game_input`）无重复上报
+- [x] 服务端发送 `Welcome` 包
+- [x] 客户端握手后拿到 `MyNetworkId`
+- [x] `NetworkStatus` 按连接事件变化（`Connecting/Connected/Disconnected`）
+- [x] 输入发送单通道（`update_game_input`）无重复上报
 - [ ] 快照插值无明显抖动
 
 ## 5. 存档回归
@@ -41,7 +43,7 @@
 
 ## 6. 性能与可运维
 
-- [ ] 进度 UI 为增量更新（非每帧销毁重建）
+- [x] 进度 UI 为增量更新（非每帧销毁重建）
 - [ ] Redis 同步为批量 + 节流 + 后台写队列
 - [ ] release 构建无高频 debug 输出噪音
 

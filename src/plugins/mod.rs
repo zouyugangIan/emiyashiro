@@ -5,6 +5,7 @@ pub mod gameplay;
 pub mod netcode;
 pub mod persistence;
 pub mod presentation;
+pub mod server;
 pub mod ui;
 
 /// Aggregated client-side plugin entrypoint.
