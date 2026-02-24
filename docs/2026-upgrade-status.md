@@ -24,7 +24,7 @@
 - `cargo clippy --all-features --all-targets -- -D warnings`
 - `cargo test --lib --all-features`
 
-测试结果：`105 passed, 0 failed`。
+测试结果：`109 passed, 0 failed`。
 
 ## 3) 架构升级完成项（本轮）
 
@@ -65,6 +65,11 @@
 - 存档治理（单路径 + 严格校验）：`已对齐`（v2 only，无 legacy 分支）。
 
 ## 5) 仍在推进的升级项
+
+当前已进入 T-001 第一阶段实现：
+
+- 客户端位置层已接入“本地预测 + 服务器误差校正”机制（deadzone / smooth / snap）。
+- 下一步是补齐量化验证（端到端延迟、校正触发率、抖动曲线）。
 
 剩余工作已统一迁移到：
 

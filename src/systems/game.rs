@@ -76,6 +76,8 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
     let player_common = (
         Transform::from_translation(GameConfig::PLAYER_START_POS),
         Player,
+        crate::systems::network::LocalPlayer,
+        crate::components::network::NetworkId(0),
         Velocity { x: 0.0, y: 0.0 },
         PlayerState::default(),
         crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),

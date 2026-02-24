@@ -29,7 +29,8 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Enforced hard checksum verification for save loading/scanning and removed checksum compatibility mode.
 - Simplified save payload decoding to `Plain JSON + Zstd` and removed Gzip compatibility branch.
 - Removed animation config legacy fallback field and standardized on explicit `playback_mode`.
-- Expanded test baseline from `94` to `105` passing tests.
+- Implemented T-001 position-layer netcode upgrade: local prediction + server reconciliation (deadzone/smooth/snap).
+- Expanded test baseline from `94` to `109` passing tests.
 - Upgraded CI workflow in `.github/workflows/rust-ci.yml`:
   - Added `cargo check` (default features).
   - Added `cargo check --all-features --future-incompat-report`.

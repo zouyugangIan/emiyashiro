@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::systems::{
     interfaces::GameSystemSet,
     network::{
-        MyNetworkId, NetworkConfig, NetworkEntityMap, NetworkReconnectState, NetworkResource,
+        ClientPredictionConfig, MyNetworkId, NetworkConfig, NetworkEntityMap,
+        NetworkReconnectState, NetworkResource, NetworkSnapshotState, apply_server_corrections,
         auto_reconnect_network, handle_network_events, interpolate_positions,
         send_heartbeat_ping_system, send_ping_system, setup_network, update_network_status,
     },
@@ -16,9 +17,11 @@ impl Plugin for NetcodePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<NetworkResource>()
             .init_resource::<NetworkConfig>()
+            .init_resource::<ClientPredictionConfig>()
             .init_resource::<NetworkReconnectState>()
             .init_resource::<NetworkEntityMap>()
             .init_resource::<MyNetworkId>()
+            .init_resource::<NetworkSnapshotState>()
             .add_systems(Startup, setup_network)
             .add_systems(
                 Update,
@@ -26,6 +29,7 @@ impl Plugin for NetcodePlugin {
                     update_network_status,
                     auto_reconnect_network,
                     handle_network_events,
+                    apply_server_corrections,
                     send_ping_system,
                     send_heartbeat_ping_system,
                     interpolate_positions,

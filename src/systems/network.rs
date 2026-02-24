@@ -338,6 +338,30 @@ pub struct NetworkEntityMap(pub HashMap<u64, Entity>);
 #[derive(Resource, Default)]
 pub struct MyNetworkId(pub Option<u64>);
 
+#[derive(Resource, Debug, Clone)]
+pub struct ClientPredictionConfig {
+    pub correction_deadzone: f32,
+    pub snap_threshold: f32,
+    pub min_correction_secs: f32,
+    pub max_correction_secs: f32,
+}
+
+impl Default for ClientPredictionConfig {
+    fn default() -> Self {
+        Self {
+            correction_deadzone: 6.0,
+            snap_threshold: 140.0,
+            min_correction_secs: 0.05,
+            max_correction_secs: 0.2,
+        }
+    }
+}
+
+#[derive(Resource, Debug, Default)]
+pub struct NetworkSnapshotState {
+    pub last_server_tick: u64,
+}
+
 #[derive(Component)]
 pub struct InterpolationState {
     pub start_pos: Vec3,
@@ -347,28 +371,72 @@ pub struct InterpolationState {
 }
 
 #[derive(Component)]
+pub struct ServerCorrectionState {
+    pub start_pos: Vec3,
+    pub target_pos: Vec3,
+    pub start_time: f32,
+    pub duration: f32,
+}
+
+#[derive(Component)]
 pub struct LocalPlayer;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum LocalCorrectionMode {
+    Noop,
+    Smooth(f32),
+    Snap,
+}
+
+fn correction_duration(error_distance: f32, config: &ClientPredictionConfig) -> f32 {
+    let normalized = (error_distance / config.snap_threshold.max(1.0)).clamp(0.0, 1.0);
+    config.min_correction_secs
+        + (config.max_correction_secs - config.min_correction_secs) * normalized
+}
+
+fn correction_mode(error_distance: f32, config: &ClientPredictionConfig) -> LocalCorrectionMode {
+    if error_distance <= config.correction_deadzone {
+        LocalCorrectionMode::Noop
+    } else if error_distance >= config.snap_threshold {
+        LocalCorrectionMode::Snap
+    } else {
+        LocalCorrectionMode::Smooth(correction_duration(error_distance, config))
+    }
+}
+
+fn smoothstep(t: f32) -> f32 {
+    let x = t.clamp(0.0, 1.0);
+    x * x * (3.0 - 2.0 * x)
+}
 
 #[derive(SystemParam)]
 pub struct NetworkEventParams<'w, 's> {
     net: ResMut<'w, NetworkResource>,
     entity_map: ResMut<'w, NetworkEntityMap>,
     my_id: ResMut<'w, MyNetworkId>,
-    query: Query<
+    prediction_config: Res<'w, ClientPredictionConfig>,
+    snapshot_state: ResMut<'w, NetworkSnapshotState>,
+    remote_query: Query<
         'w,
         's,
         (
             &'static mut Transform,
             Option<&'static mut InterpolationState>,
         ),
+        Without<LocalPlayer>,
     >,
     local_player_query: Query<
         'w,
         's,
-        (Entity, &'static mut crate::components::network::NetworkId),
+        (
+            Entity,
+            &'static mut Transform,
+            &'static mut crate::components::network::NetworkId,
+            Option<&'static mut ServerCorrectionState>,
+        ),
         With<LocalPlayer>,
     >,
-    asset_server: Res<'w, AssetServer>,
+    asset_server: Option<Res<'w, AssetServer>>,
     time: Res<'w, Time>,
 }
 
@@ -384,20 +452,75 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                 info!("Server says: {} (My ID: {})", message, id);
                 params.my_id.0 = Some(id);
 
-                if let Ok((entity, mut net_id)) = params.local_player_query.single_mut() {
+                if let Ok((entity, _, mut net_id, _)) = params.local_player_query.single_mut() {
                     net_id.0 = id;
+                    params
+                        .entity_map
+                        .0
+                        .retain(|_, mapped_entity| *mapped_entity != entity);
                     params.entity_map.0.insert(id, entity);
                     info!("Updated local player NetworkId to {}", id);
                 }
             }
-            GamePacket::WorldSnapshot { tick: _, players } => {
+            GamePacket::WorldSnapshot { tick, players } => {
+                if tick <= params.snapshot_state.last_server_tick {
+                    continue;
+                }
+                params.snapshot_state.last_server_tick = tick;
+
                 let current_time = params.time.elapsed_secs();
 
                 for player_state in players {
                     let is_local = Some(player_state.id) == params.my_id.0;
 
-                    if let Some(&entity) = params.entity_map.0.get(&player_state.id) {
-                        if let Ok((transform, interp_state)) = params.query.get_mut(entity) {
+                    if is_local {
+                        if let Ok((entity, mut local_transform, mut net_id, correction_state)) =
+                            params.local_player_query.single_mut()
+                        {
+                            net_id.0 = player_state.id;
+                            params
+                                .entity_map
+                                .0
+                                .retain(|_, mapped_entity| *mapped_entity != entity);
+                            params.entity_map.0.insert(player_state.id, entity);
+
+                            let target_position = Vec3::new(
+                                player_state.position.x,
+                                player_state.position.y,
+                                local_transform.translation.z,
+                            );
+                            let error_distance =
+                                local_transform.translation.distance(target_position);
+                            match correction_mode(error_distance, &params.prediction_config) {
+                                LocalCorrectionMode::Noop => {
+                                    commands.entity(entity).remove::<ServerCorrectionState>();
+                                }
+                                LocalCorrectionMode::Snap => {
+                                    local_transform.translation = target_position;
+                                    commands.entity(entity).remove::<ServerCorrectionState>();
+                                }
+                                LocalCorrectionMode::Smooth(duration) => {
+                                    if let Some(mut correction) = correction_state {
+                                        correction.start_pos = local_transform.translation;
+                                        correction.target_pos = target_position;
+                                        correction.start_time = current_time;
+                                        correction.duration = duration;
+                                    } else {
+                                        commands.entity(entity).insert(ServerCorrectionState {
+                                            start_pos: local_transform.translation,
+                                            target_pos: target_position,
+                                            start_time: current_time,
+                                            duration,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    if let Some(entity) = params.entity_map.0.get(&player_state.id).copied() {
+                        if let Ok((transform, interp_state)) = params.remote_query.get_mut(entity) {
                             if let Some(mut interp) = interp_state {
                                 interp.start_pos = transform.translation;
                                 interp.target_pos = player_state.position;
@@ -411,35 +534,61 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                                     duration: 0.1,
                                 });
                             }
+                            continue;
                         }
-                    } else if !is_local {
-                        let entity = commands
-                            .spawn((
-                                Sprite {
-                                    image: params
-                                        .asset_server
-                                        .load("images/characters/shirou_idle1.jpg"),
-                                    ..default()
-                                },
-                                Transform::from_translation(player_state.position)
-                                    .with_scale(Vec3::splat(0.5)),
-                                crate::components::network::NetworkId(player_state.id),
-                                InterpolationState {
-                                    start_pos: player_state.position,
-                                    target_pos: player_state.position,
-                                    start_time: current_time,
-                                    duration: 0.1,
-                                },
-                            ))
-                            .id();
-                        params.entity_map.0.insert(player_state.id, entity);
+                        params.entity_map.0.remove(&player_state.id);
                     }
+
+                    let sprite_image = params
+                        .asset_server
+                        .as_ref()
+                        .map(|asset_server| asset_server.load("images/characters/shirou_idle1.jpg"))
+                        .unwrap_or_default();
+
+                    let entity = commands
+                        .spawn((
+                            Sprite {
+                                image: sprite_image,
+                                ..default()
+                            },
+                            Transform::from_translation(player_state.position)
+                                .with_scale(Vec3::splat(0.5)),
+                            crate::components::network::NetworkId(player_state.id),
+                            InterpolationState {
+                                start_pos: player_state.position,
+                                target_pos: player_state.position,
+                                start_time: current_time,
+                                duration: 0.1,
+                            },
+                        ))
+                        .id();
+                    params.entity_map.0.insert(player_state.id, entity);
                 }
             }
             GamePacket::Pong(id) => {
                 info!("Pong from server: {}", id);
             }
             _ => {}
+        }
+    }
+}
+
+pub fn apply_server_corrections(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Transform, &ServerCorrectionState), With<LocalPlayer>>,
+    time: Res<Time>,
+) {
+    let current_time = time.elapsed_secs();
+
+    for (entity, mut transform, correction) in query.iter_mut() {
+        let elapsed = current_time - correction.start_time;
+        let t = (elapsed / correction.duration).clamp(0.0, 1.0);
+        transform.translation = correction
+            .start_pos
+            .lerp(correction.target_pos, smoothstep(t));
+
+        if t >= 1.0 {
+            commands.entity(entity).remove::<ServerCorrectionState>();
         }
     }
 }
@@ -473,5 +622,148 @@ pub fn send_ping_system(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResour
     {
         let _ = tx.send(PlayerAction::Ping(0));
         info!("Sent Ping");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::network::NetworkId;
+
+    fn test_player_state(id: u64, position: Vec3) -> crate::protocol::PlayerState {
+        crate::protocol::PlayerState {
+            id,
+            position,
+            velocity: Vec3::ZERO,
+            facing_right: true,
+            animation_state: "Idle".to_string(),
+        }
+    }
+
+    fn setup_network_event_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<NetworkResource>()
+            .init_resource::<NetworkEntityMap>()
+            .init_resource::<MyNetworkId>()
+            .init_resource::<ClientPredictionConfig>()
+            .init_resource::<NetworkSnapshotState>()
+            .add_systems(Update, handle_network_events);
+        app
+    }
+
+    #[test]
+    fn correction_mode_respects_thresholds() {
+        let config = ClientPredictionConfig::default();
+
+        assert_eq!(
+            correction_mode(config.correction_deadzone * 0.5, &config),
+            LocalCorrectionMode::Noop
+        );
+        assert_eq!(
+            correction_mode(config.snap_threshold + 1.0, &config),
+            LocalCorrectionMode::Snap
+        );
+        assert!(
+            matches!(
+                correction_mode(config.correction_deadzone + 10.0, &config),
+                LocalCorrectionMode::Smooth(_)
+            ),
+            "medium error should use smooth reconciliation"
+        );
+    }
+
+    #[test]
+    fn local_snapshot_creates_smooth_correction_for_medium_error() {
+        let mut app = setup_network_event_app();
+        let local_entity = app.world_mut().spawn((
+            LocalPlayer,
+            NetworkId(0),
+            Transform::from_xyz(0.0, 0.0, 1.0),
+        ));
+        let local_entity = local_entity.id();
+        app.world_mut().resource_mut::<MyNetworkId>().0 = Some(7);
+
+        let snapshot = GamePacket::WorldSnapshot {
+            tick: 1,
+            players: vec![test_player_state(7, Vec3::new(40.0, 0.0, 0.0))],
+        };
+
+        let packet_rx = app.world().resource::<NetworkResource>().packet_rx.clone();
+        if let Ok(mut queue) = packet_rx.lock() {
+            queue.push_back(snapshot);
+        }
+
+        app.update();
+
+        let entity_ref = app.world().entity(local_entity);
+        let correction = entity_ref
+            .get::<ServerCorrectionState>()
+            .expect("local player should enter smooth correction");
+        assert_eq!(correction.target_pos, Vec3::new(40.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn local_snapshot_snaps_when_error_is_large() {
+        let mut app = setup_network_event_app();
+        let local_entity = app.world_mut().spawn((
+            LocalPlayer,
+            NetworkId(0),
+            Transform::from_xyz(0.0, 0.0, 1.0),
+        ));
+        let local_entity = local_entity.id();
+        app.world_mut().resource_mut::<MyNetworkId>().0 = Some(9);
+
+        let snapshot = GamePacket::WorldSnapshot {
+            tick: 1,
+            players: vec![test_player_state(9, Vec3::new(1000.0, 0.0, 0.0))],
+        };
+
+        let packet_rx = app.world().resource::<NetworkResource>().packet_rx.clone();
+        if let Ok(mut queue) = packet_rx.lock() {
+            queue.push_back(snapshot);
+        }
+
+        app.update();
+
+        let entity_ref = app.world().entity(local_entity);
+        assert!(
+            !entity_ref.contains::<ServerCorrectionState>(),
+            "large error should snap directly without correction component"
+        );
+        let transform = entity_ref
+            .get::<Transform>()
+            .expect("local player transform should exist");
+        assert_eq!(transform.translation, Vec3::new(1000.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn apply_server_corrections_completes_and_removes_component() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, apply_server_corrections);
+        let entity = app.world_mut().spawn((
+            LocalPlayer,
+            Transform::from_xyz(0.0, 0.0, 1.0),
+            ServerCorrectionState {
+                start_pos: Vec3::new(0.0, 0.0, 1.0),
+                target_pos: Vec3::new(50.0, 0.0, 1.0),
+                start_time: -1.0,
+                duration: 0.2,
+            },
+        ));
+        let entity = entity.id();
+
+        app.update();
+
+        let entity_ref = app.world().entity(entity);
+        assert!(
+            !entity_ref.contains::<ServerCorrectionState>(),
+            "completed correction should clean up component"
+        );
+        let transform = entity_ref
+            .get::<Transform>()
+            .expect("entity should still have transform");
+        assert_eq!(transform.translation, Vec3::new(50.0, 0.0, 1.0));
     }
 }
