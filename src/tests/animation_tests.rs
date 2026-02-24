@@ -18,7 +18,7 @@ mod tests {
     }
 
     #[test]
-    fn test_legacy_frame_arrays_still_available() {
+    fn test_frame_arrays_are_available() {
         assert!(!crate::asset_paths::SHIROU_ANIMATION_FRAMES.is_empty());
         assert!(!crate::asset_paths::SAKURA_ANIMATION_FRAMES.is_empty());
     }

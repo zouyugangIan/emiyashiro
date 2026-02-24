@@ -9,8 +9,9 @@
 
 - `docs/documentation-completeness-audit-2026-02-23.md`
 - `IMPLEMENTATION-SUMMARY.md`
+- `docs/2026-bevy-upgrade-assessment-zh.md`
 
-上述两份文档已完成使命，已从主文档集合中移除，避免状态分裂与重复维护。
+上述文档已完成使命，已从主文档集合中移除，避免状态分裂与重复维护。
 
 ## 2) 质量门禁状态（2026-02-24 实测）
 
@@ -23,7 +24,7 @@
 - `cargo clippy --all-features --all-targets -- -D warnings`
 - `cargo test --lib --all-features`
 
-测试结果：`104 passed, 0 failed`。
+测试结果：`105 passed, 0 failed`。
 
 ## 3) 架构升级完成项（本轮）
 
@@ -48,12 +49,20 @@
 - 服务端广播改为“每连接独立 writer task + 发送通道”模型。
 - 避免旧实现中同包重复发送与 sink 写入路径耦合。
 
+### 3.5 存档链路零 legacy 化
+
+- 删除 `SaveData` 与 legacy 迁移/兼容代码路径。
+- 存档读取严格限定为 `SaveFileData v2`，旧 schema 直接拒绝。
+- 校验和策略统一为 `BLAKE3`，校验失败即硬失败（无兼容模式）。
+- 文件解码统一为 `Plain JSON + Zstd`，移除 Gzip 兼容路径。
+
 ## 4) 与 2026 最佳实践对齐结论
 
 - 插件化与职责分层：`已对齐`（客户端 + 服务端双入口收敛）。
 - 固定步长核心逻辑：`已对齐`（服务端 60Hz 固定 tick）。
-- 网络生命周期管理：`部分对齐`（已具备握手、状态机、重连、心跳；预测校正待完成）。
+- 网络生命周期管理：`部分对齐`（已具备握手、状态机、重连、心跳；预测校正与会话恢复待完成）。
 - 文档与门禁一致性：`已对齐`（门禁结果已刷新，避免“文档通过但代码退化”）。
+- 存档治理（单路径 + 严格校验）：`已对齐`（v2 only，无 legacy 分支）。
 
 ## 5) 仍在推进的升级项
 
@@ -68,3 +77,4 @@
 
 - `docs/bevy-upgrade-regression-checklist.md`：已完成（全部勾选）。
 - `docs/ops-runbook.md` Release Readiness：已完成（按当前执行环境验收）。
+- 存档系统作业：已完成（零 legacy、严格校验、测试覆盖）。

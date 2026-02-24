@@ -37,9 +37,9 @@
 ## 5. 存档回归
 
 - [x] 统一写入 `SaveFileData v2`
-- [x] legacy `SaveData` 读取后自动迁移到 v2
-- [x] legacy `CompleteGameState` 读取后自动迁移到 v2
-- [x] 校验和验证与兼容模式符合预期
+- [x] 仅接受 `SaveFileData v2`（旧 schema 直接拒绝）
+- [x] 校验和不匹配时硬失败（无兼容模式）
+- [x] v2 schema 回归测试覆盖保存/加载/损坏校验
 
 ## 6. 性能与可运维
 

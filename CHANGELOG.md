@@ -25,7 +25,11 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Added client auto-reconnect and heartbeat ping systems in `src/systems/network.rs`.
 - Reworked server broadcast path to per-client writer channels.
 - Replaced runtime stdout debug prints with structured logs and throttled Redis sync error logs.
-- Expanded test baseline from `94` to `104` passing tests.
+- Removed legacy save pipeline (`SaveData`/migration/compatibility paths) in favor of strict `SaveFileData v2` only.
+- Enforced hard checksum verification for save loading/scanning and removed checksum compatibility mode.
+- Simplified save payload decoding to `Plain JSON + Zstd` and removed Gzip compatibility branch.
+- Removed animation config legacy fallback field and standardized on explicit `playback_mode`.
+- Expanded test baseline from `94` to `105` passing tests.
 - Upgraded CI workflow in `.github/workflows/rust-ci.yml`:
   - Added `cargo check` (default features).
   - Added `cargo check --all-features --future-incompat-report`.
@@ -42,6 +46,8 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Merged completed docs into `docs/2026-upgrade-status.md` and removed duplicated completed docs.
 - Removed completed docs `IMPLEMENTATION-SUMMARY.md` and `docs/documentation-completeness-audit-2026-02-23.md` from active index.
 - Completed and checked all items in `docs/bevy-upgrade-regression-checklist.md`.
+- Merged and removed completed assessment doc `docs/2026-bevy-upgrade-assessment-zh.md`.
+- Updated save-related docs to reflect zero-legacy policy and strict checksum behavior.
 
 ## [2026-02-23]
 

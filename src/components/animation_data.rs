@@ -8,10 +8,6 @@ fn default_frame_duration() -> f32 {
     0.1
 }
 
-fn default_looping() -> bool {
-    true
-}
-
 fn default_speed_reference() -> f32 {
     150.0
 }
@@ -36,12 +32,8 @@ pub struct AnimationClipData {
     /// Duration of each frame in seconds.
     #[serde(default = "default_frame_duration")]
     pub frame_duration: f32,
-    /// Legacy field. Prefer `playback_mode`.
-    #[serde(default = "default_looping")]
-    pub looping: bool,
-    /// Explicit playback mode. If absent, falls back to `looping` for old configs.
-    #[serde(default)]
-    pub playback_mode: Option<PlaybackMode>,
+    /// Explicit playback mode for this clip.
+    pub playback_mode: PlaybackMode,
     /// Whether to scale playback speed based on character horizontal velocity.
     #[serde(default)]
     pub speed_scale_by_velocity: bool,
@@ -55,11 +47,7 @@ pub struct AnimationClipData {
 
 impl AnimationClipData {
     pub fn playback_mode(&self) -> PlaybackMode {
-        self.playback_mode.unwrap_or(if self.looping {
-            PlaybackMode::Loop
-        } else {
-            PlaybackMode::Once
-        })
+        self.playback_mode
     }
 
     pub fn frame_duration_for_speed(&self, horizontal_speed_abs: f32) -> f32 {

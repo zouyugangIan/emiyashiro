@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::{resources::*, states::*};
 
@@ -19,54 +19,59 @@ pub fn save_game(
     character_selection: Res<CharacterSelection>,
     mut save_manager: ResMut<SaveManager>,
 ) {
-    let summary = SaveData {
-        player_name: AUTOSAVE_NAME.to_string(),
-        selected_character: character_selection.selected_character.clone(),
-        best_distance: game_stats.distance_traveled.max(
-            save_manager
-                .current_save
-                .as_ref()
-                .map(|save| save.best_distance)
-                .unwrap_or(0.0),
-        ),
-        total_jumps: game_stats.jump_count
-            + save_manager
-                .current_save
-                .as_ref()
-                .map(|save| save.total_jumps)
-                .unwrap_or(0),
-        total_play_time: game_stats.play_time
-            + save_manager
-                .current_save
-                .as_ref()
-                .map(|save| save.total_play_time)
-                .unwrap_or(0.0),
-        save_time: chrono::Utc::now(),
-    };
+    let previous_state = save_manager
+        .current_save
+        .as_ref()
+        .map(|save| &save.game_state);
+    let save_timestamp = chrono::Utc::now();
+    let best_distance = game_stats.distance_traveled.max(
+        previous_state
+            .map(|state| state.distance_traveled)
+            .unwrap_or(0.0),
+    );
+    let total_jumps =
+        game_stats.jump_count + previous_state.map(|state| state.jump_count).unwrap_or(0);
+    let total_play_time =
+        game_stats.play_time + previous_state.map(|state| state.play_time).unwrap_or(0.0);
+
+    let mut metadata = save_manager
+        .current_save
+        .as_ref()
+        .map(|save| save.metadata.clone())
+        .unwrap_or_else(|| SaveFileMetadata {
+            name: AUTOSAVE_NAME.to_string(),
+            score: 0,
+            distance: 0.0,
+            play_time: 0.0,
+            save_timestamp,
+            file_path: String::new(),
+            selected_character: character_selection.selected_character.clone(),
+        });
+
+    metadata.file_path = save_manager.save_file_path.clone();
+    metadata.selected_character = character_selection.selected_character.clone();
+    metadata.distance = best_distance;
+    metadata.play_time = total_play_time;
+    metadata.save_timestamp = save_timestamp;
 
     let mut state = CompleteGameState::default();
-    state.selected_character = summary.selected_character.clone();
-    state.distance_traveled = summary.best_distance;
-    state.jump_count = summary.total_jumps;
-    state.play_time = summary.total_play_time;
+    state.selected_character = metadata.selected_character.clone();
+    state.distance_traveled = best_distance;
+    state.jump_count = total_jumps;
+    state.play_time = total_play_time;
     state.score = (state.distance_traveled * 10.0) as u32 + state.jump_count * 50;
-    state.save_timestamp = summary.save_time;
+    state.save_timestamp = save_timestamp;
 
     let save_path = PathBuf::from(&save_manager.save_file_path);
-    let metadata = SaveFileMetadata {
-        name: summary.player_name.clone(),
-        score: state.score,
-        distance: state.distance_traveled,
-        play_time: state.play_time,
-        save_timestamp: state.save_timestamp,
-        file_path: save_path.to_string_lossy().to_string(),
-        selected_character: state.selected_character.clone(),
-    };
+    metadata.score = state.score;
+    metadata.distance = state.distance_traveled;
+    metadata.play_time = state.play_time;
+    metadata.file_path = save_path.to_string_lossy().to_string();
 
     let save_data = SaveFileData::new(metadata, state);
     match write_v2_save(&save_path, &save_data) {
         Ok(()) => {
-            save_manager.current_save = Some(summary);
+            save_manager.current_save = Some(save_data);
             crate::debug_log!("Game saved (SaveFileData v2)");
         }
         Err(error) => {
@@ -75,7 +80,7 @@ pub fn save_game(
     }
 }
 
-/// 加载游戏数据（兼容 legacy，只读导入后自动迁移到 v2）。
+/// 加载游戏数据（仅支持 SaveFileData v2）。
 pub fn load_game(
     mut save_manager: ResMut<SaveManager>,
     mut character_selection: ResMut<CharacterSelection>,
@@ -97,99 +102,30 @@ pub fn load_game(
         }
     };
 
-    if let Ok(v2_save) = serde_json::from_str::<SaveFileData>(&json_data) {
-        character_selection.selected_character = v2_save.game_state.selected_character.clone();
-        save_manager.current_save = Some(summary_from_v2(&v2_save));
-        crate::debug_log!("Loaded v2 save: {}", save_path.display());
-        return;
-    }
-
-    if let Ok(legacy_save) = serde_json::from_str::<SaveData>(&json_data) {
-        character_selection.selected_character = legacy_save.selected_character.clone();
-        save_manager.current_save = Some(legacy_save.clone());
-        migrate_legacy_save_data(&save_path, legacy_save);
-        return;
-    }
-
-    if let Ok(legacy_state) = serde_json::from_str::<CompleteGameState>(&json_data) {
-        character_selection.selected_character = legacy_state.selected_character.clone();
-        save_manager.current_save =
-            Some(summary_from_state(AUTOSAVE_NAME.to_string(), &legacy_state));
-        migrate_legacy_state(&save_path, legacy_state);
-        return;
-    }
-
-    crate::debug_log!("Unknown save format: {}", save_path.display());
-}
-
-fn summary_from_v2(v2_save: &SaveFileData) -> SaveData {
-    summary_from_state(v2_save.metadata.name.clone(), &v2_save.game_state)
-}
-
-fn summary_from_state(name: String, state: &CompleteGameState) -> SaveData {
-    SaveData {
-        player_name: name,
-        selected_character: state.selected_character.clone(),
-        best_distance: state.distance_traveled,
-        total_jumps: state.jump_count,
-        total_play_time: state.play_time,
-        save_time: state.save_timestamp,
-    }
-}
-
-fn migrate_legacy_save_data(save_path: &PathBuf, legacy_save: SaveData) {
-    let mut state = CompleteGameState::default();
-    state.selected_character = legacy_save.selected_character.clone();
-    state.distance_traveled = legacy_save.best_distance;
-    state.jump_count = legacy_save.total_jumps;
-    state.play_time = legacy_save.total_play_time;
-    state.score = (state.distance_traveled * 10.0) as u32 + state.jump_count * 50;
-    state.save_timestamp = legacy_save.save_time;
-
-    let metadata = SaveFileMetadata {
-        name: legacy_save.player_name.clone(),
-        score: state.score,
-        distance: state.distance_traveled,
-        play_time: state.play_time,
-        save_timestamp: state.save_timestamp,
-        file_path: save_path.to_string_lossy().to_string(),
-        selected_character: state.selected_character.clone(),
+    let mut v2_save = match serde_json::from_str::<SaveFileData>(&json_data) {
+        Ok(save) => save,
+        Err(error) => {
+            crate::debug_log!(
+                "Unsupported save format at {}: {}",
+                save_path.display(),
+                error
+            );
+            return;
+        }
     };
 
-    let v2_save = SaveFileData::new(metadata, state);
-    match write_v2_save(save_path, &v2_save) {
-        Ok(()) => crate::debug_log!("Migrated legacy SaveData to v2: {}", save_path.display()),
-
-        Err(error) => crate::debug_log!("Legacy SaveData migration failed: {}", error),
+    if !v2_save.verify_checksum() {
+        crate::debug_log!("Checksum verification failed for {}", save_path.display());
+        return;
     }
+
+    v2_save.metadata.file_path = save_path.to_string_lossy().to_string();
+    character_selection.selected_character = v2_save.game_state.selected_character.clone();
+    save_manager.current_save = Some(v2_save);
+    crate::debug_log!("Loaded v2 save: {}", save_path.display());
 }
 
-fn migrate_legacy_state(save_path: &PathBuf, legacy_state: CompleteGameState) {
-    let metadata = SaveFileMetadata {
-        name: save_path
-            .file_stem()
-            .and_then(|value| value.to_str())
-            .unwrap_or(AUTOSAVE_NAME)
-            .to_string(),
-        score: legacy_state.score,
-        distance: legacy_state.distance_traveled,
-        play_time: legacy_state.play_time,
-        save_timestamp: legacy_state.save_timestamp,
-        file_path: save_path.to_string_lossy().to_string(),
-        selected_character: legacy_state.selected_character.clone(),
-    };
-
-    let v2_save = SaveFileData::new(metadata, legacy_state);
-    match write_v2_save(save_path, &v2_save) {
-        Ok(()) => crate::debug_log!(
-            "Migrated legacy CompleteGameState to v2: {}",
-            save_path.display()
-        ),
-        Err(error) => crate::debug_log!("Legacy CompleteGameState migration failed: {}", error),
-    }
-}
-
-fn write_v2_save(save_path: &PathBuf, save_data: &SaveFileData) -> Result<(), String> {
+fn write_v2_save(save_path: &Path, save_data: &SaveFileData) -> Result<(), String> {
     if let Some(parent) = save_path.parent()
         && !parent.as_os_str().is_empty()
     {
@@ -197,7 +133,8 @@ fn write_v2_save(save_path: &PathBuf, save_data: &SaveFileData) -> Result<(), St
     }
 
     let json_data = serde_json::to_string_pretty(save_data).map_err(|error| error.to_string())?;
-    fs::write(save_path, json_data).map_err(|error| error.to_string())
+    crate::systems::shared_utils::atomic_write_file(save_path, json_data.as_bytes())
+        .map_err(|error| error.to_string())
 }
 
 /// 处理存档按钮点击

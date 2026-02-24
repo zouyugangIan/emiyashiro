@@ -5485,7 +5485,6 @@ dependencies = [
  "bincode",
  "blake3",
  "chrono",
- "flate2",
  "futures-lite 2.6.1",
  "futures-util",
  "gloo-net",

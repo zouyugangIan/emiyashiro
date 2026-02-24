@@ -4,15 +4,13 @@
         // core sheet row 0 (4x2 atlas)
         frames: [0, 1, 2, 3],
         frame_duration: 0.15,
-        looping: true,
-        playback_mode: PingPong,
+        playback_mode: "PingPong",
     ),
     Running: (
         // run sheet row 0 (5x1 atlas)
         frames: [0, 1, 2, 3, 4],
         frame_duration: 0.09,
-        looping: true,
-        playback_mode: Loop,
+        playback_mode: "Loop",
         speed_scale_by_velocity: true,
         speed_reference: 180.0,
         min_frame_duration: 0.05,
@@ -21,28 +19,24 @@
         // attack sheet row 0 (4x1 atlas)
         frames: [0, 1, 2, 3],
         frame_duration: 0.08,
-        looping: false,
-        playback_mode: Once,
+        playback_mode: "Once",
     ),
     Jumping: (
         // core sheet row 1 (jump start -> apex -> descend)
         frames: [4, 5, 6],
         frame_duration: 0.12,
-        looping: false,
-        playback_mode: Once,
+        playback_mode: "Once",
     ),
     Crouching: (
         // keep a stable crouch frame
         frames: [7, 7],
         frame_duration: 0.2,
-        looping: true,
-        playback_mode: Loop,
+        playback_mode: "Loop",
     ),
     Landing: (
         // short landing settle
         frames: [7, 0],
         frame_duration: 0.1,
-        looping: false,
-        playback_mode: Once,
+        playback_mode: "Once",
     )
 }

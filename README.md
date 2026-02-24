@@ -66,7 +66,6 @@ src/
 
 - `G-ENGINE-SETUP.md`: 联机与基础设施部署指南
 - `SCENE_ENHANCEMENT.md`: 场景视差与装饰系统说明
-- `docs/2026-bevy-upgrade-assessment-zh.md`: 2026 全面评估与升级蓝图
 - `docs/2026-best-practice-sources.md`: 本次互联网最佳实践来源清单
 - `docs/2026-upgrade-status.md`: 2026 升级状态总览（文档完成状态 SSOT）
 - `docs/2026-architecture-upgrade-tasks.md`: 架构升级任务排期与验收标准

@@ -306,47 +306,25 @@ fn process_save_file(
     let file_data = fs::read(entry.path())?;
     let json_data = crate::systems::shared_utils::decode_file_payload(&file_data)?;
 
-    // 尝试新格式（SaveFileData with metadata and checksum）
-    if let Ok(save_file_data) = serde_json::from_str::<SaveFileData>(&json_data) {
-        // 验证校验和
-        if !save_file_data.verify_checksum() {
-            crate::debug_log!(
-                "Checksum mismatch for {}, loading anyway",
-                entry.path().display()
-            );
+    let save_file_data = match serde_json::from_str::<SaveFileData>(&json_data) {
+        Ok(data) => data,
+        Err(_) => {
+            crate::debug_log!("Unsupported save schema: {}", entry.path().display());
+            return Ok(false);
         }
+    };
 
-        let mut metadata = save_file_data.metadata;
-        metadata.file_path = entry.path().to_string_lossy().to_string();
-
-        save_file_manager.save_files.push(metadata);
-        crate::debug_log!("Loaded save in v2 format: {}", entry.path().display());
-        return Ok(true);
+    if !save_file_data.verify_checksum() {
+        crate::debug_log!("Checksum mismatch: {}", entry.path().display());
+        return Ok(false);
     }
 
-    // 尝试旧格式（直接是 CompleteGameState）
-    if let Ok(state) = serde_json::from_str::<CompleteGameState>(&json_data) {
-        let file_name_owned = entry.file_name().to_string_lossy().to_string();
-        let save_name = file_name_owned.trim_end_matches(".json").to_string();
+    let mut metadata = save_file_data.metadata;
+    metadata.file_path = entry.path().to_string_lossy().to_string();
 
-        let metadata = SaveFileMetadata {
-            name: save_name,
-            score: state.score,
-            distance: state.distance_traveled,
-            play_time: state.play_time,
-            save_timestamp: state.save_timestamp,
-            file_path: entry.path().to_string_lossy().to_string(),
-            selected_character: state.selected_character.clone(),
-        };
-
-        save_file_manager.save_files.push(metadata);
-        crate::debug_log!("Detected legacy save format: {}", entry.path().display());
-        return Ok(true);
-    }
-
-    // 文件无法解析
-    crate::debug_log!("Corrupted save file: {}", entry.path().display());
-    Ok(false)
+    save_file_manager.save_files.push(metadata);
+    crate::debug_log!("Loaded save in v2 format: {}", entry.path().display());
+    Ok(true)
 }
 
 /// 删除存档文件

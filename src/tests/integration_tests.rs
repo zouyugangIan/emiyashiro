@@ -147,26 +147,30 @@ mod tests {
     }
 
     #[test]
-    fn test_save_data_serialization() {
-        let save_data = crate::resources::SaveData {
-            player_name: "Test Player".to_string(),
+    fn test_save_file_data_serialization() {
+        let metadata = SaveFileMetadata {
+            name: "Test Player".to_string(),
+            score: 314,
+            distance: 1000.0,
+            play_time: 300.0,
+            save_timestamp: chrono::Utc::now(),
+            file_path: "saves/test.json".to_string(),
             selected_character: CharacterType::Shirou2,
-            best_distance: 1000.0,
-            total_jumps: 50,
-            total_play_time: 300.0,
-            save_time: chrono::Utc::now(),
         };
+        let save_data = SaveFileData::new(metadata, CompleteGameState::default());
 
-        // Test serialization
         let json = serde_json::to_string(&save_data).unwrap();
         assert!(json.contains("Test Player"));
         assert!(json.contains("Shirou2"));
+        assert!(json.contains("\"version\":\"2.0\""));
 
-        // Test deserialization
-        let deserialized: crate::resources::SaveData = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.player_name, "Test Player");
-        assert_eq!(deserialized.selected_character, CharacterType::Shirou2);
-        assert_eq!(deserialized.best_distance, 1000.0);
+        let deserialized: SaveFileData = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.metadata.name, "Test Player");
+        assert_eq!(
+            deserialized.metadata.selected_character,
+            CharacterType::Shirou2
+        );
+        assert!(deserialized.verify_checksum());
     }
 
     // 统一存档系统集成测试

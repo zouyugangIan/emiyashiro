@@ -79,14 +79,20 @@ mod tests {
     }
 
     #[test]
-    fn test_save_data_default() {
-        let save_data = crate::resources::SaveData::default();
+    fn test_save_file_data_uses_v2_schema() {
+        let metadata = SaveFileMetadata {
+            name: "schema-check".to_string(),
+            score: 0,
+            distance: 0.0,
+            play_time: 0.0,
+            save_timestamp: chrono::Utc::now(),
+            file_path: "unused.json".to_string(),
+            selected_character: CharacterType::Shirou1,
+        };
+        let save_data = SaveFileData::new(metadata, CompleteGameState::default());
 
-        assert_eq!(save_data.player_name, "DefaultSave");
-        assert_eq!(save_data.selected_character, CharacterType::Shirou1);
-        assert_eq!(save_data.best_distance, 0.0);
-        assert_eq!(save_data.total_jumps, 0);
-        assert_eq!(save_data.total_play_time, 0.0);
+        assert_eq!(save_data.version, "2.0");
+        assert!(save_data.verify_checksum());
     }
 
     #[test]
@@ -131,22 +137,23 @@ mod tests {
     }
 
     #[test]
-    fn test_load_game_migrates_legacy_save_data_to_v2() {
+    fn test_load_game_rejects_deprecated_save_schema() {
         let temp_path = std::env::temp_dir().join(format!(
-            "emiyashiro-legacy-save-{}.json",
+            "emiyashiro-deprecated-save-{}.json",
             uuid::Uuid::new_v4()
         ));
 
-        let legacy = SaveData {
-            player_name: "LegacyPlayer".to_string(),
-            selected_character: CharacterType::Shirou2,
-            best_distance: 888.0,
-            total_jumps: 99,
-            total_play_time: 123.0,
-            save_time: chrono::Utc::now(),
-        };
-        let legacy_json = serde_json::to_string_pretty(&legacy).expect("serialize legacy save");
-        fs::write(&temp_path, legacy_json.as_bytes()).expect("write legacy save");
+        let deprecated_json = serde_json::json!({
+            "player_name": "DeprecatedPlayer",
+            "selected_character": "Shirou2",
+            "best_distance": 888.0,
+            "total_jumps": 99,
+            "total_play_time": 123.0,
+            "save_time": chrono::Utc::now(),
+        });
+        let deprecated_json =
+            serde_json::to_string_pretty(&deprecated_json).expect("serialize json");
+        fs::write(&temp_path, deprecated_json.as_bytes()).expect("write deprecated save");
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -159,20 +166,13 @@ mod tests {
 
         app.update();
 
-        let migrated_json = fs::read_to_string(&temp_path).expect("migrated save should exist");
-        let v2_save: SaveFileData =
-            serde_json::from_str(&migrated_json).expect("legacy save should be migrated to v2");
-
-        assert_eq!(v2_save.version, "2.0");
-        assert_eq!(v2_save.metadata.name, "LegacyPlayer");
-        assert_eq!(
-            v2_save.game_state.selected_character,
-            CharacterType::Shirou2
+        let save_manager = app.world().resource::<SaveManager>();
+        assert!(
+            save_manager.current_save.is_none(),
+            "deprecated save schema must be rejected"
         );
-        assert_eq!(v2_save.game_state.distance_traveled, 888.0);
-
         let loaded_selection = app.world().resource::<CharacterSelection>();
-        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou2);
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou1);
 
         let _ = fs::remove_file(temp_path);
     }
@@ -1349,22 +1349,22 @@ mod tests {
     }
 
     #[test]
-    fn test_load_game_migrates_legacy_complete_state_to_v2() {
+    fn test_load_game_rejects_state_only_schema() {
         let temp_path = std::env::temp_dir().join(format!(
-            "emiyashiro-legacy-state-{}.json",
+            "emiyashiro-state-only-{}.json",
             uuid::Uuid::new_v4()
         ));
 
-        let legacy_state = CompleteGameState {
+        let state_only_schema = CompleteGameState {
             selected_character: CharacterType::Shirou2,
             distance_traveled: 456.0,
             jump_count: 12,
             score: 987,
             ..Default::default()
         };
-        let legacy_json =
-            serde_json::to_string_pretty(&legacy_state).expect("serialize legacy state");
-        fs::write(&temp_path, legacy_json.as_bytes()).expect("write legacy state");
+        let state_only_json =
+            serde_json::to_string_pretty(&state_only_schema).expect("serialize state-only schema");
+        fs::write(&temp_path, state_only_json.as_bytes()).expect("write state-only schema");
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -1376,20 +1376,54 @@ mod tests {
             temp_path.to_string_lossy().to_string();
         app.update();
 
-        let migrated_json = fs::read_to_string(&temp_path).expect("migrated save should exist");
-        let v2_save: SaveFileData =
-            serde_json::from_str(&migrated_json).expect("legacy CompleteGameState should migrate");
-
-        assert_eq!(v2_save.version, "2.0");
-        assert_eq!(
-            v2_save.game_state.selected_character,
-            CharacterType::Shirou2
+        let save_manager = app.world().resource::<SaveManager>();
+        assert!(
+            save_manager.current_save.is_none(),
+            "state-only schema must be rejected"
         );
-        assert_eq!(v2_save.game_state.distance_traveled, 456.0);
-        assert_eq!(v2_save.game_state.jump_count, 12);
-
         let loaded_selection = app.world().resource::<CharacterSelection>();
-        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou2);
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou1);
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_load_game_rejects_checksum_mismatch() {
+        let temp_path = std::env::temp_dir().join(format!(
+            "emiyashiro-invalid-checksum-{}.json",
+            uuid::Uuid::new_v4()
+        ));
+        let metadata = SaveFileMetadata {
+            name: "checksum".to_string(),
+            score: 1,
+            distance: 2.0,
+            play_time: 3.0,
+            save_timestamp: chrono::Utc::now(),
+            file_path: temp_path.to_string_lossy().to_string(),
+            selected_character: CharacterType::Shirou2,
+        };
+        let mut save_data = SaveFileData::new(metadata, CompleteGameState::default());
+        save_data.checksum = "broken".to_string();
+        let json = serde_json::to_string_pretty(&save_data).expect("serialize save");
+        fs::write(&temp_path, json).expect("write save");
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<CharacterSelection>()
+            .init_resource::<SaveManager>()
+            .add_systems(Update, save::load_game);
+
+        app.world_mut().resource_mut::<SaveManager>().save_file_path =
+            temp_path.to_string_lossy().to_string();
+        app.update();
+
+        let save_manager = app.world().resource::<SaveManager>();
+        assert!(
+            save_manager.current_save.is_none(),
+            "checksum mismatch must be rejected"
+        );
+        let loaded_selection = app.world().resource::<CharacterSelection>();
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou1);
 
         let _ = fs::remove_file(temp_path);
     }

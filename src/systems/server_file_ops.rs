@@ -9,17 +9,6 @@ use crate::{
     systems::error_handling::SaveSystemError,
 };
 
-fn checksum_mismatch_is_fatal() -> bool {
-    std::env::var("EMIYASHIRO_STRICT_CHECKSUM")
-        .map(|value| {
-            matches!(
-                value.trim().to_ascii_lowercase().as_str(),
-                "1" | "true" | "yes" | "on"
-            )
-        })
-        .unwrap_or(false)
-}
-
 /// 内部实现：异步保存游戏状态
 pub async fn save_game_state_internal(
     save_path: PathBuf,
@@ -33,7 +22,7 @@ pub async fn save_game_state_internal(
             .map_err(|e| SaveSystemError::DirectoryCreationFailed(e.to_string()))?;
     }
 
-    // 创建保存数据结构（带校验和和算法信息）
+    // 创建保存数据结构（v2 + 校验和）
     let save_data = SaveFileData::new(metadata, game_state);
 
     // 序列化数据
@@ -68,47 +57,18 @@ pub async fn load_game_state_internal(
     let json_data = decode_file_payload(&file_data)
         .map_err(|e| SaveSystemError::DeserializationFailed(e.to_string()))?;
 
-    // 优先尝试新格式
-    if let Ok(save_data) = serde_json::from_str::<SaveFileData>(&json_data) {
-        if !save_data.verify_checksum() {
-            if checksum_mismatch_is_fatal() {
-                return Err(SaveSystemError::ChecksumMismatch);
-            }
+    let save_data = serde_json::from_str::<SaveFileData>(&json_data).map_err(|e| {
+        SaveSystemError::DeserializationFailed(format!("Unsupported save file format: {}", e))
+    })?;
 
-            warn!(
-                "Checksum mismatch for {:?}, loading in compatibility mode",
-                save_path
-            );
-        }
-
-        let mut metadata = save_data.metadata;
-        metadata.file_path = save_path.to_string_lossy().to_string();
-
-        return Ok((save_data.game_state, metadata));
+    if !save_data.verify_checksum() {
+        return Err(SaveSystemError::ChecksumMismatch);
     }
 
-    // 兼容旧格式（仅包含 CompleteGameState）
-    if let Ok(state) = serde_json::from_str::<CompleteGameState>(&json_data) {
-        let metadata = SaveFileMetadata {
-            name: save_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("LegacySave")
-                .to_string(),
-            score: state.score,
-            distance: state.distance_traveled,
-            play_time: state.play_time,
-            save_timestamp: state.save_timestamp,
-            file_path: save_path.to_string_lossy().to_string(),
-            selected_character: state.selected_character.clone(),
-        };
+    let mut metadata = save_data.metadata;
+    metadata.file_path = save_path.to_string_lossy().to_string();
 
-        return Ok((state, metadata));
-    }
-
-    Err(SaveSystemError::DeserializationFailed(
-        "Unsupported save file format".to_string(),
-    ))
+    Ok((save_data.game_state, metadata))
 }
 
 /// 内部实现：异步扫描存档文件
@@ -157,37 +117,17 @@ async fn load_save_metadata_internal(
     let json_data = decode_file_payload(&file_data)
         .map_err(|e| SaveSystemError::DeserializationFailed(e.to_string()))?;
 
-    // 新格式元数据
-    if let Ok(save_data) = serde_json::from_str::<SaveFileData>(&json_data) {
-        if !save_data.verify_checksum() {
-            warn!("Checksum mismatch in metadata scan for {:?}", save_path);
-        }
+    let save_data = serde_json::from_str::<SaveFileData>(&json_data).map_err(|e| {
+        SaveSystemError::DeserializationFailed(format!("Unsupported save metadata format: {}", e))
+    })?;
 
-        let mut metadata = save_data.metadata;
-        metadata.file_path = save_path.to_string_lossy().to_string();
-        return Ok(metadata);
+    if !save_data.verify_checksum() {
+        return Err(SaveSystemError::ChecksumMismatch);
     }
 
-    // 旧格式回退
-    if let Ok(state) = serde_json::from_str::<CompleteGameState>(&json_data) {
-        return Ok(SaveFileMetadata {
-            name: save_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("LegacySave")
-                .to_string(),
-            score: state.score,
-            distance: state.distance_traveled,
-            play_time: state.play_time,
-            save_timestamp: state.save_timestamp,
-            file_path: save_path.to_string_lossy().to_string(),
-            selected_character: state.selected_character.clone(),
-        });
-    }
-
-    Err(SaveSystemError::DeserializationFailed(
-        "Unsupported save metadata format".to_string(),
-    ))
+    let mut metadata = save_data.metadata;
+    metadata.file_path = save_path.to_string_lossy().to_string();
+    Ok(metadata)
 }
 
 #[cfg(test)]
@@ -195,14 +135,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn load_compatibility_mode_accepts_checksum_mismatch() {
+    fn load_rejects_checksum_mismatch() {
         let temp_path = std::env::temp_dir().join(format!(
             "emiyashiro-load-test-{}.json",
             uuid::Uuid::new_v4()
         ));
 
         let metadata = SaveFileMetadata {
-            name: "compat-check".to_string(),
+            name: "checksum-check".to_string(),
             score: 123,
             distance: 45.0,
             play_time: 6.0,
@@ -217,19 +157,11 @@ mod tests {
         let json = serde_json::to_string_pretty(&save_data).expect("serialize test save");
         fs::write(&temp_path, json.as_bytes()).expect("write test save file");
 
-        if checksum_mismatch_is_fatal() {
-            let _ = fs::remove_file(temp_path);
-            return;
-        }
-
         let result =
-            futures_lite::future::block_on(load_game_state_internal(temp_path.clone(), false))
-                .expect("compatibility load should succeed");
-
-        assert_eq!(
-            result.1.file_path,
-            temp_path.to_string_lossy().to_string(),
-            "load should always return actual file path"
+            futures_lite::future::block_on(load_game_state_internal(temp_path.clone(), false));
+        assert!(
+            matches!(result, Err(SaveSystemError::ChecksumMismatch)),
+            "load should fail on checksum mismatch"
         );
 
         let _ = fs::remove_file(temp_path);

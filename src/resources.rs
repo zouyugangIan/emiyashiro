@@ -171,40 +171,8 @@ pub struct CurrentSession {
     pub player_id: Option<uuid::Uuid>,
 }
 
-/// 存档数据结构 (legacy format)
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct SaveData {
-    pub player_name: String,
-    pub selected_character: crate::states::CharacterType,
-    pub best_distance: f32,
-    pub total_jumps: u32,
-    pub total_play_time: f32,
-    pub save_time: chrono::DateTime<chrono::Utc>,
-}
-
-impl Default for SaveData {
-    fn default() -> Self {
-        Self {
-            player_name: "DefaultSave".to_string(),
-            selected_character: crate::states::CharacterType::Shirou1,
-            best_distance: 0.0,
-            total_jumps: 0,
-            total_play_time: 0.0,
-            save_time: chrono::Utc::now(),
-        }
-    }
-}
-
 fn default_save_file_version() -> String {
-    "1.0".to_string()
-}
-
-fn default_checksum_algorithm() -> String {
-    "default-hasher-v1".to_string()
-}
-
-fn is_legacy_checksum_algorithm(value: &String) -> bool {
-    value == "default-hasher-v1" || value == "legacy-default-hasher"
+    "2.0".to_string()
 }
 
 /// 新的存档文件格式 - 包含元数据、游戏状态和校验和
@@ -212,11 +180,6 @@ fn is_legacy_checksum_algorithm(value: &String) -> bool {
 pub struct SaveFileData {
     #[serde(default = "default_save_file_version")]
     pub version: String,
-    #[serde(
-        default = "default_checksum_algorithm",
-        skip_serializing_if = "is_legacy_checksum_algorithm"
-    )]
-    pub checksum_algorithm: String,
     pub metadata: SaveFileMetadata,
     pub game_state: CompleteGameState,
     pub checksum: String,
@@ -226,7 +189,6 @@ impl SaveFileData {
     pub fn new(metadata: SaveFileMetadata, game_state: CompleteGameState) -> Self {
         let mut data = Self {
             version: "2.0".to_string(),
-            checksum_algorithm: "blake3".to_string(),
             metadata,
             game_state,
             checksum: String::new(),
@@ -237,18 +199,12 @@ impl SaveFileData {
     }
 
     fn calculate_checksum_for(data: &SaveFileData) -> String {
-        use crate::systems::shared_utils::{calculate_checksum, calculate_legacy_checksum};
+        use crate::systems::shared_utils::calculate_checksum;
 
         let mut temp_data = data.clone();
         temp_data.checksum = String::new();
         if let Ok(json) = serde_json::to_string_pretty(&temp_data) {
-            match temp_data.checksum_algorithm.as_str() {
-                "blake3" => calculate_checksum(json.as_bytes()),
-                "default-hasher-v1" | "legacy-default-hasher" => {
-                    calculate_legacy_checksum(json.as_bytes())
-                }
-                _ => calculate_checksum(json.as_bytes()),
-            }
+            calculate_checksum(json.as_bytes())
         } else {
             String::new()
         }
@@ -263,7 +219,7 @@ impl SaveFileData {
 /// 存档管理资源
 #[derive(Resource, Default)]
 pub struct SaveManager {
-    pub current_save: Option<SaveData>,
+    pub current_save: Option<SaveFileData>,
     pub save_file_path: String,
 }
 

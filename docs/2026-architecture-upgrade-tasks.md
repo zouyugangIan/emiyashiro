@@ -1,7 +1,7 @@
 # 2026 引擎架构升级 TASKS
 
 > 基线日期：2026-02-24  
-> 输入文档：`docs/2026-bevy-upgrade-assessment-zh.md`、`docs/bevy-upgrade-regression-checklist.md`、`docs/ops-runbook.md`、`SCENE_ENHANCEMENT.md`
+> 输入文档：`docs/2026-upgrade-status.md`、`docs/bevy-upgrade-regression-checklist.md`、`docs/ops-runbook.md`、`SCENE_ENHANCEMENT.md`
 
 ## 1) 目标与原则
 
@@ -21,6 +21,7 @@
 - [x] 服务端固定步长 60Hz（`FixedUpdate`）
 - [x] 客户端自动重连（冷却窗口）
 - [x] 客户端心跳 Ping 管线
+- [x] 存档零 legacy 化（仅 `SaveFileData v2` + 强校验）
 - [x] 严格质量门禁（`clippy -D warnings` + `test --all-features`）
 
 ### 进行中
@@ -71,9 +72,9 @@
 
 - 优先级：P1
 - 验收：
-  - [ ] 仅 `SaveFileData v2` 参与写入路径。
-  - [ ] legacy 仅保留“读取 -> 迁移”。
-  - [ ] schema 回归测试覆盖核心字段兼容。
+  - [x] 仅 `SaveFileData v2` 参与写入路径。
+  - [x] 旧 schema 不再迁移，直接拒绝。
+  - [x] schema 回归测试覆盖核心字段与损坏校验。
 
 ### T-006 Redis 后台写队列
 

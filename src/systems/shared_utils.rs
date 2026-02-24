@@ -1,13 +1,9 @@
 //! Shared utility functions for file operations, compression, and checksums.
 
 use atomicwrites::{AtomicFile, OverwriteBehavior};
-use flate2::read::GzDecoder;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::io::{self, Cursor, Read, Write};
+use std::io::{self, Cursor, Write};
 use std::path::Path;
 
-const GZIP_MAGIC: [u8; 2] = [0x1f, 0x8b];
 const ZSTD_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
 
 /// Compresses data using Zstd.
@@ -29,21 +25,14 @@ pub fn decompress_data(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
         return zstd::stream::decode_all(Cursor::new(data));
     }
 
-    if data.starts_with(&GZIP_MAGIC) {
-        let mut decoder = GzDecoder::new(data);
-        let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed)?;
-        return Ok(decompressed);
-    }
-
     Err(io::Error::new(
         io::ErrorKind::InvalidData,
-        "Unknown compressed format",
+        "Unsupported compressed format",
     ))
 }
 
 /// Decodes a file payload into UTF-8 JSON string.
-/// Supports plain JSON, Zstd, and legacy Gzip payloads.
+/// Supports plain JSON and Zstd payloads.
 pub fn decode_file_payload(file_data: &[u8]) -> Result<String, std::io::Error> {
     let decoded = if is_compressed(file_data) {
         decompress_data(file_data)?
@@ -57,7 +46,7 @@ pub fn decode_file_payload(file_data: &[u8]) -> Result<String, std::io::Error> {
 
 /// Checks if data is compressed by looking for known magic numbers.
 pub fn is_compressed(data: &[u8]) -> bool {
-    data.starts_with(&GZIP_MAGIC) || data.starts_with(&ZSTD_MAGIC)
+    data.starts_with(&ZSTD_MAGIC)
 }
 
 /// Calculates a checksum for a slice of bytes using BLAKE3.
@@ -66,13 +55,6 @@ pub fn is_compressed(data: &[u8]) -> bool {
 /// * `data` - The byte slice to hash.
 pub fn calculate_checksum(data: &[u8]) -> String {
     blake3::hash(data).to_hex().to_string()
-}
-
-/// Calculates checksum using legacy `DefaultHasher` for backward compatibility.
-pub fn calculate_legacy_checksum(data: &[u8]) -> String {
-    let mut hasher = DefaultHasher::new();
-    data.hash(&mut hasher);
-    format!("{:x}", hasher.finish())
 }
 
 /// Atomically writes file bytes to target path.
