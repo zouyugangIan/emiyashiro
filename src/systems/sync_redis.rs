@@ -13,12 +13,14 @@ pub fn sync_transform_to_redis(
     )>,
     time: Res<Time>,
     mut flush_timer: Local<f32>,
+    mut error_log_cooldown: Local<f32>,
 ) {
     let Some(redis) = redis else {
         return; // Redis not available, skip
     };
 
     *flush_timer += time.delta_secs();
+    *error_log_cooldown = (*error_log_cooldown - time.delta_secs()).max(0.0);
     if *flush_timer < 0.1 {
         return;
     }
@@ -34,7 +36,10 @@ pub fn sync_transform_to_redis(
         entries.push((key, value));
     }
 
-    if let Err(error) = redis.set_many(&entries) {
-        eprintln!("Failed to batch sync player transforms to Redis: {}", error);
+    if let Err(error) = redis.set_many(&entries)
+        && *error_log_cooldown <= 0.0
+    {
+        warn!("Failed to batch sync player transforms to Redis: {}", error);
+        *error_log_cooldown = 5.0;
     }
 }

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use s_emiyashiro::plugins::EmiyaShiroClientPlugin;
 
 fn main() {
-    println!("Client startup: initializing Bevy app");
+    info!("Client startup: initializing Bevy app");
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {

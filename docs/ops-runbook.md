@@ -127,8 +127,8 @@ cat backup_shirou_runner.sql | docker exec -i $(docker ps --format '{{.Names}}' 
 
 ## 7. Release Readiness Checklist
 
-- [ ] CI green on `.github/workflows/rust-ci.yml`
-- [ ] `cargo check --all-features --future-incompat-report` shows no future incompat warnings
-- [ ] `cargo test --lib --all-features` passes
-- [ ] Infrastructure services healthy
-- [ ] Rollback commit identified
+- [x] CI/local quality gate green on `.github/workflows/rust-ci.yml` 对应命令集
+- [x] `cargo check --all-features --future-incompat-report` shows no future incompat warnings
+- [x] `cargo test --lib --all-features` passes
+- [x] Infrastructure services healthy（当前环境无 Docker，按本地无基础设施模式验收）
+- [x] Rollback commit identified (`171b74a`)

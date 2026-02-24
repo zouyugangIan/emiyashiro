@@ -4,6 +4,7 @@ mod tests {
     use crate::{components::*, resources::*, states::*, systems::*};
     use bevy::prelude::*;
     use std::fs;
+    use std::time::Duration;
 
     fn create_test_app() -> App {
         let mut app = App::new();
@@ -17,6 +18,12 @@ mod tests {
             .init_resource::<text_input::KeyboardInputHandler>()
             .init_resource::<error_handling::ErrorRecoveryManager>();
         app
+    }
+
+    fn advance_fixed_time(app: &mut App, secs: f32) {
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(Duration::from_secs_f32(secs));
     }
 
     #[test]
@@ -834,5 +841,556 @@ mod tests {
         assert_eq!(retrieved_state.score, 750);
         assert_eq!(retrieved_state.distance_traveled, 1250.0);
         assert_eq!(retrieved_state.selected_character, CharacterType::Shirou2);
+    }
+
+    #[test]
+    fn test_menu_playing_paused_playing_transition_chain() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>();
+
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Menu
+        );
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Playing
+        );
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Paused);
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Paused
+        );
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Playing
+        );
+    }
+
+    #[test]
+    fn test_playing_gameover_reviving_playing_transition_chain() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::apply_damage_events,
+                    crate::systems::death::handle_game_over_input
+                        .run_if(in_state(GameState::GameOver)),
+                ),
+            )
+            .add_systems(
+                OnEnter(GameState::Reviving),
+                crate::systems::death::revive_player,
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                Health::new(100.0),
+                ShroudState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update();
+        app.update();
+
+        app.world_mut()
+            .resource_mut::<Messages<crate::events::DamageEvent>>()
+            .write(crate::events::DamageEvent {
+                target: player,
+                amount: 999.0,
+                source: crate::events::DamageSource::EnemyContact,
+            });
+        app.update();
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::GameOver
+        );
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyR);
+        app.update();
+        app.update();
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Playing
+        );
+    }
+
+    #[test]
+    fn test_save_load_rename_dialog_stateflow() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>();
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::SaveDialog);
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::SaveDialog
+        );
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::LoadTable);
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::LoadTable
+        );
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::RenameDialog);
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::RenameDialog
+        );
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::LoadTable);
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::LoadTable
+        );
+    }
+
+    #[test]
+    fn test_fixedupdate_player_move_jump_crouch_stable() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(Time::<Fixed>::from_hz(60.0))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .init_resource::<input::GameInput>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::player::player_movement,
+                    crate::systems::player::player_jump,
+                    crate::systems::player::player_crouch,
+                    crate::systems::player::physics_update_system,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<input::GameInput>()
+            .move_right = true;
+        for _ in 0..5 {
+            advance_fixed_time(&mut app, 1.0 / 60.0);
+            app.update();
+        }
+
+        let moved_x = app
+            .world()
+            .entity(player)
+            .get::<Transform>()
+            .expect("player transform")
+            .translation
+            .x;
+        assert!(moved_x > 0.0);
+
+        {
+            let mut input_state = app.world_mut().resource_mut::<input::GameInput>();
+            input_state.move_right = false;
+            input_state.crouch = true;
+        }
+        advance_fixed_time(&mut app, 1.0 / 60.0);
+        app.update();
+        let crouching = app
+            .world()
+            .entity(player)
+            .get::<PlayerState>()
+            .expect("player state")
+            .is_crouching;
+        assert!(crouching);
+
+        {
+            let mut input_state = app.world_mut().resource_mut::<input::GameInput>();
+            input_state.crouch = false;
+            input_state.jump = true;
+            input_state.jump_pressed_this_frame = true;
+            input_state.jump_buffer_seconds = 0.15;
+        }
+        advance_fixed_time(&mut app, 1.0 / 60.0);
+        app.update();
+
+        let velocity_y = app
+            .world()
+            .entity(player)
+            .get::<Velocity>()
+            .expect("player velocity")
+            .y;
+        let jump_count = app.world().resource::<GameStats>().jump_count;
+        assert!(
+            velocity_y > 0.0,
+            "jump should produce positive vertical velocity"
+        );
+        assert!(jump_count >= 1, "jump count should increase");
+    }
+
+    #[test]
+    fn test_projectile_hit_enemy_applies_damage_and_despawns_projectile() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::projectile_enemy_collision,
+                    crate::systems::combat::apply_damage_events,
+                ),
+            );
+
+        let projectile = app
+            .world_mut()
+            .spawn((
+                Projectile,
+                ProjectileData::new(5, 0.0, 10.0),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::collision::CollisionBox::new(Vec2::new(20.0, 20.0)),
+            ))
+            .id();
+
+        let enemy = app
+            .world_mut()
+            .spawn((
+                Enemy,
+                EnemyState::new(5, 100.0),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::collision::CollisionBox::new(Vec2::new(20.0, 20.0)),
+            ))
+            .id();
+
+        app.update();
+        app.update();
+
+        let enemy_state = app
+            .world()
+            .entity(enemy)
+            .get::<EnemyState>()
+            .expect("enemy state");
+        assert!(!enemy_state.is_alive, "enemy should be dead after hit");
+        assert!(
+            app.world().get_entity(projectile).is_err(),
+            "projectile should be despawned after hit"
+        );
+    }
+
+    #[test]
+    fn test_player_enemy_contact_damage_updates_hud_health_text() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .init_resource::<GameStats>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::apply_damage_events,
+                    crate::systems::ui::update_game_hud,
+                ),
+            );
+
+        app.world_mut()
+            .spawn((Text::new("HP: 100/100"), crate::systems::ui::HealthDisplay));
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Health::new(100.0),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::collision::CollisionBox::new(Vec2::new(24.0, 24.0)),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<Messages<crate::events::DamageEvent>>()
+            .write(crate::events::DamageEvent {
+                target: player,
+                amount: 12.0,
+                source: crate::events::DamageSource::EnemyContact,
+            });
+        app.update();
+        app.update();
+
+        let health = app
+            .world()
+            .entity(player)
+            .get::<Health>()
+            .expect("player health");
+        assert!(health.current < health.max);
+        let expected = format!("HP: {:.0}/{:.0}", health.current, health.max);
+
+        let health_text_value = {
+            let mut query = app
+                .world_mut()
+                .query_filtered::<&Text, With<crate::systems::ui::HealthDisplay>>();
+            let text = query.single(app.world()).expect("health HUD text");
+            text.to_string()
+        };
+        assert_eq!(
+            health_text_value, expected,
+            "health HUD text should track player health"
+        );
+    }
+
+    #[test]
+    fn test_fall_death_then_press_r_revives_to_playing() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(
+                Update,
+                (
+                    (
+                        crate::systems::death::check_player_fall_death,
+                        crate::systems::combat::apply_damage_events,
+                    )
+                        .run_if(in_state(GameState::Playing)),
+                    crate::systems::death::handle_game_over_input
+                        .run_if(in_state(GameState::GameOver)),
+                ),
+            )
+            .add_systems(
+                OnEnter(GameState::Reviving),
+                crate::systems::death::revive_player,
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, -450.0, 0.0),
+            Velocity::default(),
+            PlayerState::default(),
+            Health::new(100.0),
+            ShroudState::default(),
+        ));
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update();
+        app.update();
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::GameOver
+        );
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyR);
+        app.update();
+        app.update();
+        app.update();
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Playing
+        );
+    }
+
+    #[test]
+    fn test_shroud_damage_event_pipeline_and_timeout_recovery() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::shirou::handle_shroud_input,
+                    crate::systems::combat::apply_damage_events,
+                    crate::systems::shirou::shroud_health_drain,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((Player, Health::new(20.0), ShroudState::default()))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyK);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .clear();
+
+        let entity_ref = app.world().entity(player);
+        let health = entity_ref.get::<Health>().expect("health");
+        let shroud = entity_ref.get::<ShroudState>().expect("shroud");
+        assert_eq!(
+            health.current, 18.0,
+            "toggle should cost HP through damage events"
+        );
+        assert!(shroud.is_released, "toggle should enable release state");
+
+        let shroud_after = {
+            let mut entity = app.world_mut().entity_mut(player);
+            let mut shroud_state = entity.get_mut::<ShroudState>().expect("shroud");
+            let expired = shroud_state.tick(Duration::from_secs_f32(
+                ShroudState::OVEREDGE_DURATION_SECS + 0.2,
+            ));
+            assert!(expired, "tick should report timeout expiration");
+            shroud_state.clone()
+        };
+        assert!(
+            !shroud_after.is_released,
+            "release should timeout and recover automatically"
+        );
+    }
+
+    #[test]
+    fn test_network_interpolation_is_monotonic_and_no_overshoot() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, crate::systems::network::interpolate_positions);
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::network::InterpolationState {
+                    start_pos: Vec3::new(0.0, 0.0, 0.0),
+                    target_pos: Vec3::new(100.0, 0.0, 0.0),
+                    start_time: 0.0,
+                    duration: 0.5,
+                },
+            ))
+            .id();
+
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(crate::systems::network::InterpolationState {
+                start_pos: Vec3::new(0.0, 0.0, 0.0),
+                target_pos: Vec3::new(100.0, 0.0, 0.0),
+                start_time: -1.0,
+                duration: 0.5,
+            });
+        app.update();
+        let final_x = app
+            .world()
+            .entity(entity)
+            .get::<Transform>()
+            .expect("transform")
+            .translation
+            .x;
+        assert!(
+            (final_x - 100.0).abs() < 0.01,
+            "should converge to target after sufficient time"
+        );
+        assert!(
+            !app.world()
+                .entity(entity)
+                .contains::<crate::systems::network::InterpolationState>(),
+            "interpolation component should be removed when completed"
+        );
+    }
+
+    #[test]
+    fn test_load_game_migrates_legacy_complete_state_to_v2() {
+        let temp_path = std::env::temp_dir().join(format!(
+            "emiyashiro-legacy-state-{}.json",
+            uuid::Uuid::new_v4()
+        ));
+
+        let legacy_state = CompleteGameState {
+            selected_character: CharacterType::Shirou2,
+            distance_traveled: 456.0,
+            jump_count: 12,
+            score: 987,
+            ..Default::default()
+        };
+        let legacy_json =
+            serde_json::to_string_pretty(&legacy_state).expect("serialize legacy state");
+        fs::write(&temp_path, legacy_json.as_bytes()).expect("write legacy state");
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<CharacterSelection>()
+            .init_resource::<SaveManager>()
+            .add_systems(Update, save::load_game);
+
+        app.world_mut().resource_mut::<SaveManager>().save_file_path =
+            temp_path.to_string_lossy().to_string();
+        app.update();
+
+        let migrated_json = fs::read_to_string(&temp_path).expect("migrated save should exist");
+        let v2_save: SaveFileData =
+            serde_json::from_str(&migrated_json).expect("legacy CompleteGameState should migrate");
+
+        assert_eq!(v2_save.version, "2.0");
+        assert_eq!(
+            v2_save.game_state.selected_character,
+            CharacterType::Shirou2
+        );
+        assert_eq!(v2_save.game_state.distance_traveled, 456.0);
+        assert_eq!(v2_save.game_state.jump_count, 12);
+
+        let loaded_selection = app.world().resource::<CharacterSelection>();
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou2);
+
+        let _ = fs::remove_file(temp_path);
     }
 }

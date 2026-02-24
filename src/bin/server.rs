@@ -17,7 +17,7 @@ type SharedClients = Arc<Mutex<ClientSenderMap>>;
 
 #[tokio::main]
 async fn main() {
-    println!("Starting G-Engine Server...");
+    info!("Starting G-Engine Server...");
 
     let (action_tx, action_rx) = mpsc::unbounded_channel::<(u64, PlayerAction)>();
     let (broadcast_tx, mut broadcast_rx) = mpsc::unbounded_channel::<GamePacket>();
@@ -40,7 +40,7 @@ async fn main() {
     tokio::spawn(async move {
         let addr = "127.0.0.1:8080";
         let listener = TcpListener::bind(addr).await.expect("Failed to bind");
-        println!("WebSocket server listening on: {}", addr);
+        info!("WebSocket server listening on: {}", addr);
 
         let mut client_id_counter: u64 = 0;
 
@@ -62,7 +62,7 @@ async fn main() {
             let binary = match bincode::serialize(&packet) {
                 Ok(bytes) => bytes,
                 Err(error) => {
-                    eprintln!("Failed to serialize packet: {}", error);
+                    warn!("Failed to serialize packet: {}", error);
                     continue;
                 }
             };
@@ -118,7 +118,7 @@ async fn handle_connection(
     action_tx: mpsc::UnboundedSender<(u64, PlayerAction)>,
 ) {
     let ws_stream = accept_async(stream).await.expect("Error during handshake");
-    println!("New client connected: {}", client_id);
+    info!("New client connected: {}", client_id);
 
     let (mut write, mut read) = ws_stream.split();
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<WsMessage>();
@@ -140,7 +140,7 @@ async fn handle_connection(
             let _ = out_tx.send(WsMessage::Binary(binary));
         }
         Err(error) => {
-            eprintln!("Failed to serialize welcome packet: {}", error);
+            warn!("Failed to serialize welcome packet: {}", error);
         }
     }
 
@@ -160,7 +160,7 @@ async fn handle_connection(
         }
     }
 
-    println!("Client disconnected: {}", client_id);
+    info!("Client disconnected: {}", client_id);
     if let Ok(mut clients_guard) = clients.lock() {
         clients_guard.remove(&client_id);
     }

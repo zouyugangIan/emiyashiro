@@ -98,7 +98,7 @@ impl Database {
         .execute(pool)
         .await?;
 
-        println!("数据库表创建完成");
+        bevy::log::info!("数据库表创建完成");
         Ok(())
     }
 }

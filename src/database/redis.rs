@@ -118,10 +118,10 @@ impl Plugin for RedisPlugin {
         match RedisManager::new() {
             Ok(manager) => {
                 app.insert_resource(manager);
-                println!("Redis connected successfully");
+                info!("Redis connected successfully");
             }
             Err(e) => {
-                eprintln!("Failed to connect to Redis: {}", e);
+                warn!("Failed to connect to Redis: {}", e);
             }
         }
     }

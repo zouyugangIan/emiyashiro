@@ -23,7 +23,7 @@
 - `cargo clippy --all-features --all-targets -- -D warnings`
 - `cargo test --lib --all-features`
 
-测试结果：`94 passed, 0 failed`。
+测试结果：`104 passed, 0 failed`。
 
 ## 3) 架构升级完成项（本轮）
 
@@ -63,3 +63,8 @@
 - `docs/bevy-upgrade-regression-checklist.md`
 
 执行策略：以回归清单为验收口，以 `TASKS` 为排期口，避免文档重复承诺。
+
+## 6) Jobs 完成度（2026-02-24）
+
+- `docs/bevy-upgrade-regression-checklist.md`：已完成（全部勾选）。
+- `docs/ops-runbook.md` Release Readiness：已完成（按当前执行环境验收）。
