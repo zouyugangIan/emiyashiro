@@ -14,6 +14,7 @@ pub fn sync_transform_to_redis(
     time: Res<Time>,
     mut flush_timer: Local<f32>,
     mut error_log_cooldown: Local<f32>,
+    mut metrics_log_timer: Local<f32>,
 ) {
     let Some(redis) = redis else {
         return; // Redis not available, skip
@@ -21,7 +22,21 @@ pub fn sync_transform_to_redis(
 
     *flush_timer += time.delta_secs();
     *error_log_cooldown = (*error_log_cooldown - time.delta_secs()).max(0.0);
+    *metrics_log_timer += time.delta_secs();
     if *flush_timer < 0.1 {
+        if *metrics_log_timer >= 30.0 {
+            let metrics = redis.metrics_snapshot();
+            info!(
+                "Redis write queue metrics: queued={}, processed={}, dropped={}, failed={}, retries={}, pending={}",
+                metrics.queued_batches,
+                metrics.processed_batches,
+                metrics.dropped_batches,
+                metrics.failed_batches,
+                metrics.retry_attempts,
+                metrics.estimated_pending_batches
+            );
+            *metrics_log_timer = 0.0;
+        }
         return;
     }
     *flush_timer = 0.0;
@@ -41,5 +56,19 @@ pub fn sync_transform_to_redis(
     {
         warn!("Failed to batch sync player transforms to Redis: {}", error);
         *error_log_cooldown = 5.0;
+    }
+
+    if *metrics_log_timer >= 30.0 {
+        let metrics = redis.metrics_snapshot();
+        info!(
+            "Redis write queue metrics: queued={}, processed={}, dropped={}, failed={}, retries={}, pending={}",
+            metrics.queued_batches,
+            metrics.processed_batches,
+            metrics.dropped_batches,
+            metrics.failed_batches,
+            metrics.retry_attempts,
+            metrics.estimated_pending_batches
+        );
+        *metrics_log_timer = 0.0;
     }
 }

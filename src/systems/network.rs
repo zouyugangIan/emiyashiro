@@ -1,7 +1,7 @@
 use crate::protocol::{GamePacket, PlayerAction};
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
@@ -52,6 +52,25 @@ pub struct NetworkReconnectState {
     pub attempt_count: u32,
 }
 
+#[derive(Resource, Debug)]
+pub struct NetworkLifecycleState {
+    pub last_status: NetworkStatus,
+    pub transition_history: Vec<NetworkStatus>,
+    pub last_disconnect_time_secs: Option<f32>,
+    pub reconnect_durations_secs: Vec<f32>,
+}
+
+impl Default for NetworkLifecycleState {
+    fn default() -> Self {
+        Self {
+            last_status: NetworkStatus::Disconnected,
+            transition_history: vec![NetworkStatus::Disconnected],
+            last_disconnect_time_secs: None,
+            reconnect_durations_secs: Vec::new(),
+        }
+    }
+}
+
 impl Default for NetworkResource {
     fn default() -> Self {
         Self {
@@ -60,6 +79,43 @@ impl Default for NetworkResource {
             runtime_events: Arc::new(Mutex::new(VecDeque::new())),
             status: NetworkStatus::Disconnected,
         }
+    }
+}
+
+fn apply_status_transition(
+    net: &mut NetworkResource,
+    lifecycle: &mut NetworkLifecycleState,
+    new_status: NetworkStatus,
+    now_secs: f32,
+) {
+    if lifecycle.last_status == new_status {
+        return;
+    }
+
+    net.status = new_status;
+    lifecycle.last_status = new_status;
+    lifecycle.transition_history.push(new_status);
+    if lifecycle.transition_history.len() > 128 {
+        let drop_count = lifecycle.transition_history.len() - 128;
+        lifecycle.transition_history.drain(0..drop_count);
+    }
+
+    match new_status {
+        NetworkStatus::Disconnected => {
+            lifecycle.last_disconnect_time_secs = Some(now_secs);
+        }
+        NetworkStatus::Connected => {
+            if let Some(disconnect_at) = lifecycle.last_disconnect_time_secs.take() {
+                lifecycle
+                    .reconnect_durations_secs
+                    .push((now_secs - disconnect_at).max(0.0));
+                if lifecycle.reconnect_durations_secs.len() > 64 {
+                    let drop_count = lifecycle.reconnect_durations_secs.len() - 64;
+                    lifecycle.reconnect_durations_secs.drain(0..drop_count);
+                }
+            }
+        }
+        NetworkStatus::Connecting => {}
     }
 }
 
@@ -231,36 +287,69 @@ fn start_network_connection(net: &mut NetworkResource, server_url: &str) {
     });
 }
 
-pub fn setup_network(mut net: ResMut<NetworkResource>, config: Res<NetworkConfig>) {
+pub fn setup_network(
+    mut net: ResMut<NetworkResource>,
+    config: Res<NetworkConfig>,
+    mut lifecycle: ResMut<NetworkLifecycleState>,
+    time: Res<Time>,
+) {
     start_network_connection(&mut net, &config.server_url);
+    if net.status == NetworkStatus::Connecting {
+        apply_status_transition(
+            &mut net,
+            &mut lifecycle,
+            NetworkStatus::Connecting,
+            time.elapsed_secs(),
+        );
+    }
 }
 
-pub fn update_network_status(mut net: ResMut<NetworkResource>) {
-    let mut last_event = None;
-    if let Ok(mut events) = net.runtime_events.lock() {
-        while let Some(event) = events.pop_front() {
-            last_event = Some(event);
-        }
+pub fn update_network_status(
+    mut net: ResMut<NetworkResource>,
+    mut lifecycle: ResMut<NetworkLifecycleState>,
+    time: Res<Time>,
+) {
+    let now_secs = time.elapsed_secs();
+    let runtime_events = net.runtime_events.clone();
+    let mut pending_events = Vec::new();
+
+    if let Ok(mut events) = runtime_events.lock() {
+        pending_events.extend(events.drain(..));
     }
 
-    if let Some(event) = last_event {
+    for event in pending_events {
         match event {
             NetworkRuntimeEvent::Connected => {
                 if net.status != NetworkStatus::Connected {
                     info!("Network status: Connected");
                 }
-                net.status = NetworkStatus::Connected;
+                apply_status_transition(
+                    &mut net,
+                    &mut lifecycle,
+                    NetworkStatus::Connected,
+                    now_secs,
+                );
             }
             NetworkRuntimeEvent::Disconnected => {
                 if net.status != NetworkStatus::Disconnected {
                     info!("Network status: Disconnected");
                 }
-                net.status = NetworkStatus::Disconnected;
+                apply_status_transition(
+                    &mut net,
+                    &mut lifecycle,
+                    NetworkStatus::Disconnected,
+                    now_secs,
+                );
                 net.action_tx = None;
             }
             NetworkRuntimeEvent::ConnectFailed => {
                 warn!("Network status: ConnectFailed");
-                net.status = NetworkStatus::Disconnected;
+                apply_status_transition(
+                    &mut net,
+                    &mut lifecycle,
+                    NetworkStatus::Disconnected,
+                    now_secs,
+                );
                 net.action_tx = None;
             }
         }
@@ -272,6 +361,7 @@ pub fn auto_reconnect_network(
     config: Res<NetworkConfig>,
     mut reconnect_state: ResMut<NetworkReconnectState>,
     mut net: ResMut<NetworkResource>,
+    mut lifecycle: ResMut<NetworkLifecycleState>,
 ) {
     if !config.reconnect_enabled {
         return;
@@ -292,6 +382,14 @@ pub fn auto_reconnect_network(
             reconnect_state.attempt_count = reconnect_state.attempt_count.wrapping_add(1);
             reconnect_state.cooldown_remaining_secs = config.reconnect_interval_secs.max(0.2);
             start_network_connection(&mut net, &config.server_url);
+            if net.status == NetworkStatus::Connecting {
+                apply_status_transition(
+                    &mut net,
+                    &mut lifecycle,
+                    NetworkStatus::Connecting,
+                    time.elapsed_secs(),
+                );
+            }
         }
     }
 }
@@ -450,7 +548,15 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
         match packet {
             GamePacket::Welcome { id, message } => {
                 info!("Server says: {} (My ID: {})", message, id);
+                let previous_id = params.my_id.0;
                 params.my_id.0 = Some(id);
+
+                if let Some(previous_id) = previous_id
+                    && previous_id != id
+                    && let Some(tx) = &params.net.action_tx
+                {
+                    let _ = tx.send(PlayerAction::ResumeSession { previous_id });
+                }
 
                 if let Ok((entity, _, mut net_id, _)) = params.local_player_query.single_mut() {
                     net_id.0 = id;
@@ -469,8 +575,10 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                 params.snapshot_state.last_server_tick = tick;
 
                 let current_time = params.time.elapsed_secs();
+                let mut snapshot_ids = HashSet::new();
 
                 for player_state in players {
+                    snapshot_ids.insert(player_state.id);
                     let is_local = Some(player_state.id) == params.my_id.0;
 
                     if is_local {
@@ -564,6 +672,139 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                         .id();
                     params.entity_map.0.insert(player_state.id, entity);
                 }
+
+                let to_remove: Vec<(u64, Entity)> = params
+                    .entity_map
+                    .0
+                    .iter()
+                    .filter_map(|(id, entity)| {
+                        if Some(*id) == params.my_id.0 || snapshot_ids.contains(id) {
+                            None
+                        } else {
+                            Some((*id, *entity))
+                        }
+                    })
+                    .collect();
+
+                for (removed_id, removed_entity) in to_remove {
+                    params.entity_map.0.remove(&removed_id);
+                    commands.entity(removed_entity).despawn();
+                }
+            }
+            GamePacket::WorldSnapshotDelta {
+                tick,
+                changed_players,
+                removed_player_ids,
+            } => {
+                if tick <= params.snapshot_state.last_server_tick {
+                    continue;
+                }
+                params.snapshot_state.last_server_tick = tick;
+
+                let current_time = params.time.elapsed_secs();
+                for player_state in changed_players {
+                    let is_local = Some(player_state.id) == params.my_id.0;
+
+                    if is_local {
+                        if let Ok((entity, mut local_transform, mut net_id, correction_state)) =
+                            params.local_player_query.single_mut()
+                        {
+                            net_id.0 = player_state.id;
+                            params
+                                .entity_map
+                                .0
+                                .retain(|_, mapped_entity| *mapped_entity != entity);
+                            params.entity_map.0.insert(player_state.id, entity);
+
+                            let target_position = Vec3::new(
+                                player_state.position.x,
+                                player_state.position.y,
+                                local_transform.translation.z,
+                            );
+                            let error_distance =
+                                local_transform.translation.distance(target_position);
+                            match correction_mode(error_distance, &params.prediction_config) {
+                                LocalCorrectionMode::Noop => {
+                                    commands.entity(entity).remove::<ServerCorrectionState>();
+                                }
+                                LocalCorrectionMode::Snap => {
+                                    local_transform.translation = target_position;
+                                    commands.entity(entity).remove::<ServerCorrectionState>();
+                                }
+                                LocalCorrectionMode::Smooth(duration) => {
+                                    if let Some(mut correction) = correction_state {
+                                        correction.start_pos = local_transform.translation;
+                                        correction.target_pos = target_position;
+                                        correction.start_time = current_time;
+                                        correction.duration = duration;
+                                    } else {
+                                        commands.entity(entity).insert(ServerCorrectionState {
+                                            start_pos: local_transform.translation,
+                                            target_pos: target_position,
+                                            start_time: current_time,
+                                            duration,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    if let Some(entity) = params.entity_map.0.get(&player_state.id).copied() {
+                        if let Ok((transform, interp_state)) = params.remote_query.get_mut(entity) {
+                            if let Some(mut interp) = interp_state {
+                                interp.start_pos = transform.translation;
+                                interp.target_pos = player_state.position;
+                                interp.start_time = current_time;
+                                interp.duration = 0.1;
+                            } else {
+                                commands.entity(entity).insert(InterpolationState {
+                                    start_pos: transform.translation,
+                                    target_pos: player_state.position,
+                                    start_time: current_time,
+                                    duration: 0.1,
+                                });
+                            }
+                            continue;
+                        }
+                        params.entity_map.0.remove(&player_state.id);
+                    }
+
+                    let sprite_image = params
+                        .asset_server
+                        .as_ref()
+                        .map(|asset_server| asset_server.load("images/characters/shirou_idle1.jpg"))
+                        .unwrap_or_default();
+
+                    let entity = commands
+                        .spawn((
+                            Sprite {
+                                image: sprite_image,
+                                ..default()
+                            },
+                            Transform::from_translation(player_state.position)
+                                .with_scale(Vec3::splat(0.5)),
+                            crate::components::network::NetworkId(player_state.id),
+                            InterpolationState {
+                                start_pos: player_state.position,
+                                target_pos: player_state.position,
+                                start_time: current_time,
+                                duration: 0.1,
+                            },
+                        ))
+                        .id();
+                    params.entity_map.0.insert(player_state.id, entity);
+                }
+
+                for removed_id in removed_player_ids {
+                    if Some(removed_id) == params.my_id.0 {
+                        continue;
+                    }
+                    if let Some(removed_entity) = params.entity_map.0.remove(&removed_id) {
+                        commands.entity(removed_entity).despawn();
+                    }
+                }
             }
             GamePacket::Pong(id) => {
                 info!("Pong from server: {}", id);
@@ -650,6 +891,169 @@ mod tests {
             .init_resource::<NetworkSnapshotState>()
             .add_systems(Update, handle_network_events);
         app
+    }
+
+    #[test]
+    fn welcome_with_new_id_sends_resume_session_and_updates_local_mapping() {
+        let mut app = setup_network_event_app();
+        let local_entity = app
+            .world_mut()
+            .spawn((
+                LocalPlayer,
+                NetworkId(7),
+                Transform::from_xyz(0.0, 0.0, 1.0),
+            ))
+            .id();
+        app.world_mut().resource_mut::<MyNetworkId>().0 = Some(7);
+
+        let (action_tx, mut action_rx) = tokio::sync::mpsc::unbounded_channel::<PlayerAction>();
+        {
+            let mut net = app.world_mut().resource_mut::<NetworkResource>();
+            net.status = NetworkStatus::Connected;
+            net.action_tx = Some(action_tx);
+        }
+
+        let packet_rx = app.world().resource::<NetworkResource>().packet_rx.clone();
+        if let Ok(mut queue) = packet_rx.lock() {
+            queue.push_back(GamePacket::Welcome {
+                id: 9,
+                message: "welcome".to_string(),
+            });
+        }
+
+        app.update();
+
+        let resume_action = action_rx
+            .try_recv()
+            .expect("welcome with changed id should trigger resume request");
+        assert_eq!(
+            resume_action,
+            PlayerAction::ResumeSession { previous_id: 7 }
+        );
+
+        let my_id = app.world().resource::<MyNetworkId>();
+        assert_eq!(my_id.0, Some(9));
+
+        let local_net_id = app
+            .world()
+            .entity(local_entity)
+            .get::<NetworkId>()
+            .expect("local player should keep NetworkId");
+        assert_eq!(local_net_id.0, 9);
+
+        let entity_map = app.world().resource::<NetworkEntityMap>();
+        assert_eq!(entity_map.0.get(&9), Some(&local_entity));
+    }
+
+    #[test]
+    fn world_snapshot_delta_updates_and_removes_remote_entities() {
+        let mut app = setup_network_event_app();
+        app.world_mut().resource_mut::<MyNetworkId>().0 = Some(1);
+
+        let local_entity = app
+            .world_mut()
+            .spawn((
+                LocalPlayer,
+                NetworkId(1),
+                Transform::from_xyz(0.0, 0.0, 1.0),
+            ))
+            .id();
+        let remote_entity = app
+            .world_mut()
+            .spawn((NetworkId(2), Transform::from_xyz(10.0, 0.0, 1.0)))
+            .id();
+        {
+            let mut map = app.world_mut().resource_mut::<NetworkEntityMap>();
+            map.0.insert(1, local_entity);
+            map.0.insert(2, remote_entity);
+        }
+
+        let packet_rx = app.world().resource::<NetworkResource>().packet_rx.clone();
+        if let Ok(mut queue) = packet_rx.lock() {
+            queue.push_back(GamePacket::WorldSnapshot {
+                tick: 1,
+                players: vec![
+                    test_player_state(1, Vec3::new(0.0, 0.0, 1.0)),
+                    test_player_state(2, Vec3::new(10.0, 0.0, 1.0)),
+                ],
+            });
+            queue.push_back(GamePacket::WorldSnapshotDelta {
+                tick: 2,
+                changed_players: vec![test_player_state(2, Vec3::new(45.0, 0.0, 1.0))],
+                removed_player_ids: Vec::new(),
+            });
+        }
+
+        app.update();
+
+        let interp = app
+            .world()
+            .entity(remote_entity)
+            .get::<InterpolationState>()
+            .expect("delta update should create interpolation state on remote entity");
+        assert_eq!(interp.target_pos, Vec3::new(45.0, 0.0, 1.0));
+
+        let packet_rx = app.world().resource::<NetworkResource>().packet_rx.clone();
+        if let Ok(mut queue) = packet_rx.lock() {
+            queue.push_back(GamePacket::WorldSnapshotDelta {
+                tick: 3,
+                changed_players: Vec::new(),
+                removed_player_ids: vec![2],
+            });
+        }
+
+        app.update();
+
+        let entity_map = app.world().resource::<NetworkEntityMap>();
+        assert!(
+            !entity_map.0.contains_key(&2),
+            "delta remove should clear remote entity mapping"
+        );
+        assert!(
+            app.world().get_entity(remote_entity).is_err(),
+            "delta remove should despawn remote entity"
+        );
+    }
+
+    #[test]
+    fn update_network_status_tracks_runtime_event_order_and_reconnect_duration() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<NetworkResource>()
+            .init_resource::<NetworkLifecycleState>()
+            .add_systems(Update, update_network_status);
+
+        let runtime_events = app
+            .world()
+            .resource::<NetworkResource>()
+            .runtime_events
+            .clone();
+        if let Ok(mut queue) = runtime_events.lock() {
+            queue.push_back(NetworkRuntimeEvent::Connected);
+            queue.push_back(NetworkRuntimeEvent::Disconnected);
+            queue.push_back(NetworkRuntimeEvent::Connected);
+        }
+
+        app.update();
+
+        let net = app.world().resource::<NetworkResource>();
+        assert_eq!(net.status, NetworkStatus::Connected);
+
+        let lifecycle = app.world().resource::<NetworkLifecycleState>();
+        assert_eq!(
+            lifecycle.transition_history,
+            vec![
+                NetworkStatus::Disconnected,
+                NetworkStatus::Connected,
+                NetworkStatus::Disconnected,
+                NetworkStatus::Connected
+            ]
+        );
+        assert_eq!(
+            lifecycle.reconnect_durations_secs.len(),
+            1,
+            "disconnect -> reconnect should record reconnect duration"
+        );
     }
 
     #[test]

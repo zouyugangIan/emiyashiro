@@ -31,8 +31,11 @@
 - [x] 服务端发送 `Welcome` 包
 - [x] 客户端握手后拿到 `MyNetworkId`
 - [x] `NetworkStatus` 按连接事件变化（`Connecting/Connected/Disconnected`）
+- [x] 重连后 `ResumeSession` 可恢复实体映射且不产生重复实体
 - [x] 输入发送单通道（`update_game_input`）无重复上报
+- [x] 输入协议分层（`InputState` + `InputEvent`）可通过自动化回归
 - [x] 快照插值无明显抖动
+- [x] `WorldSnapshotDelta` 更新/移除链路可通过自动化回归
 
 ## 5. 存档回归
 

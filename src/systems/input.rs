@@ -5,6 +5,31 @@
 
 use bevy::prelude::*;
 
+#[derive(Resource, Debug, Clone)]
+pub struct NetworkInputSyncState {
+    pub next_sequence: u32,
+    pub last_sent_move_x: f32,
+    pub last_sent_move_y: f32,
+    pub last_state_send_time: f32,
+    pub state_send_interval_secs: f32,
+    pub sent_state_count: u64,
+    pub sent_event_count: u64,
+}
+
+impl Default for NetworkInputSyncState {
+    fn default() -> Self {
+        Self {
+            next_sequence: 1,
+            last_sent_move_x: 0.0,
+            last_sent_move_y: 0.0,
+            last_state_send_time: f32::NEG_INFINITY,
+            state_send_interval_secs: 0.1,
+            sent_state_count: 0,
+            sent_event_count: 0,
+        }
+    }
+}
+
 /// 游戏输入资源
 ///
 /// 存储当前的输入状态和输入历史，用于游戏逻辑处理。
@@ -66,6 +91,7 @@ pub fn update_game_input(
     mut game_input: ResMut<GameInput>,
     time: Res<Time>,
     net: Res<crate::systems::network::NetworkResource>,
+    mut net_sync: ResMut<NetworkInputSyncState>,
 ) {
     const JUMP_BUFFER_DURATION: f32 = 0.15;
 
@@ -203,30 +229,49 @@ pub fn update_game_input(
     if net.status == crate::systems::network::NetworkStatus::Connected
         && let Some(tx) = &net.action_tx
     {
-        // Jump
+        // Instant events use edge-triggered stream.
         if new_jump && !old_jump {
-            let _ = tx.send(crate::protocol::PlayerAction::Jump);
+            let sequence = net_sync.next_sequence;
+            net_sync.next_sequence = net_sync.next_sequence.wrapping_add(1);
+            let _ = tx.send(crate::protocol::PlayerAction::InputEvent {
+                sequence,
+                kind: crate::protocol::InputEventKind::Jump,
+            });
+            net_sync.sent_event_count = net_sync.sent_event_count.wrapping_add(1);
         }
 
-        // Attack
         if new_action1 && !old_action1 {
-            let _ = tx.send(crate::protocol::PlayerAction::Attack);
+            let sequence = net_sync.next_sequence;
+            net_sync.next_sequence = net_sync.next_sequence.wrapping_add(1);
+            let _ = tx.send(crate::protocol::PlayerAction::InputEvent {
+                sequence,
+                kind: crate::protocol::InputEventKind::Attack,
+            });
+            net_sync.sent_event_count = net_sync.sent_event_count.wrapping_add(1);
         }
 
-        // Move
-        if (resolved_move_left != old_move_left)
-            || (resolved_move_right != old_move_right)
-            || (new_crouch != old_crouch)
-        {
-            let x = if resolved_move_right {
-                1.0
-            } else if resolved_move_left {
-                -1.0
-            } else {
-                0.0
-            };
-            let y = if new_crouch { -1.0 } else { 0.0 };
-            let _ = tx.send(crate::protocol::PlayerAction::Move { x, y });
+        // Continuous movement uses state stream with delta + throttle.
+        let x = if resolved_move_right {
+            1.0
+        } else if resolved_move_left {
+            -1.0
+        } else {
+            0.0
+        };
+        let y = if new_crouch { -1.0 } else { 0.0 };
+
+        let state_changed = (x - net_sync.last_sent_move_x).abs() > f32::EPSILON
+            || (y - net_sync.last_sent_move_y).abs() > f32::EPSILON;
+        let throttle_expired =
+            current_time - net_sync.last_state_send_time >= net_sync.state_send_interval_secs;
+        if state_changed || throttle_expired {
+            let sequence = net_sync.next_sequence;
+            net_sync.next_sequence = net_sync.next_sequence.wrapping_add(1);
+            let _ = tx.send(crate::protocol::PlayerAction::InputState { sequence, x, y });
+            net_sync.last_sent_move_x = x;
+            net_sync.last_sent_move_y = y;
+            net_sync.last_state_send_time = current_time;
+            net_sync.sent_state_count = net_sync.sent_state_count.wrapping_add(1);
         }
     }
 }

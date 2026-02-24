@@ -20,66 +20,66 @@
 - `cargo fmt --check`
 - `cargo check`
 - `cargo check --all-features --future-incompat-report`
-- `cargo clippy --lib --all-features -- -D warnings`
 - `cargo clippy --all-features --all-targets -- -D warnings`
 - `cargo test --lib --all-features`
 
-测试结果：`109 passed, 0 failed`。
+测试结果：`119 passed, 0 failed`。
 
 ## 3) 架构升级完成项（本轮）
 
-### 3.1 服务端运行时插件化
+### 3.1 网络主链路升级（T-001 / T-002 / T-003 / T-004）
 
-- 新增 `src/plugins/server.rs`，将服务端 ECS 运行时从 `src/bin/server.rs` 剥离。
-- `src/bin/server.rs` 收敛为“网络接入 + App 启动”入口，职责更清晰。
+- 客户端位置层已实现“预测 + 服务器校正”完整闭环（deadzone / smooth / snap）。
+- 输入协议升级为“状态流 + 事件流”：
+  - 状态流：`InputState { sequence, x, y }`（节流 + 差量发送）。
+  - 事件流：`InputEvent { sequence, kind }`（边沿触发发送）。
+- 会话恢复链路落地：
+  - 客户端在 `Welcome` ID 变化后自动发送 `ResumeSession`。
+  - 服务端将旧 ID 实体映射到新 ID，避免重复实体。
+  - `NetworkStatus` 生命周期按运行时事件顺序更新并记录重连耗时。
+- 快照同步升级为“全量 + delta 混合”：
+  - 新增 `WorldSnapshotDelta`（变更实体 + 移除实体）。
+  - 服务端维护快照缓存并按固定间隔发送全量，其他 tick 发送 delta。
+  - 客户端支持 delta 应用与移除同步。
 
-### 3.2 服务端固定步长调度（Deterministic Tick）
+### 3.2 Redis 后台写队列升级（T-006）
 
-- 服务端主逻辑迁入 `FixedUpdate`，并显式配置 `Time::<Fixed>::from_hz(60.0)`。
-- 玩家物理与快照广播在固定步长上运行，降低帧间抖动与时序漂移。
+- ECS 主循环仅入队，不直接执行 Redis I/O。
+- 写队列失败重试参数化（环境变量），并记录可观测指标：
+  - queued / processed / dropped / failed / retries / pending。
+- 服务端周期输出队列指标日志，支撑线上运行可观测性。
 
-### 3.3 客户端网络稳态增强
+### 3.3 在线生态最小闭环（T-008）
 
-- 网络配置资源化：`NetworkConfig`（连接地址、重连间隔、心跳间隔）。
-- 增加 `auto_reconnect_network`：断连后按冷却窗口自动重连。
-- 增加 `send_heartbeat_ping_system`：稳定连接探活（周期 Ping）。
+- 新增排行榜存储、回放存储、云存档存储资源。
+- 新增统一发布接口，单次流程可完成：
+  - 分数提交到排行榜。
+  - 回放保存。
+  - 云存档上传。
+- 对应单元测试覆盖“最小闭环”和“跨设备下载”场景。
 
-### 3.4 广播链路稳健性提升
+### 3.4 性能与指标报告（T-001 / T-003 / T-004 / T-007）
 
-- 服务端广播改为“每连接独立 writer task + 发送通道”模型。
-- 避免旧实现中同包重复发送与 sink 写入路径耦合。
-
-### 3.5 存档链路零 legacy 化
-
-- 删除 `SaveData` 与 legacy 迁移/兼容代码路径。
-- 存档读取严格限定为 `SaveFileData v2`，旧 schema 直接拒绝。
-- 校验和策略统一为 `BLAKE3`，校验失败即硬失败（无兼容模式）。
-- 文件解码统一为 `Plain JSON + Zstd`，移除 Gzip 兼容路径。
+- 新增可复现指标采集工具：`src/bin/architecture_metrics.rs`。
+- 生成报告：`docs/2026-architecture-metrics-report.md`。
+- 报告覆盖：
+  - 首次纠偏延迟 p50/p95、抖动、纠偏频次。
+  - 输入协议带宽对比。
+  - 快照 delta 带宽对比。
+  - 1080p 场景装饰预算（低/中/高配置）基线。
 
 ## 4) 与 2026 最佳实践对齐结论
 
-- 插件化与职责分层：`已对齐`（客户端 + 服务端双入口收敛）。
-- 固定步长核心逻辑：`已对齐`（服务端 60Hz 固定 tick）。
-- 网络生命周期管理：`部分对齐`（已具备握手、状态机、重连、心跳；预测校正与会话恢复待完成）。
-- 文档与门禁一致性：`已对齐`（门禁结果已刷新，避免“文档通过但代码退化”）。
-- 存档治理（单路径 + 严格校验）：`已对齐`（v2 only，无 legacy 分支）。
+- 插件化与职责分层：`已对齐`。
+- 固定步长核心逻辑：`已对齐`。
+- 网络生命周期管理（预测、校正、会话恢复、delta）：`已对齐`。
+- Redis 异步写入与可观测性：`已对齐`。
+- 存档治理（单路径 + 严格校验）：`已对齐`。
+- 文档与门禁一致性：`已对齐`。
 
-## 5) 仍在推进的升级项
+## 5) Jobs 完成度（2026-02-24）
 
-当前已进入 T-001 第一阶段实现：
-
-- 客户端位置层已接入“本地预测 + 服务器误差校正”机制（deadzone / smooth / snap）。
-- 下一步是补齐量化验证（端到端延迟、校正触发率、抖动曲线）。
-
-剩余工作已统一迁移到：
-
-- `docs/2026-architecture-upgrade-tasks.md`
-- `docs/bevy-upgrade-regression-checklist.md`
-
-执行策略：以回归清单为验收口，以 `TASKS` 为排期口，避免文档重复承诺。
-
-## 6) Jobs 完成度（2026-02-24）
-
+- `docs/2026-architecture-upgrade-tasks.md`：已完成（所有任务勾选）。
 - `docs/bevy-upgrade-regression-checklist.md`：已完成（全部勾选）。
 - `docs/ops-runbook.md` Release Readiness：已完成（按当前执行环境验收）。
-- 存档系统作业：已完成（零 legacy、严格校验、测试覆盖）。
+- 网络/性能指标报告：已完成（`docs/2026-architecture-metrics-report.md`）。

@@ -14,6 +14,9 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Added upgrade status SSOT: `docs/2026-upgrade-status.md`.
 - Added architecture task board: `docs/2026-architecture-upgrade-tasks.md`.
 - Added targeted regression tests for stateflow/combat/save/network interpolation (`src/tests/systems_tests.rs`).
+- Added online ecosystem module with leaderboard/replay/cloud-save minimal loop (`src/systems/online_ecosystem.rs`).
+- Added architecture metrics generator binary (`src/bin/architecture_metrics.rs`) and generated metrics report (`docs/2026-architecture-metrics-report.md`).
+- Added reconnect-resume/delta/input-protocol regression tests in `src/systems/network.rs`, `src/plugins/server.rs`, and `src/tests/systems_tests.rs`.
 
 ### Changed
 
@@ -30,7 +33,12 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Simplified save payload decoding to `Plain JSON + Zstd` and removed Gzip compatibility branch.
 - Removed animation config legacy fallback field and standardized on explicit `playback_mode`.
 - Implemented T-001 position-layer netcode upgrade: local prediction + server reconciliation (deadzone/smooth/snap).
-- Expanded test baseline from `94` to `109` passing tests.
+- Implemented T-002 reconnect resume flow with identity remap and lifecycle tracking.
+- Implemented T-003 split input protocol (`InputState` + `InputEvent`) with client-side delta/throttle sync.
+- Implemented T-004 snapshot delta path (`WorldSnapshotDelta`) with server-side bandwidth metrics.
+- Implemented T-006 Redis background queue retry/metrics observability upgrades.
+- Implemented T-008 online ecosystem minimum closed loop (leaderboard/replay/cloud-save).
+- Expanded test baseline from `94` to `119` passing tests.
 - Upgraded CI workflow in `.github/workflows/rust-ci.yml`:
   - Added `cargo check` (default features).
   - Added `cargo check --all-features --future-incompat-report`.
@@ -49,6 +57,7 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Completed and checked all items in `docs/bevy-upgrade-regression-checklist.md`.
 - Merged and removed completed assessment doc `docs/2026-bevy-upgrade-assessment-zh.md`.
 - Updated save-related docs to reflect zero-legacy policy and strict checksum behavior.
+- Updated architecture tasks/status docs to mark T-001..T-008 complete and linked reproducible metrics report.
 
 ## [2026-02-23]
 

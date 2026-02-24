@@ -16,6 +16,10 @@ path = "src/bin/client.rs"
 name = "server"
 path = "src/bin/server.rs"
 
+[[bin]]
+name = "architecture_metrics"
+path = "src/bin/architecture_metrics.rs"
+
 [dependencies]
 bevy = { version = "0.18", features = ["png", "jpeg"] }
 tokio = { version = "1.49", features = ["full"], optional = true }

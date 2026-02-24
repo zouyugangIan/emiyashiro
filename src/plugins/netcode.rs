@@ -4,9 +4,10 @@ use crate::systems::{
     interfaces::GameSystemSet,
     network::{
         ClientPredictionConfig, MyNetworkId, NetworkConfig, NetworkEntityMap,
-        NetworkReconnectState, NetworkResource, NetworkSnapshotState, apply_server_corrections,
-        auto_reconnect_network, handle_network_events, interpolate_positions,
-        send_heartbeat_ping_system, send_ping_system, setup_network, update_network_status,
+        NetworkLifecycleState, NetworkReconnectState, NetworkResource, NetworkSnapshotState,
+        apply_server_corrections, auto_reconnect_network, handle_network_events,
+        interpolate_positions, send_heartbeat_ping_system, send_ping_system, setup_network,
+        update_network_status,
     },
 };
 
@@ -22,6 +23,7 @@ impl Plugin for NetcodePlugin {
             .init_resource::<NetworkEntityMap>()
             .init_resource::<MyNetworkId>()
             .init_resource::<NetworkSnapshotState>()
+            .init_resource::<NetworkLifecycleState>()
             .add_systems(Startup, setup_network)
             .add_systems(
                 Update,

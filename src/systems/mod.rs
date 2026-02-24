@@ -36,6 +36,7 @@ pub mod audio;
 pub mod async_file_ops;
 pub mod async_tasks;
 pub mod database_service;
+pub mod online_ecosystem;
 pub mod pause_save;
 pub mod save;
 pub mod server_file_ops;

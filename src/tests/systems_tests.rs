@@ -402,6 +402,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .insert_resource(ButtonInput::<KeyCode>::default())
             .init_resource::<input::GameInput>()
+            .init_resource::<input::NetworkInputSyncState>()
             .init_resource::<crate::systems::network::NetworkResource>()
             .add_systems(Update, input::update_game_input);
 
@@ -421,6 +422,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .insert_resource(ButtonInput::<KeyCode>::default())
             .init_resource::<input::GameInput>()
+            .init_resource::<input::NetworkInputSyncState>()
             .init_resource::<crate::systems::network::NetworkResource>()
             .add_systems(Update, input::update_game_input);
 
@@ -440,6 +442,130 @@ mod tests {
         );
         assert!(!game_input.move_left);
         assert!(!game_input.move_right);
+    }
+
+    #[test]
+    fn test_input_state_stream_uses_delta_and_throttle() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<input::GameInput>()
+            .init_resource::<input::NetworkInputSyncState>()
+            .init_resource::<crate::systems::network::NetworkResource>()
+            .add_systems(Update, input::update_game_input);
+
+        let (action_tx, mut action_rx) =
+            tokio::sync::mpsc::unbounded_channel::<crate::protocol::PlayerAction>();
+        {
+            let mut net = app
+                .world_mut()
+                .resource_mut::<crate::systems::network::NetworkResource>();
+            net.status = crate::systems::network::NetworkStatus::Connected;
+            net.action_tx = Some(action_tx);
+        }
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyD);
+
+        app.update();
+
+        let first_action = action_rx
+            .try_recv()
+            .expect("first move input should send InputState");
+        match first_action {
+            crate::protocol::PlayerAction::InputState { x, y, .. } => {
+                assert_eq!(x, 1.0);
+                assert_eq!(y, 0.0);
+            }
+            other => panic!("expected InputState, got {:?}", other),
+        }
+        assert!(
+            action_rx.try_recv().is_err(),
+            "move-only input should not emit extra packets on first frame"
+        );
+
+        app.update();
+
+        assert!(
+            action_rx.try_recv().is_err(),
+            "unchanged movement before throttle interval should not resend state"
+        );
+    }
+
+    #[test]
+    fn test_input_event_stream_is_edge_triggered_per_press_cycle() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<input::GameInput>()
+            .init_resource::<input::NetworkInputSyncState>()
+            .init_resource::<crate::systems::network::NetworkResource>()
+            .add_systems(Update, input::update_game_input);
+
+        let (action_tx, mut action_rx) =
+            tokio::sync::mpsc::unbounded_channel::<crate::protocol::PlayerAction>();
+        {
+            let mut net = app
+                .world_mut()
+                .resource_mut::<crate::systems::network::NetworkResource>();
+            net.status = crate::systems::network::NetworkStatus::Connected;
+            net.action_tx = Some(action_tx);
+        }
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::ArrowUp);
+        app.update();
+        let mut first_cycle_jump_events = 0usize;
+        while let Ok(action) = action_rx.try_recv() {
+            if matches!(
+                action,
+                crate::protocol::PlayerAction::InputEvent {
+                    kind: crate::protocol::InputEventKind::Jump,
+                    ..
+                }
+            ) {
+                first_cycle_jump_events += 1;
+            }
+        }
+        assert_eq!(first_cycle_jump_events, 1);
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(KeyCode::ArrowUp);
+        app.update();
+        let mut release_cycle_jump_events = 0usize;
+        while let Ok(action) = action_rx.try_recv() {
+            if matches!(
+                action,
+                crate::protocol::PlayerAction::InputEvent {
+                    kind: crate::protocol::InputEventKind::Jump,
+                    ..
+                }
+            ) {
+                release_cycle_jump_events += 1;
+            }
+        }
+        assert_eq!(release_cycle_jump_events, 0);
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::ArrowUp);
+        app.update();
+        let mut second_cycle_jump_events = 0usize;
+        while let Ok(action) = action_rx.try_recv() {
+            if matches!(
+                action,
+                crate::protocol::PlayerAction::InputEvent {
+                    kind: crate::protocol::InputEventKind::Jump,
+                    ..
+                }
+            ) {
+                second_cycle_jump_events += 1;
+            }
+        }
+        assert_eq!(second_cycle_jump_events, 1);
     }
 
     #[test]
