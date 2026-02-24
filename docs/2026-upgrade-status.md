@@ -1,21 +1,30 @@
 # 2026 引擎升级状态总览
 
 > 最后更新：2026-02-24  
-> 作用：作为“文档完成状态 + 架构升级现状”的单一事实来源（SSOT）
+> 作用：作为“升级完成状态 + 指标快照 + 文档索引”的单一事实来源（SSOT）
 
-## 1) 本次归并说明
+## 1) 文档收口结果
 
-本文件归并了以下已完成且阶段性文档的核心结论：
+为避免文档分裂，已将“已完成任务板、来源清单、指标报告”归并到本文件并移除冗余文件。
 
+当前仅保留 3 份活文档：
+
+- `docs/2026-upgrade-status.md`（本文件，状态 SSOT）
+- `docs/bevy-upgrade-regression-checklist.md`（升级回归入口）
+- `docs/ops-runbook.md`（运行与发布入口）
+
+本次归并并删除：
+
+- `docs/2026-architecture-upgrade-tasks.md`
+- `docs/2026-best-practice-sources.md`
+- `docs/2026-architecture-metrics-report.md`
 - `docs/documentation-completeness-audit-2026-02-23.md`
-- `IMPLEMENTATION-SUMMARY.md`
 - `docs/2026-bevy-upgrade-assessment-zh.md`
-
-上述文档已完成使命，已从主文档集合中移除，避免状态分裂与重复维护。
+- `IMPLEMENTATION-SUMMARY.md`
 
 ## 2) 质量门禁状态（2026-02-24 实测）
 
-以下命令均已在当前代码基线执行通过：
+以下命令在当前基线通过：
 
 - `cargo fmt --check`
 - `cargo check`
@@ -23,63 +32,64 @@
 - `cargo clippy --all-features --all-targets -- -D warnings`
 - `cargo test --lib --all-features`
 
-测试结果：`119 passed, 0 failed`。
+结果：`119 passed, 0 failed`，且 `future-incompat` 警告为 `0`。
 
-## 3) 架构升级完成项（本轮）
+## 3) Jobs 完成矩阵
 
-### 3.1 网络主链路升级（T-001 / T-002 / T-003 / T-004）
+| Job                           | 状态 | 验收结论                                                   |
+| ----------------------------- | ---- | ---------------------------------------------------------- |
+| T-001 客户端预测 + 服务器校正 | 完成 | deadzone/smooth/snap 校正链路与指标已落地                  |
+| T-002 断线恢复会话            | 完成 | `ResumeSession` + 身份映射恢复 + 生命周期顺序校验已落地    |
+| T-003 输入协议分层            | 完成 | `InputState`（状态流）+ `InputEvent`（事件流）已替换旧链路 |
+| T-004 快照差量同步            | 完成 | `WorldSnapshotDelta` 已接入，客户端支持更新/移除           |
+| T-005 存档 SSOT               | 完成 | 仅 `SaveFileData v2`，旧 schema 直接拒绝                   |
+| T-006 Redis 后台写队列        | 完成 | 主循环无直接 I/O，失败重试可配置且可观测                   |
+| T-007 性能预算守护            | 完成 | 1080p 场景预算基线已给出（低/中/高）                       |
+| T-008 在线生态最小闭环        | 完成 | 排行榜/回放/云存档闭环与跨设备验证通过                     |
 
-- 客户端位置层已实现“预测 + 服务器校正”完整闭环（deadzone / smooth / snap）。
-- 输入协议升级为“状态流 + 事件流”：
-  - 状态流：`InputState { sequence, x, y }`（节流 + 差量发送）。
-  - 事件流：`InputEvent { sequence, kind }`（边沿触发发送）。
-- 会话恢复链路落地：
-  - 客户端在 `Welcome` ID 变化后自动发送 `ResumeSession`。
-  - 服务端将旧 ID 实体映射到新 ID，避免重复实体。
-  - `NetworkStatus` 生命周期按运行时事件顺序更新并记录重连耗时。
-- 快照同步升级为“全量 + delta 混合”：
-  - 新增 `WorldSnapshotDelta`（变更实体 + 移除实体）。
-  - 服务端维护快照缓存并按固定间隔发送全量，其他 tick 发送 delta。
-  - 客户端支持 delta 应用与移除同步。
+## 4) 关键指标快照（2026-02-24）
 
-### 3.2 Redis 后台写队列升级（T-006）
+指标由 `cargo run --release --bin architecture_metrics` 生成（工具：`src/bin/architecture_metrics.rs`）。
 
-- ECS 主循环仅入队，不直接执行 Redis I/O。
-- 写队列失败重试参数化（环境变量），并记录可观测指标：
-  - queued / processed / dropped / failed / retries / pending。
-- 服务端周期输出队列指标日志，支撑线上运行可观测性。
+### 4.1 T-001 体验指标
 
-### 3.3 在线生态最小闭环（T-008）
+- 首次纠偏延迟 p50：`30.82 ms`
+- 首次纠偏延迟 p95：`36.46 ms`
+- 快照抖动（stddev）：`3.28 ms`
+- 纠偏触发率：`39.17%`
+- Snap 触发率：`1.67%`
 
-- 新增排行榜存储、回放存储、云存档存储资源。
-- 新增统一发布接口，单次流程可完成：
-  - 分数提交到排行榜。
-  - 回放保存。
-  - 云存档上传。
-- 对应单元测试覆盖“最小闭环”和“跨设备下载”场景。
+### 4.2 T-003 输入协议带宽
 
-### 3.4 性能与指标报告（T-001 / T-003 / T-004 / T-007）
+- 10s@60Hz 包数：`612 -> 112`（`-81.70%`）
+- 10s@60Hz payload：`7248 -> 1744 bytes`（`-75.94%`）
 
-- 新增可复现指标采集工具：`src/bin/architecture_metrics.rs`。
-- 生成报告：`docs/2026-architecture-metrics-report.md`。
-- 报告覆盖：
-  - 首次纠偏延迟 p50/p95、抖动、纠偏频次。
-  - 输入协议带宽对比。
-  - 快照 delta 带宽对比。
-  - 1080p 场景装饰预算（低/中/高配置）基线。
+### 4.3 T-004 快照同步带宽
 
-## 4) 与 2026 最佳实践对齐结论
+- 10s@60Hz payload：`3388800 -> 435520 bytes`（`-87.15%`）
 
-- 插件化与职责分层：`已对齐`。
-- 固定步长核心逻辑：`已对齐`。
-- 网络生命周期管理（预测、校正、会话恢复、delta）：`已对齐`。
-- Redis 异步写入与可观测性：`已对齐`。
-- 存档治理（单路径 + 严格校验）：`已对齐`。
-- 文档与门禁一致性：`已对齐`。
+### 4.4 T-007 场景预算基线（Headless ECS）
 
-## 5) Jobs 完成度（2026-02-24）
+- Low（1000 装饰）：`0.0306ms avg / 0.0344ms p95`
+- Medium（5000 装饰）：`0.0353ms avg / 0.0420ms p95`
+- High（10000 装饰）：`0.0432ms avg / 0.0468ms p95`
 
-- `docs/2026-architecture-upgrade-tasks.md`：已完成（所有任务勾选）。
-- `docs/bevy-upgrade-regression-checklist.md`：已完成（全部勾选）。
-- `docs/ops-runbook.md` Release Readiness：已完成（按当前执行环境验收）。
-- 网络/性能指标报告：已完成（`docs/2026-architecture-metrics-report.md`）。
+## 5) 2026 最佳实践来源（归并）
+
+- Cargo `check` / `test` / future incompat report：
+  - https://doc.rust-lang.org/cargo/commands/cargo-check.html
+  - https://doc.rust-lang.org/cargo/commands/cargo-test.html
+  - https://doc.rust-lang.org/cargo/reference/future-incompat-report.html
+- Clippy：
+  - https://doc.rust-lang.org/clippy/
+- GitHub Actions：
+  - https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs
+  - https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+- Rust cache action：
+  - https://github.com/Swatinem/rust-cache
+- Bevy 迁移与 API：
+  - https://bevy.org/learn/migration-guides/0-17-to-0-18/
+  - https://docs.rs/bevy/latest/bevy/app/struct.FixedUpdate.html
+  - https://docs.rs/bevy/latest/bevy/prelude/struct.App.html#method.add_plugins
+- Tokio mpsc：
+  - https://docs.rs/tokio/latest/tokio/sync/mpsc/

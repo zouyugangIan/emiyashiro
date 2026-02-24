@@ -42,11 +42,12 @@ fn resolve_save_target(
         .find(|save| save.name == requested_name)
     {
         let existing_path = PathBuf::from(&existing.file_path);
-        let target_path = if existing_path.as_os_str().is_empty() {
-            save_dir.join(format!("{}.json", requested_name))
-        } else {
-            existing_path
-        };
+        let target_path =
+            if existing_path.as_os_str().is_empty() || !is_valid_save_path(&existing_path) {
+                save_dir.join(format!("{}.json", requested_name))
+            } else {
+                existing_path
+            };
 
         return (requested_name.to_string(), target_path, true);
     }
@@ -67,6 +68,14 @@ fn resolve_save_target(
     }
 
     (resolved_name, candidate_path, false)
+}
+
+fn is_valid_save_path(path: &Path) -> bool {
+    let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    let has_json_extension = path.extension().and_then(|ext| ext.to_str()) == Some("json");
+    !file_name.is_empty() && has_json_extension
 }
 
 /// System to handle save game requests by spawning them on the async compute pool.
@@ -327,6 +336,37 @@ mod tests {
             Some("slot_2.json")
         );
         assert!(!is_overwrite);
+
+        let _ = fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn resolve_save_target_falls_back_when_existing_path_is_invalid() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "emiyashiro-save-target-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        fs::create_dir_all(&temp_dir).expect("create temp save dir");
+
+        let existing_saves = vec![SaveFileMetadata {
+            name: "slot".to_string(),
+            score: 0,
+            distance: 0.0,
+            play_time: 0.0,
+            save_timestamp: chrono::Utc::now(),
+            file_path: ".".to_string(),
+            selected_character: crate::states::CharacterType::Shirou1,
+        }];
+
+        let (resolved_name, resolved_path, is_overwrite) =
+            resolve_save_target(&temp_dir, "slot", &existing_saves);
+
+        assert_eq!(resolved_name, "slot");
+        assert_eq!(
+            resolved_path.file_name().and_then(|name| name.to_str()),
+            Some("slot.json")
+        );
+        assert!(is_overwrite);
 
         let _ = fs::remove_dir_all(temp_dir);
     }

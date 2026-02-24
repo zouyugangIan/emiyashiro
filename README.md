@@ -66,9 +66,7 @@ src/
 
 - `G-ENGINE-SETUP.md`: 联机与基础设施部署指南
 - `SCENE_ENHANCEMENT.md`: 场景视差与装饰系统说明
-- `docs/2026-best-practice-sources.md`: 本次互联网最佳实践来源清单
 - `docs/2026-upgrade-status.md`: 2026 升级状态总览（文档完成状态 SSOT）
-- `docs/2026-architecture-upgrade-tasks.md`: 架构升级任务排期与验收标准
 - `docs/bevy-upgrade-regression-checklist.md`: 引擎升级回归清单
 - `docs/ops-runbook.md`: 运维与发布 runbook
 - `CHANGELOG.md`: 版本化变更记录
@@ -83,8 +81,7 @@ src/
 - `cargo clippy --lib --all-features -- -D warnings`
 - `cargo test --lib --all-features`
 
-## 已知待完善项（2026）
+## 架构升级状态（2026）
 
-- 客户端预测与服务器校正
-- 断线重连与恢复
-- WorldSnapshot 差量同步
+- 2026 架构升级 jobs（T-001 ~ T-008）已完成。
+- 最新完成状态、指标快照与最佳实践来源统一收口在 `docs/2026-upgrade-status.md`。

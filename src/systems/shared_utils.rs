@@ -1,6 +1,7 @@
 //! Shared utility functions for file operations, compression, and checksums.
 
 use atomicwrites::{AtomicFile, OverwriteBehavior};
+use std::fs;
 use std::io::{self, Cursor, Write};
 use std::path::Path;
 
@@ -59,8 +60,49 @@ pub fn calculate_checksum(data: &[u8]) -> String {
 
 /// Atomically writes file bytes to target path.
 pub fn atomic_write_file(path: &Path, data: &[u8]) -> Result<(), std::io::Error> {
-    let atomic_file = AtomicFile::new(path, OverwriteBehavior::AllowOverwrite);
-    atomic_file
-        .write(|file| file.write_all(data))
-        .map_err(|e| io::Error::other(e.to_string()))
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent)?;
+    }
+
+    // `atomicwrites` may panic for paths without a stable parent directory.
+    // For such paths we fallback to direct write to keep runtime robust.
+    let no_stable_parent = path
+        .parent()
+        .map(|parent| parent.as_os_str().is_empty())
+        .unwrap_or(true);
+    if no_stable_parent {
+        return fs::write(path, data);
+    }
+
+    let write_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let atomic_file = AtomicFile::new(path, OverwriteBehavior::AllowOverwrite);
+        atomic_file.write(|file| file.write_all(data))
+    }));
+
+    match write_result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(error)) => Err(io::Error::other(error.to_string())),
+        Err(_) => fs::write(path, data),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn atomic_write_file_supports_relative_path_without_parent() {
+        let relative = std::path::PathBuf::from(format!(
+            "emiyashiro-relative-write-{}.json",
+            uuid::Uuid::new_v4()
+        ));
+
+        atomic_write_file(&relative, br#"{"ok":true}"#).expect("write should succeed");
+        let saved = fs::read(&relative).expect("saved file should be readable");
+        assert_eq!(saved, br#"{"ok":true}"#);
+
+        let _ = fs::remove_file(relative);
+    }
 }

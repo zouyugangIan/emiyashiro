@@ -58,6 +58,10 @@ The format follows Keep a Changelog and Semantic Versioning conventions where ap
 - Merged and removed completed assessment doc `docs/2026-bevy-upgrade-assessment-zh.md`.
 - Updated save-related docs to reflect zero-legacy policy and strict checksum behavior.
 - Updated architecture tasks/status docs to mark T-001..T-008 complete and linked reproducible metrics report.
+- Consolidated completed 2026 docs into `docs/2026-upgrade-status.md` and removed:
+  - `docs/2026-architecture-upgrade-tasks.md`
+  - `docs/2026-best-practice-sources.md`
+  - `docs/2026-architecture-metrics-report.md`
 
 ## [2026-02-23]
 

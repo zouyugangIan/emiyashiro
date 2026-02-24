@@ -5,6 +5,10 @@
 use crate::{components::*, resources::*};
 use bevy::prelude::*;
 
+const PLAYER_STAND_SCALE_Y: f32 = 1.0;
+const PLAYER_CROUCH_SCALE_Y: f32 = 0.5;
+const PLAYER_CROUCH_TRANSLATION_OFFSET: f32 = 15.0;
+
 /// 玩家移动系统
 ///
 /// 处理玩家的水平移动，根据输入更新玩家的速度和位置。
@@ -110,8 +114,8 @@ pub fn player_jump(
         // 提升容错：若角色处于蹲伏且玩家请求跳跃，先自动起身再进入跳跃判定。
         if wants_jump && player_state.is_grounded && player_state.is_crouching {
             player_state.is_crouching = false;
-            transform.scale.y = transform.scale.x;
-            transform.translation.y += 15.0;
+            transform.scale.y = PLAYER_STAND_SCALE_Y;
+            transform.translation.y += PLAYER_CROUCH_TRANSLATION_OFFSET;
         }
 
         let can_jump_now = (player_state.is_grounded || near_ground) && !player_state.is_crouching;
@@ -318,16 +322,14 @@ pub fn player_crouch(
         if is_crouch_pressed && !player_state.is_crouching && player_state.is_grounded {
             // 开始趴下
             player_state.is_crouching = true;
-            // 简单的缩放方法，保持原始X缩放
-            let _original_x_scale = transform.scale.x;
-            transform.scale.y = 0.5; // 压缩高度
-            transform.translation.y -= 15.0; // 向下移动一点
+            transform.scale.y = PLAYER_CROUCH_SCALE_Y;
+            transform.translation.y -= PLAYER_CROUCH_TRANSLATION_OFFSET;
             crate::debug_log!("🗡️ 士郎趴下！");
         } else if !is_crouch_pressed && player_state.is_crouching {
             // 停止趴下
             player_state.is_crouching = false;
-            transform.scale.y = transform.scale.x; // 恢复Y缩放与X缩放一致
-            transform.translation.y += 15.0; // 向上移动回原位
+            transform.scale.y = PLAYER_STAND_SCALE_Y;
+            transform.translation.y += PLAYER_CROUCH_TRANSLATION_OFFSET;
             crate::debug_log!("🗡️ 士郎站起！");
         }
     }

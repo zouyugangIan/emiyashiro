@@ -17,7 +17,9 @@ pub async fn save_game_state_internal(
     compression_enabled: bool,
     compression_level: u32,
 ) -> Result<(), SaveSystemError> {
-    if let Some(parent_dir) = save_path.parent() {
+    if let Some(parent_dir) = save_path.parent()
+        && !parent_dir.as_os_str().is_empty()
+    {
         fs::create_dir_all(parent_dir)
             .map_err(|e| SaveSystemError::DirectoryCreationFailed(e.to_string()))?;
     }

@@ -10,18 +10,18 @@ use s_emiyashiro::systems::scene_decoration::{
 
 #[derive(Debug)]
 struct InputBandwidthReport {
-    legacy_packets: u64,
+    baseline_packets: u64,
     modern_packets: u64,
-    legacy_bytes: u64,
+    baseline_bytes: u64,
     modern_bytes: u64,
     reduction_pct: f64,
 }
 
 #[derive(Debug)]
 struct SnapshotBandwidthReport {
-    legacy_packets: u64,
+    baseline_packets: u64,
     modern_packets: u64,
-    legacy_bytes: u64,
+    baseline_bytes: u64,
     modern_bytes: u64,
     reduction_pct: f64,
 }
@@ -45,13 +45,13 @@ struct ScenePerfProfile {
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct LegacyWorldSnapshot {
+struct BaselineWorldSnapshot {
     tick: u64,
     players: Vec<PlayerState>,
 }
 
 #[derive(Debug, Clone, Serialize)]
-enum LegacyPlayerAction {
+enum BaselinePlayerAction {
     Move { x: f32, y: f32 },
     Jump,
     Attack,
@@ -108,9 +108,9 @@ fn movement_axis_for_tick(tick: u32) -> f32 {
 }
 
 fn simulate_input_bandwidth(total_ticks: u32) -> InputBandwidthReport {
-    let mut legacy_packets = 0u64;
+    let mut baseline_packets = 0u64;
     let mut modern_packets = 0u64;
-    let mut legacy_bytes = 0u64;
+    let mut baseline_bytes = 0u64;
     let mut modern_bytes = 0u64;
 
     let mut sequence = 1u32;
@@ -124,19 +124,19 @@ fn simulate_input_bandwidth(total_ticks: u32) -> InputBandwidthReport {
         let jump_trigger = tick % 120 == 0;
         let attack_trigger = tick % 90 == 45;
 
-        let legacy_move = LegacyPlayerAction::Move { x, y };
-        legacy_bytes += serialize_len(&legacy_move) as u64;
-        legacy_packets += 1;
+        let baseline_move = BaselinePlayerAction::Move { x, y };
+        baseline_bytes += serialize_len(&baseline_move) as u64;
+        baseline_packets += 1;
 
         if jump_trigger {
-            let legacy_jump = LegacyPlayerAction::Jump;
-            legacy_bytes += serialize_len(&legacy_jump) as u64;
-            legacy_packets += 1;
+            let baseline_jump = BaselinePlayerAction::Jump;
+            baseline_bytes += serialize_len(&baseline_jump) as u64;
+            baseline_packets += 1;
         }
         if attack_trigger {
-            let legacy_attack = LegacyPlayerAction::Attack;
-            legacy_bytes += serialize_len(&legacy_attack) as u64;
-            legacy_packets += 1;
+            let baseline_attack = BaselinePlayerAction::Attack;
+            baseline_bytes += serialize_len(&baseline_attack) as u64;
+            baseline_packets += 1;
         }
 
         let state_changed = (x - last_sent_x).abs() > f32::EPSILON;
@@ -170,16 +170,16 @@ fn simulate_input_bandwidth(total_ticks: u32) -> InputBandwidthReport {
         }
     }
 
-    let reduction_pct = if legacy_bytes > 0 {
-        ((legacy_bytes as f64 - modern_bytes as f64) / legacy_bytes as f64) * 100.0
+    let reduction_pct = if baseline_bytes > 0 {
+        ((baseline_bytes as f64 - modern_bytes as f64) / baseline_bytes as f64) * 100.0
     } else {
         0.0
     };
 
     InputBandwidthReport {
-        legacy_packets,
+        baseline_packets,
         modern_packets,
-        legacy_bytes,
+        baseline_bytes,
         modern_bytes,
         reduction_pct,
     }
@@ -204,9 +204,9 @@ fn simulate_snapshot_bandwidth(
         .map(|index| build_player_state(index as u64 + 1, index as f32 * 2.0))
         .collect();
 
-    let mut legacy_packets = 0u64;
+    let mut baseline_packets = 0u64;
     let mut modern_packets = 0u64;
-    let mut legacy_bytes = 0u64;
+    let mut baseline_bytes = 0u64;
     let mut modern_bytes = 0u64;
 
     for tick in 1..=total_ticks {
@@ -222,12 +222,12 @@ fn simulate_snapshot_bandwidth(
             };
         }
 
-        let legacy_packet = LegacyWorldSnapshot {
+        let baseline_packet = BaselineWorldSnapshot {
             tick,
             players: players.clone(),
         };
-        legacy_packets += 1;
-        legacy_bytes += serialize_len(&legacy_packet) as u64;
+        baseline_packets += 1;
+        baseline_bytes += serialize_len(&baseline_packet) as u64;
 
         let send_full = tick == 1 || (tick - 1) % 30 == 0;
         if send_full {
@@ -254,16 +254,16 @@ fn simulate_snapshot_bandwidth(
         modern_bytes += serialize_len(&modern_packet) as u64;
     }
 
-    let reduction_pct = if legacy_bytes > 0 {
-        ((legacy_bytes as f64 - modern_bytes as f64) / legacy_bytes as f64) * 100.0
+    let reduction_pct = if baseline_bytes > 0 {
+        ((baseline_bytes as f64 - modern_bytes as f64) / baseline_bytes as f64) * 100.0
     } else {
         0.0
     };
 
     SnapshotBandwidthReport {
-        legacy_packets,
+        baseline_packets,
         modern_packets,
-        legacy_bytes,
+        baseline_bytes,
         modern_bytes,
         reduction_pct,
     }
@@ -393,9 +393,7 @@ fn print_report(
         std::env::consts::ARCH,
         profile
     );
-    println!(
-        "> Command: `cargo run --release --bin architecture_metrics > docs/2026-architecture-metrics-report.md`"
-    );
+    println!("> Command: `cargo run --release --bin architecture_metrics`");
     println!();
 
     println!("## T-001 Client Prediction + Server Reconciliation");
@@ -426,37 +424,37 @@ fn print_report(
 
     println!("## T-003 Input Protocol (State Stream + Event Stream)");
     println!();
-    println!("| Metric | Legacy | 2026 Protocol | Improvement |");
+    println!("| Metric | Baseline | 2026 Protocol | Improvement |");
     println!("| --- | ---: | ---: | ---: |");
     println!(
         "| Packets over 10s @60Hz | {} | {} | {:.2}% |",
-        input_bandwidth.legacy_packets,
+        input_bandwidth.baseline_packets,
         input_bandwidth.modern_packets,
-        ((input_bandwidth.legacy_packets as f64 - input_bandwidth.modern_packets as f64)
-            / input_bandwidth.legacy_packets as f64)
+        ((input_bandwidth.baseline_packets as f64 - input_bandwidth.modern_packets as f64)
+            / input_bandwidth.baseline_packets as f64)
             * 100.0
     );
     println!(
         "| Payload bytes over 10s @60Hz | {} | {} | {:.2}% |",
-        input_bandwidth.legacy_bytes, input_bandwidth.modern_bytes, input_bandwidth.reduction_pct
+        input_bandwidth.baseline_bytes, input_bandwidth.modern_bytes, input_bandwidth.reduction_pct
     );
     println!();
 
     println!("## T-004 Snapshot Delta");
     println!();
-    println!("| Metric | Legacy (full each tick) | 2026 delta/full mix | Improvement |");
+    println!("| Metric | Baseline (full each tick) | 2026 delta/full mix | Improvement |");
     println!("| --- | ---: | ---: | ---: |");
     println!(
         "| Packets over 10s @60Hz | {} | {} | {:.2}% |",
-        snapshot_bandwidth.legacy_packets,
+        snapshot_bandwidth.baseline_packets,
         snapshot_bandwidth.modern_packets,
-        ((snapshot_bandwidth.legacy_packets as f64 - snapshot_bandwidth.modern_packets as f64)
-            / snapshot_bandwidth.legacy_packets as f64)
+        ((snapshot_bandwidth.baseline_packets as f64 - snapshot_bandwidth.modern_packets as f64)
+            / snapshot_bandwidth.baseline_packets as f64)
             * 100.0
     );
     println!(
         "| Payload bytes over 10s @60Hz | {} | {} | {:.2}% |",
-        snapshot_bandwidth.legacy_bytes,
+        snapshot_bandwidth.baseline_bytes,
         snapshot_bandwidth.modern_bytes,
         snapshot_bandwidth.reduction_pct
     );

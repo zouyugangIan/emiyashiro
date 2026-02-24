@@ -58,7 +58,7 @@ pub struct VisualEffect {
     pub duration: f32,
     pub elapsed: f32,
     pub intensity: f32,
-    pub base_scale: Option<Vec3>,
+    pub applied_scale: Vec3,
     pub translation_offset: Vec3,
 }
 
@@ -78,7 +78,7 @@ impl VisualEffect {
             duration,
             elapsed: 0.0,
             intensity,
-            base_scale: None,
+            applied_scale: Vec3::ONE,
             translation_offset: Vec3::ZERO,
         }
     }
@@ -170,9 +170,9 @@ pub fn update_visual_effects(
     time: Res<Time>,
 ) {
     for (entity, mut effect, mut transform) in effect_query.iter_mut() {
-        if effect.base_scale.is_none() {
-            effect.base_scale = Some(transform.scale);
-        }
+        // Revert scale multiplier from previous frame so gameplay systems keep authority.
+        remove_effect_scale(&mut transform, effect.applied_scale);
+        effect.applied_scale = Vec3::ONE;
 
         // 先还原上一帧应用的位移偏移，保证游戏逻辑系统仍然掌控主位移。
         transform.translation -= effect.translation_offset;
@@ -181,22 +181,22 @@ pub fn update_visual_effects(
         effect.elapsed += time.delta_secs();
 
         if effect.is_finished() {
-            // 重置变换并移除效果
-            reset_transform(&effect, &mut transform);
             commands.entity(entity).remove::<VisualEffect>();
             continue;
         }
 
         // 应用效果
-        effect.translation_offset = apply_visual_effect(&effect, &mut transform);
+        let (translation_offset, scale_multiplier) = apply_visual_effect(&effect);
+        transform.scale *= scale_multiplier;
+        effect.applied_scale = scale_multiplier;
+        effect.translation_offset = translation_offset;
         transform.translation += effect.translation_offset;
     }
 }
 
 /// 应用视觉效果到变换
-fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) -> Vec3 {
+fn apply_visual_effect(effect: &VisualEffect) -> (Vec3, Vec3) {
     let progress = effect.progress();
-    let base_scale = effect.base_scale.unwrap_or(transform.scale);
 
     match effect.effect_type {
         EffectType::JumpScale => {
@@ -208,12 +208,14 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) -> Vec3
                 // 后70%时间恢复正常
                 effect.intensity - (effect.intensity - 1.0) * ((progress - 0.3) / 0.7)
             };
-            transform.scale = Vec3::new(
-                base_scale.x * scale_factor * BASE_PLAYER_SCALE,
-                base_scale.y * scale_factor * BASE_PLAYER_SCALE,
-                base_scale.z,
-            );
-            Vec3::ZERO
+            (
+                Vec3::ZERO,
+                Vec3::new(
+                    scale_factor * BASE_PLAYER_SCALE,
+                    scale_factor * BASE_PLAYER_SCALE,
+                    1.0,
+                ),
+            )
         }
 
         EffectType::LandShake => {
@@ -222,15 +224,13 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) -> Vec3
             let shake_x = (effect.elapsed * 50.0).sin() * shake_intensity;
             let shake_y = (effect.elapsed * 60.0).cos() * shake_intensity;
 
-            transform.scale = base_scale;
-            Vec3::new(shake_x, shake_y, 0.0)
+            (Vec3::new(shake_x, shake_y, 0.0), Vec3::ONE)
         }
 
         EffectType::RunBob => {
             // 跑步时的上下摆动
             let bob_offset = (effect.elapsed * 8.0).sin() * effect.intensity;
-            transform.scale = base_scale;
-            Vec3::new(0.0, bob_offset, 0.0)
+            (Vec3::new(0.0, bob_offset, 0.0), Vec3::ONE)
         }
 
         EffectType::CrouchSquash => {
@@ -242,20 +242,25 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) -> Vec3
                 // 后50%时间恢复
                 effect.intensity + (1.0 - effect.intensity) * ((progress - 0.5) / 0.5)
             };
-            transform.scale = Vec3::new(
-                base_scale.x,
-                base_scale.y * squash_factor * BASE_PLAYER_SCALE,
-                base_scale.z,
-            );
-            Vec3::ZERO
+            (
+                Vec3::ZERO,
+                Vec3::new(1.0, squash_factor * BASE_PLAYER_SCALE, 1.0),
+            )
         }
     }
 }
 
-/// 重置变换到默认状态
-fn reset_transform(effect: &VisualEffect, transform: &mut Transform) {
-    if let Some(base_scale) = effect.base_scale {
-        transform.scale = base_scale;
+fn remove_effect_scale(transform: &mut Transform, applied_scale: Vec3) {
+    const SCALE_EPSILON: f32 = 1e-5;
+
+    if applied_scale.x.abs() > SCALE_EPSILON {
+        transform.scale.x /= applied_scale.x;
+    }
+    if applied_scale.y.abs() > SCALE_EPSILON {
+        transform.scale.y /= applied_scale.y;
+    }
+    if applied_scale.z.abs() > SCALE_EPSILON {
+        transform.scale.z /= applied_scale.z;
     }
 }
 
@@ -339,17 +344,44 @@ mod tests {
     #[test]
     fn jump_scale_stays_within_configured_bounds() {
         let mut effect = VisualEffect::new(EffectType::JumpScale, 0.3, 1.2);
-        effect.base_scale = Some(Vec3::ONE);
-
         let mut transform = Transform::default();
         for elapsed in [0.01, 0.05, 0.09, 0.15, 0.21, 0.27] {
+            remove_effect_scale(&mut transform, effect.applied_scale);
+            effect.applied_scale = Vec3::ONE;
             effect.elapsed = elapsed;
-            let _ = apply_visual_effect(&effect, &mut transform);
+            let (_, scale_multiplier) = apply_visual_effect(&effect);
+            transform.scale *= scale_multiplier;
+            effect.applied_scale = scale_multiplier;
             assert!(
                 transform.scale.x >= 1.0 - 1e-4 && transform.scale.x <= 1.2 + 1e-4,
                 "jump scale out of range: {}",
                 transform.scale.x
             );
         }
+    }
+
+    #[test]
+    fn effect_cleanup_does_not_lock_in_old_scale_baseline() {
+        let mut effect = VisualEffect::new(EffectType::CrouchSquash, 0.2, 0.8);
+        let mut transform = Transform::default();
+
+        remove_effect_scale(&mut transform, effect.applied_scale);
+        let (_, scale_multiplier) = apply_visual_effect(&effect);
+        transform.scale *= scale_multiplier;
+        effect.applied_scale = scale_multiplier;
+
+        // Simulate gameplay systems restoring canonical standing scale while effect is still active.
+        transform.scale = Vec3::ONE;
+
+        remove_effect_scale(&mut transform, effect.applied_scale);
+        effect.applied_scale = Vec3::ONE;
+        effect.elapsed = 0.25;
+        assert!(effect.is_finished());
+
+        assert_eq!(
+            transform.scale,
+            Vec3::ONE,
+            "ending a visual effect must not restore stale pre-effect scale"
+        );
     }
 }
