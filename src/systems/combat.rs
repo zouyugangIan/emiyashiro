@@ -9,6 +9,138 @@ use bevy::prelude::*;
 
 const PLAYER_CONTACT_DAMAGE: f32 = 12.0;
 const PLAYER_CONTACT_DAMAGE_COOLDOWN: f32 = 1.0;
+const PROJECTILE_MUZZLE_X_OFFSET: f32 = 54.0;
+const PROJECTILE_MUZZLE_Y_OFFSET: f32 = 18.0;
+
+#[derive(Clone, Copy)]
+struct ProjectileConfig {
+    projectile_type: ProjectileType,
+    damage: i32,
+    speed: f32,
+    lifetime: f32,
+    collision_size: Vec2,
+    core_size: Vec2,
+    core_color: Color,
+    aura_size: Vec2,
+    aura_color: Color,
+    accent_size: Vec2,
+    accent_color: Color,
+    aura_offset: Vec3,
+    accent_offset: Vec3,
+    initial_rotation: f32,
+    accent_rotation: f32,
+    cooldown: f32,
+    pulse_speed: f32,
+    pulse_amount: f32,
+    spin_speed: f32,
+}
+
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ProjectileVisualMotion {
+    base_scale: Vec3,
+    pulse_speed: f32,
+    pulse_amount: f32,
+    spin_speed: f32,
+}
+
+fn projectile_config(is_overedge: bool) -> ProjectileConfig {
+    if is_overedge {
+        ProjectileConfig {
+            projectile_type: ProjectileType::Overedge,
+            damage: 9,
+            speed: 420.0,
+            lifetime: 0.9,
+            collision_size: Vec2::new(98.0, 52.0),
+            core_size: Vec2::new(96.0, 22.0),
+            core_color: Color::srgba(0.92, 0.20, 0.25, 0.96),
+            aura_size: Vec2::new(128.0, 38.0),
+            aura_color: Color::srgba(1.0, 0.30, 0.25, 0.32),
+            accent_size: Vec2::new(102.0, 5.0),
+            accent_color: Color::srgba(1.0, 0.9, 0.85, 0.75),
+            aura_offset: Vec3::new(8.0, 0.0, -0.05),
+            accent_offset: Vec3::new(0.0, 4.0, 0.05),
+            initial_rotation: 0.04,
+            accent_rotation: 0.03,
+            cooldown: 0.55,
+            pulse_speed: 12.0,
+            pulse_amount: 0.05,
+            spin_speed: 0.4,
+        }
+    } else {
+        ProjectileConfig {
+            projectile_type: ProjectileType::MagicWave,
+            damage: 2,
+            speed: 330.0,
+            lifetime: 2.8,
+            collision_size: Vec2::new(30.0, 24.0),
+            core_size: Vec2::new(18.0, 18.0),
+            core_color: Color::srgba(0.70, 0.92, 1.0, 0.98),
+            aura_size: Vec2::new(34.0, 24.0),
+            aura_color: Color::srgba(0.22, 0.56, 1.0, 0.34),
+            accent_size: Vec2::new(20.0, 3.0),
+            accent_color: Color::srgba(0.84, 0.95, 1.0, 0.8),
+            aura_offset: Vec3::new(-2.0, 0.0, -0.05),
+            accent_offset: Vec3::new(-12.0, 0.0, 0.05),
+            initial_rotation: std::f32::consts::FRAC_PI_4,
+            accent_rotation: 0.0,
+            cooldown: 0.25,
+            pulse_speed: 18.0,
+            pulse_amount: 0.08,
+            spin_speed: 3.0,
+        }
+    }
+}
+
+fn spawn_projectile_with_style(
+    commands: &mut Commands,
+    spawn_position: Vec3,
+    config: ProjectileConfig,
+) {
+    commands
+        .spawn((
+            Sprite {
+                color: config.core_color,
+                custom_size: Some(config.core_size),
+                ..default()
+            },
+            Transform::from_xyz(spawn_position.x, spawn_position.y, 2.0)
+                .with_rotation(Quat::from_rotation_z(config.initial_rotation)),
+            Projectile,
+            config.projectile_type,
+            ProjectileData::new(config.damage, config.speed, config.lifetime),
+            Velocity {
+                x: config.speed,
+                y: 0.0,
+            },
+            crate::systems::collision::CollisionBox::new(config.collision_size),
+            ProjectileVisualMotion {
+                base_scale: Vec3::ONE,
+                pulse_speed: config.pulse_speed,
+                pulse_amount: config.pulse_amount,
+                spin_speed: config.spin_speed,
+            },
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Sprite {
+                    color: config.aura_color,
+                    custom_size: Some(config.aura_size),
+                    ..default()
+                },
+                Transform::from_translation(config.aura_offset),
+            ));
+
+            parent.spawn((
+                Sprite {
+                    color: config.accent_color,
+                    custom_size: Some(config.accent_size),
+                    ..default()
+                },
+                Transform::from_translation(config.accent_offset)
+                    .with_rotation(Quat::from_rotation_z(config.accent_rotation)),
+            ));
+        });
+}
 
 /// 玩家发射投射物。
 pub fn player_shoot_projectile(
@@ -25,52 +157,22 @@ pub fn player_shoot_projectile(
         && *cooldown <= 0.0
         && let Some(player_transform) = player_query.iter().next()
     {
-        let is_shroud_released = shroud_query
+        let use_overedge = shroud_query
             .iter()
             .next()
             .map(|state| state.is_released)
             .unwrap_or(false);
 
-        let (projectile_type, damage, speed, lifetime, size, color, cd) = if is_shroud_released {
-            (
-                ProjectileType::Overedge,
-                10,
-                400.0,
-                0.5,
-                Vec2::new(80.0, 60.0),
-                Color::srgb(1.0, 0.0, 0.0),
-                0.8,
-            )
-        } else {
-            (
-                ProjectileType::MagicWave,
-                1,
-                300.0,
-                3.0,
-                Vec2::new(20.0, 10.0),
-                Color::srgb(0.3, 0.6, 1.0),
-                0.3,
-            )
-        };
+        let config = projectile_config(use_overedge);
+        *cooldown = config.cooldown;
 
-        *cooldown = cd;
+        let spawn_position = Vec3::new(
+            player_transform.translation.x + PROJECTILE_MUZZLE_X_OFFSET,
+            player_transform.translation.y + PROJECTILE_MUZZLE_Y_OFFSET,
+            2.0,
+        );
 
-        let projectile_x = player_transform.translation.x + 50.0;
-        let projectile_y = player_transform.translation.y;
-
-        commands.spawn((
-            Sprite {
-                color,
-                custom_size: Some(size),
-                ..default()
-            },
-            Transform::from_xyz(projectile_x, projectile_y, 2.0),
-            Projectile,
-            projectile_type,
-            ProjectileData::new(damage, speed, lifetime),
-            Velocity { x: speed, y: 0.0 },
-            crate::systems::collision::CollisionBox::new(size),
-        ));
+        spawn_projectile_with_style(&mut commands, spawn_position, config);
     }
 }
 
@@ -83,6 +185,21 @@ pub fn update_projectiles(
         transform.translation.x += velocity.x * time.delta_secs();
         transform.translation.y += velocity.y * time.delta_secs();
         data.elapsed += time.delta_secs();
+    }
+}
+
+/// 投射物视觉动画：轻微脉冲 + 旋转，让法术弹更有魔术感。
+pub fn animate_projectile_visuals(
+    time: Res<Time>,
+    mut query: Query<(&ProjectileVisualMotion, &mut Transform), With<Projectile>>,
+) {
+    let elapsed = time.elapsed_secs();
+    let delta = time.delta_secs();
+
+    for (motion, mut transform) in query.iter_mut() {
+        let pulse = 1.0 + motion.pulse_amount * (elapsed * motion.pulse_speed).sin();
+        transform.scale = motion.base_scale * pulse;
+        transform.rotate_z(motion.spin_speed * delta);
     }
 }
 

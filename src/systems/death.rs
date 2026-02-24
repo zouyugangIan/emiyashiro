@@ -123,8 +123,7 @@ pub fn revive_player(
         player_state.is_grounded = true;
         player_state.is_crouching = false;
         health.current = health.max;
-        shroud.is_released = false;
-        shroud.health_drain_timer.reset();
+        shroud.disable_release();
 
         game_stats.distance_traveled = 0.0;
         game_stats.jump_count = 0;

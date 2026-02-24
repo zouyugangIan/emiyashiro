@@ -9,7 +9,7 @@ pub struct Enemy;
 /// 敵人類型
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub enum EnemyType {
-    Mushroom, // 蘑菇敵人
+    Slime, // 史莱姆敌人
 }
 
 /// 敵人狀態

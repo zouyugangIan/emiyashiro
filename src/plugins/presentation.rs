@@ -27,6 +27,7 @@ impl Plugin for PresentationPlugin {
             Update,
             (
                 systems::animation::trigger_audio_effects,
+                systems::combat::animate_projectile_visuals,
                 systems::frame_animation::update_frame_animations,
                 systems::frame_animation::update_character_animations,
                 systems::frame_animation::setup_player_animation,
