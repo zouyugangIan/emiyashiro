@@ -10,14 +10,24 @@ const BASE_PLAYER_SCALE: f32 = 1.0;
 type VelocityChangedPlayerQuery<'w, 's> = Query<
     'w,
     's,
-    (Entity, &'static Transform, &'static Velocity),
+    (
+        Entity,
+        &'static Transform,
+        &'static Velocity,
+        Option<&'static VisualEffect>,
+    ),
     (With<Player>, Changed<Velocity>),
 >;
 
 type PlayerStateChangedQuery<'w, 's> = Query<
     'w,
     's,
-    (Entity, &'static Transform, &'static PlayerState),
+    (
+        Entity,
+        &'static Transform,
+        &'static PlayerState,
+        Option<&'static VisualEffect>,
+    ),
     (With<Player>, Changed<PlayerState>),
 >;
 
@@ -35,12 +45,12 @@ pub struct VisualEffect {
     pub duration: f32,
     pub elapsed: f32,
     pub intensity: f32,
-    pub base_translation: Option<Vec3>,
     pub base_scale: Option<Vec3>,
+    pub translation_offset: Vec3,
 }
 
 /// 效果类型
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectType {
     JumpScale,    // 跳跃时的缩放效果
     LandShake,    // 着陆时的震动效果
@@ -55,8 +65,8 @@ impl VisualEffect {
             duration,
             elapsed: 0.0,
             intensity,
-            base_translation: None,
             base_scale: None,
+            translation_offset: Vec3::ZERO,
         }
     }
 
@@ -69,11 +79,18 @@ impl VisualEffect {
     }
 }
 
+fn should_trigger_effect(active_effect: Option<&VisualEffect>, next_effect: EffectType) -> bool {
+    match active_effect {
+        None => true,
+        Some(effect) => effect.is_finished() || effect.effect_type != next_effect,
+    }
+}
+
 /// 跳跃视觉效果触发器
 pub fn trigger_jump_effect(mut commands: Commands, mut player_query: VelocityChangedPlayerQuery) {
-    for (entity, _transform, velocity) in player_query.iter_mut() {
+    for (entity, _transform, velocity, active_effect) in player_query.iter_mut() {
         // 检测跳跃（向上的速度突然增加）
-        if velocity.y > 300.0 {
+        if velocity.y > 300.0 && should_trigger_effect(active_effect, EffectType::JumpScale) {
             commands.entity(entity).insert(VisualEffect::new(
                 EffectType::JumpScale,
                 0.3, // 0.3秒的效果
@@ -85,9 +102,9 @@ pub fn trigger_jump_effect(mut commands: Commands, mut player_query: VelocityCha
 
 /// 着陆视觉效果触发器
 pub fn trigger_land_effect(mut commands: Commands, mut player_query: PlayerStateChangedQuery) {
-    for (entity, _transform, player_state) in player_query.iter_mut() {
+    for (entity, _transform, player_state, active_effect) in player_query.iter_mut() {
         // 检测着陆（刚刚接触地面）
-        if player_state.is_grounded {
+        if player_state.is_grounded && should_trigger_effect(active_effect, EffectType::LandShake) {
             commands.entity(entity).insert(VisualEffect::new(
                 EffectType::LandShake,
                 0.2,  // 0.2秒的震动
@@ -100,11 +117,23 @@ pub fn trigger_land_effect(mut commands: Commands, mut player_query: PlayerState
 /// 跑步视觉效果
 pub fn trigger_run_effect(
     mut commands: Commands,
-    mut player_query: Query<(Entity, &Transform, &Velocity, &PlayerState), With<Player>>,
+    mut player_query: Query<
+        (
+            Entity,
+            &Transform,
+            &Velocity,
+            &PlayerState,
+            Option<&VisualEffect>,
+        ),
+        With<Player>,
+    >,
 ) {
-    for (entity, _transform, velocity, player_state) in player_query.iter_mut() {
+    for (entity, _transform, velocity, player_state, active_effect) in player_query.iter_mut() {
         // 检测跑步（在地面上且有水平速度）
-        if player_state.is_grounded && velocity.x.abs() > 50.0 {
+        if player_state.is_grounded
+            && velocity.x.abs() > 50.0
+            && should_trigger_effect(active_effect, EffectType::RunBob)
+        {
             // 检查是否已经有跑步效果
             commands.entity(entity).insert(VisualEffect::new(
                 EffectType::RunBob,
@@ -117,9 +146,11 @@ pub fn trigger_run_effect(
 
 /// 蹲下视觉效果
 pub fn trigger_crouch_effect(mut commands: Commands, mut player_query: PlayerStateChangedQuery) {
-    for (entity, _transform, player_state) in player_query.iter_mut() {
+    for (entity, _transform, player_state, active_effect) in player_query.iter_mut() {
         // 检测蹲下状态变化
-        if player_state.is_crouching {
+        if player_state.is_crouching
+            && should_trigger_effect(active_effect, EffectType::CrouchSquash)
+        {
             commands.entity(entity).insert(VisualEffect::new(
                 EffectType::CrouchSquash,
                 0.2, // 0.2秒的压扁效果
@@ -136,12 +167,13 @@ pub fn update_visual_effects(
     time: Res<Time>,
 ) {
     for (entity, mut effect, mut transform) in effect_query.iter_mut() {
-        if effect.base_translation.is_none() {
-            effect.base_translation = Some(transform.translation);
-        }
         if effect.base_scale.is_none() {
             effect.base_scale = Some(transform.scale);
         }
+
+        // 先还原上一帧应用的位移偏移，保证游戏逻辑系统仍然掌控主位移。
+        transform.translation -= effect.translation_offset;
+        effect.translation_offset = Vec3::ZERO;
 
         effect.elapsed += time.delta_secs();
 
@@ -153,14 +185,14 @@ pub fn update_visual_effects(
         }
 
         // 应用效果
-        apply_visual_effect(&effect, &mut transform);
+        effect.translation_offset = apply_visual_effect(&effect, &mut transform);
+        transform.translation += effect.translation_offset;
     }
 }
 
 /// 应用视觉效果到变换
-fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
+fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) -> Vec3 {
     let progress = effect.progress();
-    let base_translation = effect.base_translation.unwrap_or(transform.translation);
     let base_scale = effect.base_scale.unwrap_or(transform.scale);
 
     match effect.effect_type {
@@ -178,7 +210,7 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
                 base_scale.y * scale_factor * BASE_PLAYER_SCALE,
                 base_scale.z,
             );
-            transform.translation = base_translation;
+            Vec3::ZERO
         }
 
         EffectType::LandShake => {
@@ -187,16 +219,15 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
             let shake_x = (effect.elapsed * 50.0).sin() * shake_intensity;
             let shake_y = (effect.elapsed * 60.0).cos() * shake_intensity;
 
-            // 使用基准位移，避免累加漂移
-            transform.translation = base_translation + Vec3::new(shake_x, shake_y, 0.0);
             transform.scale = base_scale;
+            Vec3::new(shake_x, shake_y, 0.0)
         }
 
         EffectType::RunBob => {
             // 跑步时的上下摆动
             let bob_offset = (effect.elapsed * 8.0).sin() * effect.intensity;
-            transform.translation = base_translation + Vec3::new(0.0, bob_offset, 0.0);
             transform.scale = base_scale;
+            Vec3::new(0.0, bob_offset, 0.0)
         }
 
         EffectType::CrouchSquash => {
@@ -213,7 +244,7 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
                 base_scale.y * squash_factor * BASE_PLAYER_SCALE,
                 base_scale.z,
             );
-            transform.translation = base_translation;
+            Vec3::ZERO
         }
     }
 }
@@ -222,9 +253,6 @@ fn apply_visual_effect(effect: &VisualEffect, transform: &mut Transform) {
 fn reset_transform(effect: &VisualEffect, transform: &mut Transform) {
     if let Some(base_scale) = effect.base_scale {
         transform.scale = base_scale;
-    }
-    if let Some(base_translation) = effect.base_translation {
-        transform.translation = base_translation;
     }
 }
 
@@ -286,5 +314,39 @@ pub fn update_blinking_text(
                 * (0.5 + 0.5 * (time.elapsed_secs() * blink.blink_speed).sin());
 
         text_color.0.set_alpha(alpha);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn active_effect_blocks_same_effect_retrigger() {
+        let active = VisualEffect::new(EffectType::JumpScale, 0.3, 1.2);
+        assert!(!should_trigger_effect(Some(&active), EffectType::JumpScale));
+    }
+
+    #[test]
+    fn active_effect_allows_different_effect_switch() {
+        let active = VisualEffect::new(EffectType::JumpScale, 0.3, 1.2);
+        assert!(should_trigger_effect(Some(&active), EffectType::RunBob));
+    }
+
+    #[test]
+    fn jump_scale_stays_within_configured_bounds() {
+        let mut effect = VisualEffect::new(EffectType::JumpScale, 0.3, 1.2);
+        effect.base_scale = Some(Vec3::ONE);
+
+        let mut transform = Transform::default();
+        for elapsed in [0.01, 0.05, 0.09, 0.15, 0.21, 0.27] {
+            effect.elapsed = elapsed;
+            let _ = apply_visual_effect(&effect, &mut transform);
+            assert!(
+                transform.scale.x >= 1.0 - 1e-4 && transform.scale.x <= 1.2 + 1e-4,
+                "jump scale out of range: {}",
+                transform.scale.x
+            );
+        }
     }
 }
