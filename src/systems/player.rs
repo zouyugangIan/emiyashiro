@@ -90,6 +90,7 @@ pub fn player_jump(
     if let Ok((mut transform, mut velocity, mut player_state)) = player_query.single_mut() {
         let was_grounded = player_state.is_grounded;
         let delta_time = time.delta_secs();
+        let near_ground = transform.translation.y <= GameConfig::GROUND_LEVEL + 2.0;
 
         // 同时读取实时按键与输入资源，避免 Update/FixedUpdate 时序导致丢跳
         let direct_jump_pressed = keyboard_input.pressed(KeyCode::KeyW)
@@ -113,8 +114,10 @@ pub fn player_jump(
             transform.translation.y += 15.0;
         }
 
-        if wants_jump && player_state.can_jump() {
+        let can_jump_now = (player_state.is_grounded || near_ground) && !player_state.is_crouching;
+        if wants_jump && can_jump_now {
             velocity.y = GameConfig::JUMP_VELOCITY;
+            player_state.is_grounded = false;
             game_stats.jump_count += 1;
             game_input.jump_pressed_this_frame = false;
             game_input.jump_buffer_seconds = 0.0;
@@ -150,13 +153,14 @@ pub fn player_jump(
         }
 
         // 地面碰撞检测和处理（改进的碰撞系统）
-        handle_ground_collision(
+        let now_grounded = handle_ground_collision(
             &mut commands,
             &mut transform,
             &mut velocity,
             old_y,
             was_grounded,
         );
+        player_state.is_grounded = now_grounded;
     }
 }
 
@@ -188,7 +192,7 @@ fn handle_ground_collision(
     velocity: &mut Velocity,
     _old_y: f32,
     was_grounded: bool,
-) {
+) -> bool {
     if transform.translation.y <= GameConfig::GROUND_LEVEL {
         // 精确的地面位置设置
         transform.translation.y = GameConfig::GROUND_LEVEL;
@@ -215,6 +219,10 @@ fn handle_ground_collision(
         if velocity.y < 0.0 {
             velocity.y = 0.0;
         }
+
+        true
+    } else {
+        false
     }
 }
 

@@ -67,8 +67,8 @@ impl Plugin for GameplayPlugin {
                         systems::player::player_crouch,
                         systems::player::physics_update_system,
                         systems::collision::collision_detection_system,
-                        systems::player::update_player_state,
-                    ),
+                    )
+                        .chain(),
                     (
                         systems::enemy::enemy_patrol_ai,
                         systems::combat::update_projectiles,
@@ -77,7 +77,8 @@ impl Plugin for GameplayPlugin {
                         systems::death::check_player_fall_death,
                         systems::shirou::shroud_health_drain,
                         systems::combat::apply_damage_events,
-                    ),
+                    )
+                        .chain(),
                 )
                     .chain()
                     .in_set(GameSystemSet::GameLogic)

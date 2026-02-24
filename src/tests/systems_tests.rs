@@ -285,6 +285,47 @@ mod tests {
     }
 
     #[test]
+    fn test_collision_system_keeps_grounded_when_near_ground_level() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins).add_systems(
+            Update,
+            crate::systems::collision::collision_detection_system,
+        );
+
+        let player_entity = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_translation(Vec3::new(0.0, GameConfig::GROUND_LEVEL, 0.0)),
+                Velocity::default(),
+                PlayerState {
+                    is_grounded: false,
+                    is_crouching: false,
+                },
+                crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
+            ))
+            .id();
+
+        app.world_mut().spawn((
+            Ground,
+            Transform::from_translation(GameConfig::GROUND_POS),
+            crate::systems::collision::CollisionBox::new(GameConfig::GROUND_SIZE),
+        ));
+
+        app.update();
+
+        let player_state = app
+            .world()
+            .entity(player_entity)
+            .get::<PlayerState>()
+            .expect("player state should exist");
+        assert!(
+            player_state.is_grounded,
+            "near-ground fallback should prevent false airborne state"
+        );
+    }
+
+    #[test]
     fn test_setup_game_hud_is_idempotent() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -392,6 +433,43 @@ mod tests {
         );
         assert!(!game_input.move_left);
         assert!(!game_input.move_right);
+    }
+
+    #[test]
+    fn test_jump_allows_near_ground_recovery_when_ground_state_stale() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(Time::<Fixed>::from_hz(60.0))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<input::GameInput>()
+            .init_resource::<GameStats>()
+            .add_systems(Update, crate::systems::player::player_jump);
+
+        let player_entity = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_translation(Vec3::new(0.0, GameConfig::GROUND_LEVEL + 1.0, 0.0)),
+                Velocity::default(),
+                PlayerState {
+                    is_grounded: false,
+                    is_crouching: false,
+                },
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::ArrowUp);
+
+        app.update();
+
+        let entity = app.world().entity(player_entity);
+        let velocity = entity.get::<Velocity>().expect("velocity should exist");
+        assert!(
+            velocity.y > 0.0,
+            "player should jump when near ground even if grounded flag is stale"
+        );
     }
 
     #[test]

@@ -119,8 +119,9 @@ pub fn collision_detection_system(
             }
         }
 
-        // 更新玩家状态
-        player_state.is_grounded = on_ground;
+        // 与基于 GROUND_LEVEL 的主玩法逻辑保持一致，避免贴地时被误判为离地。
+        let near_ground = player_transform.translation.y <= GameConfig::GROUND_LEVEL + 2.0;
+        player_state.is_grounded = on_ground || near_ground;
     }
 }
 
