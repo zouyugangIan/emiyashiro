@@ -79,10 +79,12 @@ impl VisualEffect {
     }
 }
 
-fn should_trigger_effect(active_effect: Option<&VisualEffect>, next_effect: EffectType) -> bool {
+fn should_trigger_effect(active_effect: Option<&VisualEffect>, _next_effect: EffectType) -> bool {
     match active_effect {
         None => true,
-        Some(effect) => effect.is_finished() || effect.effect_type != next_effect,
+        // 2026稳态策略：同一实体同一时刻只允许一个视觉效果，
+        // 避免中途覆盖导致的缩放/位移基准漂移。
+        Some(effect) => effect.is_finished(),
     }
 }
 
@@ -328,9 +330,9 @@ mod tests {
     }
 
     #[test]
-    fn active_effect_allows_different_effect_switch() {
+    fn active_effect_blocks_different_effect_switch() {
         let active = VisualEffect::new(EffectType::JumpScale, 0.3, 1.2);
-        assert!(should_trigger_effect(Some(&active), EffectType::RunBob));
+        assert!(!should_trigger_effect(Some(&active), EffectType::RunBob));
     }
 
     #[test]
