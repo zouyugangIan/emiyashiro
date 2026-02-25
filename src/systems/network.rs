@@ -170,9 +170,9 @@ fn start_network_connection(net: &mut NetworkResource, server_url: &str) {
                     loop {
                         tokio::select! {
                             Some(action) = action_rx.recv() => {
-                                match bincode::serialize(&action) {
+                                match bincode::serde::encode_to_vec(&action, bincode::config::standard()) {
                                     Ok(bin) => {
-                                        if let Err(error) = write.send(tokio_tungstenite::tungstenite::Message::Binary(bin)).await {
+                                        if let Err(error) = write.send(tokio_tungstenite::tungstenite::Message::Binary(bin.into())).await {
                                             warn!("Network send error: {}", error);
                                             break;
                                         }
@@ -185,7 +185,7 @@ fn start_network_connection(net: &mut NetworkResource, server_url: &str) {
                             Some(msg) = read.next() => {
                                 match msg {
                                     Ok(tokio_tungstenite::tungstenite::Message::Binary(bin)) => {
-                                        if let Ok(packet) = bincode::deserialize::<GamePacket>(&bin)
+                                        if let Ok((packet, _)) = bincode::serde::decode_from_slice::<GamePacket, _>(&bin, bincode::config::standard())
                                             && let Ok(mut queue) = packet_rx.lock() {
                                                 queue.push_back(packet);
                                             }
@@ -252,7 +252,7 @@ fn start_network_connection(net: &mut NetworkResource, server_url: &str) {
                         action = action_future => {
                             match action {
                                 Some(action) => {
-                                    if let Ok(bin) = bincode::serialize(&action) {
+                                    if let Ok(bin) = bincode::serde::encode_to_vec(&action, bincode::config::standard()) {
                                         if write.send(Message::Bytes(bin)).await.is_err() {
                                             break;
                                         }
@@ -264,7 +264,7 @@ fn start_network_connection(net: &mut NetworkResource, server_url: &str) {
                         msg = read_future => {
                             match msg {
                                 Some(Ok(Message::Bytes(bin))) => {
-                                    if let Ok(packet) = bincode::deserialize::<GamePacket>(&bin) {
+                                    if let Ok((packet, _)) = bincode::serde::decode_from_slice::<GamePacket, _>(&bin, bincode::config::standard()) {
                                         if let Ok(mut queue) = packet_rx.lock() {
                                             queue.push_back(packet);
                                         }

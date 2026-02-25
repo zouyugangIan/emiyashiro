@@ -1,12 +1,12 @@
 // assets/animations/sakura.ron
 // Animation data for Sakura
 {
-    Idle: (
+    "Idle": (
         frames: [4, 5, 6, 7],
         frame_duration: 0.25,
         playback_mode: "PingPong",
     ),
-    Running: (
+    "Running": (
         frames: [14, 15, 16, 17, 18, 19],
         frame_duration: 0.12,
         playback_mode: "Loop",
@@ -14,17 +14,17 @@
         speed_reference: 150.0,
         min_frame_duration: 0.06,
     ),
-    Jumping: (
+    "Jumping": (
         frames: [20, 21, 22],
         frame_duration: 0.18,
         playback_mode: "Once",
     ),
-    Crouching: (
+    "Crouching": (
         frames: [26, 27],
         frame_duration: 0.25,
         playback_mode: "Loop",
     ),
-    Landing: (
+    "Landing": (
         frames: [22, 4], // Example: a short landing animation ending in idle
         frame_duration: 0.08,
         playback_mode: "Once",

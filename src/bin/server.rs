@@ -59,7 +59,7 @@ async fn main() {
     let clients_broadcast = clients.clone();
     tokio::spawn(async move {
         while let Some(packet) = broadcast_rx.recv().await {
-            let binary = match bincode::serialize(&packet) {
+            let binary = match bincode::serde::encode_to_vec(&packet, bincode::config::standard()) {
                 Ok(bytes) => bytes,
                 Err(error) => {
                     warn!("Failed to serialize packet: {}", error);
@@ -75,7 +75,10 @@ async fn main() {
                 };
 
                 for (client_id, sender) in clients_guard.iter() {
-                    if sender.send(WsMessage::Binary(binary.clone())).is_err() {
+                    if sender
+                        .send(WsMessage::Binary(binary.clone().into()))
+                        .is_err()
+                    {
                         stale_clients.push(*client_id);
                     }
                 }
@@ -135,9 +138,9 @@ async fn handle_connection(
         id: client_id,
         message: "Connected to G-Engine Server".to_string(),
     };
-    match bincode::serialize(&welcome) {
+    match bincode::serde::encode_to_vec(&welcome, bincode::config::standard()) {
         Ok(binary) => {
-            let _ = out_tx.send(WsMessage::Binary(binary));
+            let _ = out_tx.send(WsMessage::Binary(binary.into()));
         }
         Err(error) => {
             warn!("Failed to serialize welcome packet: {}", error);
@@ -151,7 +154,10 @@ async fn handle_connection(
     while let Some(msg) = read.next().await {
         match msg {
             Ok(WsMessage::Binary(bin)) => {
-                if let Ok(action) = bincode::deserialize::<PlayerAction>(&bin) {
+                if let Ok((action, _)) = bincode::serde::decode_from_slice::<PlayerAction, _>(
+                    &bin,
+                    bincode::config::standard(),
+                ) {
                     let _ = action_tx.send((client_id, action));
                 }
             }

@@ -8,6 +8,7 @@ use crate::components::network::NetworkId;
 use crate::components::physics::Velocity;
 use crate::components::player::{Player, PlayerInputState};
 use crate::protocol::{GamePacket, InputEventKind, PlayerAction};
+use crate::resources::GameConfig;
 use crate::systems::ai::bot_control_system;
 #[cfg(feature = "server")]
 use crate::systems::sync_redis::sync_transform_to_redis;
@@ -82,7 +83,7 @@ fn increment_tick(mut tick: ResMut<ServerTick>) {
 
 fn setup_bots(mut commands: Commands) {
     commands.spawn((
-        Transform::from_xyz(100.0, 0.0, 0.0),
+        Transform::from_xyz(100.0, GameConfig::GROUND_LEVEL, 0.0),
         Velocity::zero(),
         Player,
         PlayerInputState::default(),
@@ -168,7 +169,11 @@ fn ensure_entity(
     *client_map.0.entry(target_client_id).or_insert_with(|| {
         commands
             .spawn((
-                Transform::from_xyz(0.0, 0.0, 0.0),
+                Transform::from_xyz(
+                    GameConfig::PLAYER_START_POS.x,
+                    GameConfig::GROUND_LEVEL,
+                    0.0,
+                ),
                 Velocity::zero(),
                 Player,
                 NetworkId(target_client_id),
@@ -198,19 +203,19 @@ fn server_physics_system(
     let delta_seconds = time.delta_secs();
 
     for (mut transform, mut velocity, mut input) in query.iter_mut() {
-        velocity.x = input.move_x * 200.0;
+        velocity.x = input.move_x * GameConfig::MOVE_SPEED;
 
         if input.jump_pressed {
-            velocity.y = 500.0;
+            velocity.y = GameConfig::JUMP_VELOCITY;
             input.jump_pressed = false;
         }
 
-        velocity.y -= 980.0 * delta_seconds;
+        velocity.y -= GameConfig::GRAVITY * delta_seconds;
         transform.translation.x += velocity.x * delta_seconds;
         transform.translation.y += velocity.y * delta_seconds;
 
-        if transform.translation.y < 0.0 {
-            transform.translation.y = 0.0;
+        if transform.translation.y < GameConfig::GROUND_LEVEL {
+            transform.translation.y = GameConfig::GROUND_LEVEL;
             if velocity.y < 0.0 {
                 velocity.y = 0.0;
             }
@@ -254,7 +259,7 @@ fn broadcast_snapshot_system(
             tick: tick.0,
             players,
         };
-        if let Ok(bytes) = bincode::serialize(&packet) {
+        if let Ok(bytes) = bincode::serde::encode_to_vec(&packet, bincode::config::standard()) {
             bandwidth_metrics.full_snapshot_bytes = bandwidth_metrics
                 .full_snapshot_bytes
                 .wrapping_add(bytes.len() as u64);
@@ -292,7 +297,7 @@ fn broadcast_snapshot_system(
             changed_players,
             removed_player_ids,
         };
-        if let Ok(bytes) = bincode::serialize(&packet) {
+        if let Ok(bytes) = bincode::serde::encode_to_vec(&packet, bincode::config::standard()) {
             bandwidth_metrics.delta_snapshot_bytes = bandwidth_metrics
                 .delta_snapshot_bytes
                 .wrapping_add(bytes.len() as u64);
@@ -323,7 +328,7 @@ fn determine_animation_state(
     input: &PlayerInputState,
     transform: &Transform,
 ) -> String {
-    let is_grounded = transform.translation.y <= 0.5;
+    let is_grounded = transform.translation.y <= GameConfig::GROUND_LEVEL + 0.5;
 
     if !is_grounded {
         if velocity.y > 0.0 {
@@ -349,7 +354,7 @@ mod tests {
     fn spawn_networked_player(app: &mut App, network_id: u64, x: f32) -> Entity {
         app.world_mut()
             .spawn((
-                Transform::from_xyz(x, 0.0, 0.0),
+                Transform::from_xyz(x, GameConfig::GROUND_LEVEL, 0.0),
                 Velocity::zero(),
                 Player,
                 NetworkId(network_id),
@@ -459,5 +464,57 @@ mod tests {
         assert_eq!(metrics.delta_snapshot_count, 1);
         assert!(metrics.full_snapshot_bytes > 0);
         assert!(metrics.delta_snapshot_bytes > 0);
+    }
+
+    #[test]
+    fn process_network_events_spawns_player_at_configured_ground_level() {
+        let (action_tx, action_rx) = mpsc::unbounded_channel::<(u64, PlayerAction)>();
+        let (broadcast_tx, _broadcast_rx) = mpsc::unbounded_channel::<GamePacket>();
+        let channels = NetworkChannels {
+            action_rx: Arc::new(Mutex::new(action_rx)),
+            broadcast_tx,
+        };
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(channels)
+            .init_resource::<ClientEntityMap>()
+            .init_resource::<ClientInputSequence>()
+            .add_systems(Update, process_network_events);
+
+        action_tx
+            .send((
+                42,
+                PlayerAction::InputState {
+                    sequence: 1,
+                    x: 0.0,
+                    y: 0.0,
+                },
+            ))
+            .expect("input state should be enqueued");
+
+        app.update();
+
+        let player_entity = app
+            .world()
+            .resource::<ClientEntityMap>()
+            .0
+            .get(&42)
+            .copied()
+            .expect("player entity should be created");
+
+        let transform = app
+            .world()
+            .entity(player_entity)
+            .get::<Transform>()
+            .expect("player transform should exist");
+        assert!(
+            (transform.translation.y - GameConfig::GROUND_LEVEL).abs() <= f32::EPSILON,
+            "spawned player y should match configured ground level"
+        );
+        assert!(
+            (transform.translation.x - GameConfig::PLAYER_START_POS.x).abs() <= f32::EPSILON,
+            "spawned player x should match configured start position"
+        );
     }
 }

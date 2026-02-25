@@ -58,7 +58,7 @@ enum BaselinePlayerAction {
 }
 
 fn serialize_len<T: Serialize>(value: &T) -> usize {
-    bincode::serialize(value)
+    bincode::serde::encode_to_vec(value, bincode::config::standard())
         .map(|bytes| bytes.len())
         .unwrap_or(0)
 }

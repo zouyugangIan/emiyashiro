@@ -74,7 +74,7 @@ impl RedisManager {
             })
             .map_err(|_| {
                 RedisError::from((
-                    redis::ErrorKind::IoError,
+                    redis::ErrorKind::Io,
                     "Failed to spawn Redis write worker thread",
                 ))
             })?;
@@ -175,14 +175,14 @@ impl RedisManager {
             Err(TrySendError::Full(_)) => {
                 self.metrics.dropped_batches.fetch_add(1, Ordering::Relaxed);
                 Err(RedisError::from((
-                    redis::ErrorKind::IoError,
+                    redis::ErrorKind::Io,
                     "Redis write queue is full",
                 )))
             }
             Err(TrySendError::Disconnected(_)) => {
                 self.metrics.dropped_batches.fetch_add(1, Ordering::Relaxed);
                 Err(RedisError::from((
-                    redis::ErrorKind::IoError,
+                    redis::ErrorKind::Io,
                     "Redis write queue is disconnected",
                 )))
             }
