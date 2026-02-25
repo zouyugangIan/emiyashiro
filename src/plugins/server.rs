@@ -254,7 +254,7 @@ fn broadcast_snapshot_system(
             tick: tick.0,
             players,
         };
-        if let Ok(bytes) = bincode::serialize(&packet) {
+        if let Ok(bytes) = bincode::serde::encode_to_vec(&packet, bincode::config::standard()) {
             bandwidth_metrics.full_snapshot_bytes = bandwidth_metrics
                 .full_snapshot_bytes
                 .wrapping_add(bytes.len() as u64);
@@ -292,7 +292,7 @@ fn broadcast_snapshot_system(
             changed_players,
             removed_player_ids,
         };
-        if let Ok(bytes) = bincode::serialize(&packet) {
+        if let Ok(bytes) = bincode::serde::encode_to_vec(&packet, bincode::config::standard()) {
             bandwidth_metrics.delta_snapshot_bytes = bandwidth_metrics
                 .delta_snapshot_bytes
                 .wrapping_add(bytes.len() as u64);

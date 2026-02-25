@@ -32,7 +32,7 @@ pub async fn run_save_worker(pool: PgPool) {
                 // 声明队列
                 let _queue = channel
                     .queue_declare(
-                        "q_save_game",
+                        "q_save_game".into(),
                         QueueDeclareOptions::default(),
                         FieldTable::default(),
                     )
@@ -43,8 +43,8 @@ pub async fn run_save_worker(pool: PgPool) {
 
                 let mut consumer = channel
                     .basic_consume(
-                        "q_save_game",
-                        "save_worker",
+                        "q_save_game".into(),
+                        "save_worker".into(),
                         BasicConsumeOptions::default(),
                         FieldTable::default(),
                     )
@@ -129,7 +129,7 @@ pub async fn publish_save_task(task: SaveGameTask) -> Result<(), Box<dyn std::er
 
     channel
         .queue_declare(
-            "q_save_game",
+            "q_save_game".into(),
             QueueDeclareOptions::default(),
             FieldTable::default(),
         )
@@ -139,8 +139,8 @@ pub async fn publish_save_task(task: SaveGameTask) -> Result<(), Box<dyn std::er
 
     channel
         .basic_publish(
-            "",
-            "q_save_game",
+            "".into(),
+            "q_save_game".into(),
             BasicPublishOptions::default(),
             &payload,
             lapin::BasicProperties::default(),
