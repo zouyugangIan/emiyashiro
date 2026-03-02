@@ -5,9 +5,8 @@
 use crate::{components::*, resources::*};
 use bevy::prelude::*;
 
-const PLAYER_STAND_SCALE_Y: f32 = 1.0;
-const PLAYER_CROUCH_SCALE_Y: f32 = 0.5;
-const PLAYER_CROUCH_TRANSLATION_OFFSET: f32 = 15.0;
+const PLAYER_STAND_COLLISION_OFFSET_Y: f32 = 0.0;
+const PLAYER_CROUCH_COLLISION_OFFSET_Y: f32 = -15.0;
 
 /// 玩家移动系统
 ///
@@ -87,11 +86,21 @@ pub fn player_jump(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut game_input: ResMut<crate::systems::input::GameInput>,
-    mut player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,
+    mut player_query: Query<
+        (
+            &mut Transform,
+            &mut Velocity,
+            &mut PlayerState,
+            Option<&mut crate::systems::collision::CollisionBox>,
+        ),
+        With<Player>,
+    >,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
-    if let Ok((mut transform, mut velocity, mut player_state)) = player_query.single_mut() {
+    if let Ok((mut transform, mut velocity, mut player_state, mut collision_box)) =
+        player_query.single_mut()
+    {
         let was_grounded = player_state.is_grounded;
         let delta_time = time.delta_secs();
         let near_ground = transform.translation.y <= GameConfig::GROUND_LEVEL + 2.0;
@@ -114,8 +123,9 @@ pub fn player_jump(
         // 提升容错：若角色处于蹲伏且玩家请求跳跃，先自动起身再进入跳跃判定。
         if wants_jump && player_state.is_grounded && player_state.is_crouching {
             player_state.is_crouching = false;
-            transform.scale.y = PLAYER_STAND_SCALE_Y;
-            transform.translation.y += PLAYER_CROUCH_TRANSLATION_OFFSET;
+            if let Some(collision_box) = collision_box.as_deref_mut() {
+                apply_crouch_collision_shape(player_state.is_crouching, collision_box);
+            }
         }
 
         let can_jump_now = (player_state.is_grounded || near_ground) && !player_state.is_crouching;
@@ -184,6 +194,19 @@ fn apply_gravity(velocity: &mut Velocity, player_state: &PlayerState, delta_time
         };
 
         velocity.y -= GameConfig::GRAVITY * gravity_multiplier * delta_time;
+    }
+}
+
+fn apply_crouch_collision_shape(
+    is_crouching: bool,
+    collision_box: &mut crate::systems::collision::CollisionBox,
+) {
+    if is_crouching {
+        collision_box.size = GameConfig::PLAYER_CROUCH_SIZE;
+        collision_box.offset = Vec2::new(0.0, PLAYER_CROUCH_COLLISION_OFFSET_Y);
+    } else {
+        collision_box.size = GameConfig::PLAYER_SIZE;
+        collision_box.offset = Vec2::new(0.0, PLAYER_STAND_COLLISION_OFFSET_Y);
     }
 }
 
@@ -314,23 +337,29 @@ pub fn update_game_time(mut game_stats: ResMut<GameStats>, time: Res<Time>) {
 /// 玩家趴下系统
 pub fn player_crouch(
     game_input: Res<crate::systems::input::GameInput>,
-    mut player_query: Query<(&mut Transform, &mut PlayerState), With<Player>>,
+    mut player_query: Query<
+        (
+            &mut PlayerState,
+            Option<&mut crate::systems::collision::CollisionBox>,
+        ),
+        With<Player>,
+    >,
 ) {
-    if let Ok((mut transform, mut player_state)) = player_query.single_mut() {
+    if let Ok((mut player_state, mut collision_box)) = player_query.single_mut() {
         let is_crouch_pressed = game_input.crouch;
 
         if is_crouch_pressed && !player_state.is_crouching && player_state.is_grounded {
             // 开始趴下
             player_state.is_crouching = true;
-            transform.scale.y = PLAYER_CROUCH_SCALE_Y;
-            transform.translation.y -= PLAYER_CROUCH_TRANSLATION_OFFSET;
             crate::debug_log!("🗡️ 士郎趴下！");
         } else if !is_crouch_pressed && player_state.is_crouching {
             // 停止趴下
             player_state.is_crouching = false;
-            transform.scale.y = PLAYER_STAND_SCALE_Y;
-            transform.translation.y += PLAYER_CROUCH_TRANSLATION_OFFSET;
             crate::debug_log!("🗡️ 士郎站起！");
+        }
+
+        if let Some(collision_box) = collision_box.as_deref_mut() {
+            apply_crouch_collision_shape(player_state.is_crouching, collision_box);
         }
     }
 }

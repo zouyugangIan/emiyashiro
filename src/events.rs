@@ -25,6 +25,7 @@ pub struct DamageEvent {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DamageSource {
     Projectile,
+    Knife,
     EnemyContact,
     Fall,
     ShroudDrain,

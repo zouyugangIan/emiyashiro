@@ -36,6 +36,7 @@ impl Plugin for GameplayPlugin {
                     systems::input::update_game_input,
                     systems::shirou::handle_shroud_input,
                     systems::combat::player_shoot_projectile,
+                    systems::combat::player_knife_attack,
                 )
                     .in_set(GameSystemSet::Input)
                     .run_if(in_state(GameState::Playing)),
@@ -48,6 +49,7 @@ impl Plugin for GameplayPlugin {
                     systems::enemy::cleanup_dead_enemies,
                     systems::enemy::cleanup_offscreen_enemies,
                     systems::combat::cleanup_expired_projectiles,
+                    systems::combat::cleanup_expired_knife_slashes,
                 )
                     .in_set(GameSystemSet::GameLogic)
                     .run_if(in_state(GameState::Playing)),
@@ -73,6 +75,7 @@ impl Plugin for GameplayPlugin {
                         systems::enemy::enemy_patrol_ai,
                         systems::combat::update_projectiles,
                         systems::combat::projectile_enemy_collision,
+                        systems::combat::knife_enemy_collision,
                         systems::combat::player_enemy_collision,
                         systems::death::check_player_fall_death,
                         systems::shirou::shroud_health_drain,

@@ -1255,6 +1255,122 @@ mod tests {
     }
 
     #[test]
+    fn test_knife_hit_enemy_applies_damage_and_despawns_slash() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::knife_enemy_collision,
+                    crate::systems::combat::apply_damage_events,
+                ),
+            );
+
+        let slash = app
+            .world_mut()
+            .spawn((
+                crate::systems::combat::KnifeSlash {
+                    damage: 6.0,
+                    lifetime: Timer::from_seconds(0.2, TimerMode::Once),
+                },
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::collision::CollisionBox::new(Vec2::new(30.0, 20.0)),
+            ))
+            .id();
+
+        let enemy = app
+            .world_mut()
+            .spawn((
+                Enemy,
+                EnemyState::new(5, 100.0),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::collision::CollisionBox::new(Vec2::new(20.0, 20.0)),
+            ))
+            .id();
+
+        app.update();
+        app.update();
+
+        let enemy_state = app
+            .world()
+            .entity(enemy)
+            .get::<EnemyState>()
+            .expect("enemy state");
+        assert!(
+            !enemy_state.is_alive,
+            "enemy should be dead after knife hit"
+        );
+        assert!(
+            app.world().get_entity(slash).is_err(),
+            "knife slash should be despawned after hit"
+        );
+    }
+
+    #[test]
+    fn test_player_crouch_syncs_collision_box_size() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<crate::systems::input::GameInput>()
+            .add_systems(Update, crate::systems::player::player_crouch);
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                PlayerState::default(),
+                crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<crate::systems::input::GameInput>()
+            .crouch = true;
+        app.update();
+
+        let state = app
+            .world()
+            .entity(player)
+            .get::<PlayerState>()
+            .expect("player state");
+        let collision = app
+            .world()
+            .entity(player)
+            .get::<crate::systems::collision::CollisionBox>()
+            .expect("player collision");
+        assert!(state.is_crouching, "player should enter crouch state");
+        assert_eq!(
+            collision.size,
+            GameConfig::PLAYER_CROUCH_SIZE,
+            "crouch should shrink collision box"
+        );
+
+        app.world_mut()
+            .resource_mut::<crate::systems::input::GameInput>()
+            .crouch = false;
+        app.update();
+
+        let state = app
+            .world()
+            .entity(player)
+            .get::<PlayerState>()
+            .expect("player state");
+        let collision = app
+            .world()
+            .entity(player)
+            .get::<crate::systems::collision::CollisionBox>()
+            .expect("player collision");
+        assert!(!state.is_crouching, "player should leave crouch state");
+        assert_eq!(
+            collision.size,
+            GameConfig::PLAYER_SIZE,
+            "standing should restore collision box"
+        );
+    }
+
+    #[test]
     fn test_player_enemy_contact_damage_updates_hud_health_text() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)

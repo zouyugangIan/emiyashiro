@@ -7,10 +7,16 @@ use crate::{
 };
 use bevy::prelude::*;
 
-const PLAYER_CONTACT_DAMAGE: f32 = 12.0;
 const PLAYER_CONTACT_DAMAGE_COOLDOWN: f32 = 1.0;
 const PROJECTILE_MUZZLE_X_OFFSET: f32 = 54.0;
 const PROJECTILE_MUZZLE_Y_OFFSET: f32 = 18.0;
+const KNIFE_ATTACK_DAMAGE: f32 = 6.0;
+const KNIFE_ATTACK_COOLDOWN: f32 = 0.38;
+const KNIFE_ATTACK_LIFETIME: f32 = 0.11;
+const KNIFE_ATTACK_X_OFFSET: f32 = 62.0;
+const KNIFE_ATTACK_Y_OFFSET: f32 = 12.0;
+const KNIFE_ATTACK_CROUCH_Y_OFFSET: f32 = -8.0;
+const KNIFE_ATTACK_HITBOX_SIZE: Vec2 = Vec2::new(74.0, 36.0);
 
 #[derive(Clone, Copy)]
 struct ProjectileConfig {
@@ -41,6 +47,12 @@ pub struct ProjectileVisualMotion {
     pulse_speed: f32,
     pulse_amount: f32,
     spin_speed: f32,
+}
+
+#[derive(Component, Debug)]
+pub struct KnifeSlash {
+    pub damage: f32,
+    pub lifetime: Timer,
 }
 
 fn projectile_config(is_overedge: bool) -> ProjectileConfig {
@@ -176,6 +188,71 @@ pub fn player_shoot_projectile(
     }
 }
 
+/// 玩家近战刀攻击（L/U）：
+/// 生成短生命周期的近战命中盒，通过统一伤害事件管线结算。
+pub fn player_knife_attack(
+    mut commands: Commands,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    player_query: Query<(&Transform, &Velocity, &PlayerState), With<Player>>,
+    mut cooldown: Local<f32>,
+    time: Res<Time>,
+) {
+    *cooldown -= time.delta_secs();
+
+    let knife_pressed =
+        keyboard.just_pressed(KeyCode::KeyL) || keyboard.just_pressed(KeyCode::KeyU);
+    if !knife_pressed || *cooldown > 0.0 {
+        return;
+    }
+
+    let Some((player_transform, player_velocity, player_state)) = player_query.iter().next() else {
+        return;
+    };
+
+    let facing = if keyboard.pressed(KeyCode::KeyA) || keyboard.pressed(KeyCode::ArrowLeft) {
+        -1.0
+    } else if keyboard.pressed(KeyCode::KeyD) || keyboard.pressed(KeyCode::ArrowRight) {
+        1.0
+    } else if player_velocity.x < -5.0 {
+        -1.0
+    } else {
+        1.0
+    };
+
+    let y_offset = if player_state.is_crouching {
+        KNIFE_ATTACK_CROUCH_Y_OFFSET
+    } else {
+        KNIFE_ATTACK_Y_OFFSET
+    };
+    let slash_position = Vec3::new(
+        player_transform.translation.x + KNIFE_ATTACK_X_OFFSET * facing,
+        player_transform.translation.y + y_offset,
+        2.4,
+    );
+
+    commands.spawn((
+        Sprite {
+            color: Color::srgba(0.96, 0.96, 1.0, 0.42),
+            custom_size: Some(Vec2::new(68.0, 18.0)),
+            ..default()
+        },
+        Transform::from_translation(slash_position).with_rotation(Quat::from_rotation_z(
+            if player_state.is_crouching {
+                0.08
+            } else {
+                -0.1
+            } * facing,
+        )),
+        KnifeSlash {
+            damage: KNIFE_ATTACK_DAMAGE,
+            lifetime: Timer::from_seconds(KNIFE_ATTACK_LIFETIME, TimerMode::Once),
+        },
+        crate::systems::collision::CollisionBox::new(KNIFE_ATTACK_HITBOX_SIZE),
+    ));
+
+    *cooldown = KNIFE_ATTACK_COOLDOWN;
+}
+
 /// 更新投射物移动。
 pub fn update_projectiles(
     mut projectile_query: Query<(&mut Transform, &Velocity, &mut ProjectileData), With<Projectile>>,
@@ -211,6 +288,70 @@ pub fn cleanup_expired_projectiles(
     for (entity, data) in projectile_query.iter() {
         if data.is_expired() {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// 清理超时刀攻击命中盒。
+pub fn cleanup_expired_knife_slashes(
+    mut commands: Commands,
+    mut knife_query: Query<(Entity, &mut KnifeSlash)>,
+    time: Res<Time>,
+) {
+    for (entity, mut knife_slash) in knife_query.iter_mut() {
+        knife_slash.lifetime.tick(time.delta());
+        if knife_slash.lifetime.is_finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// 刀攻击命中敌人后统一发伤害事件。
+pub fn knife_enemy_collision(
+    mut commands: Commands,
+    mut damage_writer: MessageWriter<DamageEvent>,
+    knife_query: Query<(
+        Entity,
+        &Transform,
+        &KnifeSlash,
+        &crate::systems::collision::CollisionBox,
+    )>,
+    enemy_query: Query<
+        (
+            Entity,
+            &Transform,
+            &EnemyState,
+            &crate::systems::collision::CollisionBox,
+        ),
+        With<Enemy>,
+    >,
+) {
+    for (slash_entity, slash_transform, slash, slash_box) in knife_query.iter() {
+        let mut hit_target = None;
+
+        for (enemy_entity, enemy_transform, enemy_state, enemy_box) in enemy_query.iter() {
+            if !enemy_state.is_alive {
+                continue;
+            }
+
+            let dx = (slash_transform.translation.x - enemy_transform.translation.x).abs();
+            let dy = (slash_transform.translation.y - enemy_transform.translation.y).abs();
+            let collision_x = dx < (slash_box.size.x + enemy_box.size.x) / 2.0;
+            let collision_y = dy < (slash_box.size.y + enemy_box.size.y) / 2.0;
+
+            if collision_x && collision_y {
+                hit_target = Some(enemy_entity);
+                break;
+            }
+        }
+
+        if let Some(enemy_entity) = hit_target {
+            damage_writer.write(DamageEvent {
+                target: enemy_entity,
+                amount: slash.damage,
+                source: DamageSource::Knife,
+            });
+            commands.entity(slash_entity).despawn();
         }
     }
 }
@@ -306,7 +447,7 @@ pub fn player_enemy_collision(
             if collision_x && collision_y && *last_damage_time >= PLAYER_CONTACT_DAMAGE_COOLDOWN {
                 damage_writer.write(DamageEvent {
                     target: player_entity,
-                    amount: PLAYER_CONTACT_DAMAGE,
+                    amount: enemy_state.contact_damage,
                     source: DamageSource::EnemyContact,
                 });
                 *last_damage_time = 0.0;

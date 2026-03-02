@@ -35,7 +35,8 @@ export DATABASE_URL="postgresql://username:password@localhost/shirou_runner"
 - `A/D` 或 `←/→`: 移动
 - `W` 或 `Space`: 跳跃
 - `S` 或 `↓`: 蹲下
-- `J`: 攻击/投影
+- `J`: 投影攻击（远程）
+- `L` 或 `U`: 刀攻击（近战）
 - `K`: 圣骸布开关
 - `Esc`: 暂停
 - `R`: GameOver 后复活

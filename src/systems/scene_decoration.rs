@@ -1,7 +1,8 @@
 //! 場景裝飾系統
 //!
-//! 為遊戲場景添加豐富的視覺元素，包括多層背景、裝飾物等
+//! 為遊戲場景添加更豐富的視覺層次：多層天空、遠景輪廓、雲層與地面裝飾。
 
+use crate::resources::GameConfig;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -10,6 +11,21 @@ use bevy::window::PrimaryWindow;
 pub struct SceneDecoration {
     pub layer: DecorationLayer,
     pub speed_multiplier: f32,
+}
+
+#[derive(Component)]
+pub struct SkyPulse {
+    base_rgb: Vec3,
+    pulse_amplitude: f32,
+    pulse_speed: f32,
+    alpha: f32,
+}
+
+#[derive(Component)]
+pub struct StarPulse {
+    base_alpha: f32,
+    pulse_speed: f32,
+    phase: f32,
 }
 
 /// 裝飾層級
@@ -41,6 +57,10 @@ impl DecorationLayer {
     }
 }
 
+fn pseudo01(seed: f32) -> f32 {
+    ((seed.sin() * 43_758.547).abs()).fract()
+}
+
 /// 設置多層視差背景
 pub fn setup_parallax_background(
     mut commands: Commands,
@@ -57,20 +77,73 @@ pub fn setup_parallax_background(
         return;
     };
 
-    // 遠景層 - 使用封面圖片作為遠景
+    let width = window.width();
+    let height = window.height();
+
+    // 1) 遠景天空底色 + 緩慢呼吸。
+    for i in 0..3 {
+        let x_offset = (i as f32) * width;
+
+        commands.spawn((
+            Sprite {
+                color: Color::srgba(0.08, 0.12, 0.23, 0.98),
+                custom_size: Some(Vec2::new(width, height * 1.05)),
+                ..default()
+            },
+            Transform::from_xyz(
+                x_offset,
+                height * 0.02,
+                DecorationLayer::FarBackground.z_index() - 0.3,
+            ),
+            SceneDecoration {
+                layer: DecorationLayer::FarBackground,
+                speed_multiplier: 0.12,
+            },
+            SkyPulse {
+                base_rgb: Vec3::new(0.08, 0.12, 0.23),
+                pulse_amplitude: 0.03,
+                pulse_speed: 0.10,
+                alpha: 0.98,
+            },
+        ));
+
+        commands.spawn((
+            Sprite {
+                color: Color::srgba(0.22, 0.30, 0.46, 0.40),
+                custom_size: Some(Vec2::new(width, height * 0.62)),
+                ..default()
+            },
+            Transform::from_xyz(
+                x_offset,
+                -height * 0.12,
+                DecorationLayer::FarBackground.z_index() - 0.1,
+            ),
+            SceneDecoration {
+                layer: DecorationLayer::FarBackground,
+                speed_multiplier: 0.15,
+            },
+            SkyPulse {
+                base_rgb: Vec3::new(0.22, 0.30, 0.46),
+                pulse_amplitude: 0.04,
+                pulse_speed: 0.14,
+                alpha: 0.40,
+            },
+        ));
+    }
+
+    // 2) 保留封面圖作為超低透明紋理，降低重複感。
     let far_bg_images = [
         "images/ui/cover10.jpg",
         "images/ui/cover11.jpg",
         "images/ui/cover12.jpg",
     ];
-
     for (i, image_path) in far_bg_images.iter().enumerate() {
-        let x_offset = (i as f32) * window.width();
+        let x_offset = (i as f32) * width;
         commands.spawn((
             Sprite {
                 image: asset_server.load(*image_path),
-                custom_size: Some(Vec2::new(window.width(), window.height())),
-                color: Color::srgba(1.0, 1.0, 1.0, 0.3), // 半透明
+                custom_size: Some(Vec2::new(width, height)),
+                color: Color::srgba(1.0, 1.0, 1.0, 0.13),
                 ..default()
             },
             Transform::from_xyz(x_offset, 0.0, DecorationLayer::FarBackground.z_index()),
@@ -81,10 +154,63 @@ pub fn setup_parallax_background(
         ));
     }
 
-    crate::debug_log!("🎨 設置視差背景完成");
+    // 3) 中景輪廓（山脊/廢墟塊）提供空間深度。
+    for segment in 0..3 {
+        for ridge in 0..5 {
+            let seed = segment as f32 * 13.0 + ridge as f32 * 7.0;
+            let width_factor = 0.18 + pseudo01(seed + 2.4) * 0.22;
+            let ridge_width = width * width_factor;
+            let ridge_height = height * (0.18 + pseudo01(seed + 4.7) * 0.20);
+            let base_x = (segment as f32) * width - width * 0.44 + ridge as f32 * width * 0.22;
+            let base_y = GameConfig::GROUND_LEVEL + ridge_height * 0.35;
+
+            commands.spawn((
+                Sprite {
+                    color: Color::srgba(0.11, 0.14, 0.20, 0.92),
+                    custom_size: Some(Vec2::new(ridge_width, ridge_height)),
+                    ..default()
+                },
+                Transform::from_xyz(base_x, base_y, DecorationLayer::MidBackground.z_index()),
+                SceneDecoration {
+                    layer: DecorationLayer::MidBackground,
+                    speed_multiplier: 0.42,
+                },
+            ));
+        }
+    }
+
+    // 4) 星點：小尺寸 + 輕微閃爍。
+    for i in 0..56 {
+        let seed = i as f32 * 17.171;
+        let segment = (i % 3) as f32;
+        let x = segment * width + pseudo01(seed + 1.7) * width;
+        let y = -height * 0.10 + pseudo01(seed + 8.3) * height * 0.62;
+        let size = 1.5 + pseudo01(seed + 3.2) * 2.8;
+        let alpha = 0.24 + pseudo01(seed + 5.9) * 0.44;
+
+        commands.spawn((
+            Sprite {
+                color: Color::srgba(1.0, 1.0, 1.0, alpha),
+                custom_size: Some(Vec2::new(size, size)),
+                ..default()
+            },
+            Transform::from_xyz(x, y, DecorationLayer::FarBackground.z_index() + 0.35),
+            SceneDecoration {
+                layer: DecorationLayer::FarBackground,
+                speed_multiplier: 0.14,
+            },
+            StarPulse {
+                base_alpha: alpha,
+                pulse_speed: 1.2 + pseudo01(seed + 9.1) * 2.4,
+                phase: pseudo01(seed + 11.3) * std::f32::consts::TAU,
+            },
+        ));
+    }
+
+    crate::debug_log!("🎨 設置視差背景完成（多層天空 + 輪廓 + 星點）");
 }
 
-/// 生成地面裝飾物
+/// 清理場景裝飾
 pub fn cleanup_scene_decorations(
     mut commands: Commands,
     decorations: Query<Entity, With<SceneDecoration>>,
@@ -106,18 +232,18 @@ pub fn spawn_ground_decorations(
 
     *spawn_timer += time.delta_secs();
 
-    // 每 2 秒生成一個裝飾物
-    if *spawn_timer > 2.0 {
+    // 每 1.7 秒生成一個裝飾物
+    if *spawn_timer > 1.7 {
         *spawn_timer = 0.0;
 
-        let pseudo_random = (time.elapsed_secs() * 100.0) as u32;
+        let seed = time.elapsed_secs() * 7.31;
+        let decoration_type = (pseudo01(seed) * 4.0) as u32;
 
-        // 隨機選擇裝飾物類型
-        let decoration_type = pseudo_random % 3;
-        let (size, color) = match decoration_type {
-            0 => (Vec2::new(20.0, 30.0), Color::srgb(0.2, 0.6, 0.2)), // 草
-            1 => (Vec2::new(15.0, 15.0), Color::srgb(0.5, 0.5, 0.5)), // 石頭
-            _ => (Vec2::new(10.0, 40.0), Color::srgb(0.3, 0.5, 0.2)), // 小樹
+        let (size, color, y_offset) = match decoration_type {
+            0 => (Vec2::new(18.0, 28.0), Color::srgb(0.18, 0.56, 0.23), 12.0), // 草叢
+            1 => (Vec2::new(26.0, 14.0), Color::srgb(0.46, 0.46, 0.52), 4.0),  // 碎石
+            2 => (Vec2::new(14.0, 42.0), Color::srgb(0.27, 0.42, 0.24), 18.0), // 灌木
+            _ => (Vec2::new(10.0, 48.0), Color::srgb(0.32, 0.40, 0.33), 22.0), // 殘柱
         };
 
         commands.spawn((
@@ -127,8 +253,8 @@ pub fn spawn_ground_decorations(
                 ..default()
             },
             Transform::from_xyz(
-                window.width() + 50.0,
-                -240.0,
+                window.width() + 90.0,
+                GameConfig::GROUND_LEVEL + y_offset,
                 DecorationLayer::Ground.z_index(),
             ),
             SceneDecoration {
@@ -144,7 +270,7 @@ pub fn move_scene_decorations(
     mut decoration_query: Query<(&mut Transform, &SceneDecoration)>,
     time: Res<Time>,
 ) {
-    const BASE_SPEED: f32 = 50.0; // 基礎移動速度
+    const BASE_SPEED: f32 = 58.0;
 
     for (mut transform, decoration) in decoration_query.iter_mut() {
         // 根據層級應用不同的速度
@@ -163,7 +289,6 @@ pub fn cleanup_offscreen_decorations(
         return;
     };
 
-    // 分兩次查詢：一次用於清理，一次用於循環
     let mut to_despawn = Vec::new();
 
     for (entity, transform, decoration) in decoration_query.iter() {
@@ -173,12 +298,11 @@ pub fn cleanup_offscreen_decorations(
         }
 
         // 其他裝飾物離開屏幕後清理
-        if transform.translation.x < -200.0 {
+        if transform.translation.x < -260.0 {
             to_despawn.push(entity);
         }
     }
 
-    // 執行清理
     for entity in to_despawn {
         commands.entity(entity).despawn();
     }
@@ -198,27 +322,26 @@ pub fn spawn_enhanced_clouds(
 
     *spawn_timer += time.delta_secs();
 
-    // 每 3 秒生成一朵雲
-    if *spawn_timer > 3.0 {
+    // 每 2.6 秒生成一朵雲
+    if *spawn_timer > 2.6 {
         *spawn_timer = 0.0;
 
-        let pseudo_random = (time.elapsed_secs() * 100.0) as u32;
+        let seed = time.elapsed_secs() * 9.17;
 
         // 隨機選擇雲彩圖片
         let cloud_images = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
-        let cloud_index = (pseudo_random % cloud_images.len() as u32) as usize;
+        let cloud_index = if pseudo01(seed + 0.4) > 0.5 { 1 } else { 0 };
         let cloud_image = asset_server.load(cloud_images[cloud_index]);
 
-        // 隨機高度（上半部分屏幕）
-        let cloud_y =
-            (pseudo_random % (window.height() * 0.5) as u32) as f32 + window.height() * 0.3;
+        // 隨機高度（中上半部分屏幕）
+        let cloud_y = -window.height() * 0.08 + pseudo01(seed + 1.1) * window.height() * 0.56;
 
         // 隨機大小和透明度
-        let scale = 0.6 + ((pseudo_random % 60) as f32 / 100.0); // 0.6 - 1.2
-        let alpha = 0.5 + ((pseudo_random % 50) as f32 / 100.0); // 0.5 - 1.0
+        let scale = 0.65 + pseudo01(seed + 2.2) * 0.75;
+        let alpha = 0.35 + pseudo01(seed + 3.3) * 0.50;
 
         // 隨機選擇層級（近景或中景）
-        let layer = if pseudo_random.is_multiple_of(2) {
+        let layer = if pseudo01(seed + 4.4) > 0.5 {
             DecorationLayer::NearBackground
         } else {
             DecorationLayer::MidBackground
@@ -227,11 +350,11 @@ pub fn spawn_enhanced_clouds(
         commands.spawn((
             Sprite {
                 image: cloud_image,
-                custom_size: Some(Vec2::new(150.0 * scale, 100.0 * scale)),
+                custom_size: Some(Vec2::new(170.0 * scale, 110.0 * scale)),
                 color: Color::srgba(1.0, 1.0, 1.0, alpha),
                 ..default()
             },
-            Transform::from_xyz(window.width() + 100.0, cloud_y, layer.z_index()),
+            Transform::from_xyz(window.width() + 120.0, cloud_y, layer.z_index()),
             SceneDecoration {
                 layer,
                 speed_multiplier: layer.speed_multiplier(),
@@ -259,18 +382,26 @@ pub fn loop_far_background(
     }
 }
 
-/// 添加動態光照效果（簡單的顏色變化）
+/// 添加動態光照效果（天空呼吸 + 星點閃爍）
 pub fn dynamic_lighting(
-    mut decoration_query: Query<(&mut Sprite, &SceneDecoration)>,
+    mut decoration_query: Query<(&mut Sprite, Option<&SkyPulse>, Option<&StarPulse>)>,
     time: Res<Time>,
 ) {
-    let time_factor = (time.elapsed_secs() * 0.1).sin() * 0.1 + 0.9; // 0.8 - 1.0
+    let t = time.elapsed_secs();
 
-    for (mut sprite, decoration) in decoration_query.iter_mut() {
-        // 只對遠景應用光照變化
-        if decoration.layer == DecorationLayer::FarBackground {
-            let current_alpha = sprite.color.alpha();
-            sprite.color = Color::srgba(time_factor, time_factor, time_factor, current_alpha);
+    for (mut sprite, sky_pulse, star_pulse) in decoration_query.iter_mut() {
+        if let Some(sky) = sky_pulse {
+            let wave = (t * sky.pulse_speed).sin() * sky.pulse_amplitude;
+            let r = (sky.base_rgb.x + wave * 0.7).clamp(0.0, 1.0);
+            let g = (sky.base_rgb.y + wave * 0.85).clamp(0.0, 1.0);
+            let b = (sky.base_rgb.z + wave).clamp(0.0, 1.0);
+            sprite.color = Color::srgba(r, g, b, sky.alpha);
+        }
+
+        if let Some(star) = star_pulse {
+            let twinkle = 0.62 + 0.38 * (t * star.pulse_speed + star.phase).sin().abs();
+            let alpha = (star.base_alpha * twinkle).clamp(0.08, 0.95);
+            sprite.color = Color::srgba(1.0, 1.0, 1.0, alpha);
         }
     }
 }
