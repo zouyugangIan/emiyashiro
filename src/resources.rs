@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use std::io::ErrorKind;
 
 // Vec3 序列化支持
 mod vec3_serde {
@@ -57,6 +58,254 @@ impl GameConfig {
     pub const GROUND_SIZE: Vec2 = Vec2::new(2000.0, 50.0);
     pub const GROUND_POS: Vec3 = Vec3::new(0.0, -300.0, 0.0);
     pub const GROUND_COLOR: Color = Color::srgb(0.3, 0.3, 0.3);
+}
+
+/// Gameplay tuning loaded from disk for faster iteration and balancing.
+#[derive(Resource, Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct GameplayTuning {
+    pub knife: KnifeCombatTuning,
+    pub enemies: EnemyDirectorTuning,
+    pub camera_feedback: CameraFeedbackTuning,
+}
+
+impl Default for GameplayTuning {
+    fn default() -> Self {
+        Self {
+            knife: KnifeCombatTuning::default(),
+            enemies: EnemyDirectorTuning::default(),
+            camera_feedback: CameraFeedbackTuning::default(),
+        }
+    }
+}
+
+impl GameplayTuning {
+    pub const FILE_PATH: &'static str = "assets/config/gameplay_tuning.ron";
+
+    pub fn load_from_disk() -> Self {
+        let file_content = match std::fs::read_to_string(Self::FILE_PATH) {
+            Ok(content) => content,
+            Err(error) => {
+                if error.kind() != ErrorKind::NotFound {
+                    warn!(
+                        "Failed to read gameplay tuning file '{}': {}",
+                        Self::FILE_PATH,
+                        error
+                    );
+                }
+                return Self::default();
+            }
+        };
+
+        match ron::from_str::<Self>(&file_content) {
+            Ok(tuning) => {
+                crate::debug_log!("Loaded gameplay tuning from {}", Self::FILE_PATH);
+                tuning
+            }
+            Err(error) => {
+                warn!(
+                    "Failed to parse gameplay tuning '{}': {}. Falling back to defaults.",
+                    Self::FILE_PATH,
+                    error
+                );
+                Self::default()
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct KnifeCombatTuning {
+    pub max_combo_steps: u8,
+    pub combo_buffer_window_secs: f32,
+    pub combo_reset_window_secs: f32,
+}
+
+impl Default for KnifeCombatTuning {
+    fn default() -> Self {
+        Self {
+            max_combo_steps: 3,
+            combo_buffer_window_secs: 0.18,
+            combo_reset_window_secs: 0.8,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct EnemyDirectorTuning {
+    pub max_active_enemies: usize,
+    pub spawn_interval_min_secs: f32,
+    pub spawn_interval_max_secs: f32,
+    pub spawn_weights: EnemySpawnWeights,
+    pub slime: EnemyArchetypeTuning,
+    pub familiar: EnemyArchetypeTuning,
+    pub heroic_spirit: EnemyArchetypeTuning,
+    pub slime_behavior: SlimeBehaviorTuning,
+    pub familiar_behavior: FamiliarBehaviorTuning,
+    pub heroic_spirit_behavior: HeroicSpiritBehaviorTuning,
+}
+
+impl Default for EnemyDirectorTuning {
+    fn default() -> Self {
+        Self {
+            max_active_enemies: 18,
+            spawn_interval_min_secs: 1.4,
+            spawn_interval_max_secs: 3.0,
+            spawn_weights: EnemySpawnWeights::default(),
+            slime: EnemyArchetypeTuning {
+                health: 5,
+                patrol_range: 170.0,
+                base_speed: 58.0,
+                contact_damage: 11.0,
+                spawn_y_offset: 18.0,
+            },
+            familiar: EnemyArchetypeTuning {
+                health: 6,
+                patrol_range: 300.0,
+                base_speed: 92.0,
+                contact_damage: 13.0,
+                spawn_y_offset: 124.0,
+            },
+            heroic_spirit: EnemyArchetypeTuning {
+                health: 14,
+                patrol_range: 360.0,
+                base_speed: 132.0,
+                contact_damage: 19.0,
+                spawn_y_offset: 30.0,
+            },
+            slime_behavior: SlimeBehaviorTuning::default(),
+            familiar_behavior: FamiliarBehaviorTuning::default(),
+            heroic_spirit_behavior: HeroicSpiritBehaviorTuning::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct EnemySpawnWeights {
+    pub slime: f32,
+    pub familiar: f32,
+    pub heroic_spirit: f32,
+}
+
+impl Default for EnemySpawnWeights {
+    fn default() -> Self {
+        Self {
+            slime: 0.44,
+            familiar: 0.33,
+            heroic_spirit: 0.23,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct EnemyArchetypeTuning {
+    pub health: i32,
+    pub patrol_range: f32,
+    pub base_speed: f32,
+    pub contact_damage: f32,
+    pub spawn_y_offset: f32,
+}
+
+impl Default for EnemyArchetypeTuning {
+    fn default() -> Self {
+        Self {
+            health: 5,
+            patrol_range: 170.0,
+            base_speed: 58.0,
+            contact_damage: 11.0,
+            spawn_y_offset: 18.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct SlimeBehaviorTuning {
+    pub engage_distance: f32,
+    pub burst_speed_multiplier: f32,
+    pub burst_cooldown_secs: f32,
+}
+
+impl Default for SlimeBehaviorTuning {
+    fn default() -> Self {
+        Self {
+            engage_distance: 88.0,
+            burst_speed_multiplier: 1.95,
+            burst_cooldown_secs: 1.25,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct FamiliarBehaviorTuning {
+    pub attack_min_distance: f32,
+    pub attack_max_distance: f32,
+    pub projectile_speed: f32,
+    pub projectile_lifetime_secs: f32,
+    pub cast_windup_secs: f32,
+    pub attack_cooldown_secs: f32,
+    pub telegraph_window_secs: f32,
+}
+
+impl Default for FamiliarBehaviorTuning {
+    fn default() -> Self {
+        Self {
+            attack_min_distance: 120.0,
+            attack_max_distance: 560.0,
+            projectile_speed: 280.0,
+            projectile_lifetime_secs: 3.0,
+            cast_windup_secs: 0.22,
+            attack_cooldown_secs: 1.35,
+            telegraph_window_secs: 0.28,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct HeroicSpiritBehaviorTuning {
+    pub dash_trigger_distance: f32,
+    pub dash_charge_secs: f32,
+    pub dash_active_secs: f32,
+    pub dash_cooldown_secs: f32,
+    pub dash_speed_multiplier: f32,
+    pub telegraph_window_secs: f32,
+}
+
+impl Default for HeroicSpiritBehaviorTuning {
+    fn default() -> Self {
+        Self {
+            dash_trigger_distance: 120.0,
+            dash_charge_secs: 0.20,
+            dash_active_secs: 0.24,
+            dash_cooldown_secs: 1.55,
+            dash_speed_multiplier: 2.9,
+            telegraph_window_secs: 0.24,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct CameraFeedbackTuning {
+    pub max_shake_intensity: f32,
+    pub stack_blend: f32,
+    pub decay_power: f32,
+}
+
+impl Default for CameraFeedbackTuning {
+    fn default() -> Self {
+        Self {
+            max_shake_intensity: 10.0,
+            stack_blend: 0.62,
+            decay_power: 0.65,
+        }
+    }
 }
 
 /// 游戏资源句柄

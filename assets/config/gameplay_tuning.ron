@@ -1,0 +1,65 @@
+(
+    knife: (
+        max_combo_steps: 3,
+        combo_buffer_window_secs: 0.18,
+        combo_reset_window_secs: 0.8,
+    ),
+    enemies: (
+        max_active_enemies: 18,
+        spawn_interval_min_secs: 1.4,
+        spawn_interval_max_secs: 3.0,
+        spawn_weights: (
+            slime: 0.44,
+            familiar: 0.33,
+            heroic_spirit: 0.23,
+        ),
+        slime: (
+            health: 5,
+            patrol_range: 170.0,
+            base_speed: 58.0,
+            contact_damage: 11.0,
+            spawn_y_offset: 18.0,
+        ),
+        familiar: (
+            health: 6,
+            patrol_range: 300.0,
+            base_speed: 92.0,
+            contact_damage: 13.0,
+            spawn_y_offset: 124.0,
+        ),
+        heroic_spirit: (
+            health: 14,
+            patrol_range: 360.0,
+            base_speed: 132.0,
+            contact_damage: 19.0,
+            spawn_y_offset: 30.0,
+        ),
+        slime_behavior: (
+            engage_distance: 88.0,
+            burst_speed_multiplier: 1.95,
+            burst_cooldown_secs: 1.25,
+        ),
+        familiar_behavior: (
+            attack_min_distance: 120.0,
+            attack_max_distance: 560.0,
+            projectile_speed: 280.0,
+            projectile_lifetime_secs: 3.0,
+            cast_windup_secs: 0.22,
+            attack_cooldown_secs: 1.35,
+            telegraph_window_secs: 0.28,
+        ),
+        heroic_spirit_behavior: (
+            dash_trigger_distance: 120.0,
+            dash_charge_secs: 0.20,
+            dash_active_secs: 0.24,
+            dash_cooldown_secs: 1.55,
+            dash_speed_multiplier: 2.9,
+            telegraph_window_secs: 0.24,
+        ),
+    ),
+    camera_feedback: (
+        max_shake_intensity: 10.0,
+        stack_blend: 0.62,
+        decay_power: 0.65,
+    ),
+)

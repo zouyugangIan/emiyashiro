@@ -80,6 +80,8 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         crate::components::network::NetworkId(0),
         Velocity { x: 0.0, y: 0.0 },
         PlayerState::default(),
+        FacingDirection::default(),
+        DamageInvulnerability::default(),
         crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
         Health::default(),
         ShroudState::default(),

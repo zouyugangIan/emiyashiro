@@ -3,11 +3,57 @@
 //! 包含摄像机跟随、视角控制和场景渲染相关功能。
 //! 提供平滑的摄像机跟随、预测性移动和边界限制。
 
-use crate::{components::*, resources::*};
+use crate::{components::*, events::CameraImpulseEvent, resources::*};
 use bevy::prelude::*;
 
 type PlayerMotionQuery<'w, 's> =
     Query<'w, 's, (&'static Transform, &'static Velocity), (With<Player>, Without<Camera>)>;
+
+/// 轻量镜头震动状态。
+#[derive(Resource, Debug, Clone)]
+pub struct CameraShakeState {
+    pub remaining: f32,
+    pub duration: f32,
+    pub intensity: f32,
+    pub phase: f32,
+}
+
+impl Default for CameraShakeState {
+    fn default() -> Self {
+        Self {
+            remaining: 0.0,
+            duration: 0.0,
+            intensity: 0.0,
+            phase: 0.0,
+        }
+    }
+}
+
+impl CameraShakeState {
+    pub fn trigger(&mut self, intensity: f32, duration: f32, max_intensity: f32, stack_blend: f32) {
+        if intensity <= 0.0 || duration <= 0.0 {
+            return;
+        }
+
+        let stack_blend = stack_blend.clamp(0.0, 1.0);
+        let stacked = self.intensity + intensity * stack_blend.max(0.05);
+        self.intensity = stacked.clamp(0.0, max_intensity.max(0.5));
+
+        if duration > self.remaining {
+            self.remaining = duration;
+            self.duration = duration;
+        }
+        self.phase = (self.phase + 1.618_034) % std::f32::consts::TAU;
+    }
+
+    pub fn tick(&mut self, delta_secs: f32) {
+        self.remaining = (self.remaining - delta_secs).max(0.0);
+        if self.remaining <= 0.0 {
+            self.intensity = 0.0;
+            self.duration = 0.0;
+        }
+    }
+}
 
 /// 摄像机配置资源
 ///
@@ -276,6 +322,61 @@ pub fn camera_follow(
             camera_transform.translation.y = camera_transform.translation.y.clamp(-100.0, 100.0);
         }
     }
+}
+
+/// 读取镜头冲击事件。
+pub fn consume_camera_impulse_events(
+    mut events: MessageReader<CameraImpulseEvent>,
+    mut shake_state: ResMut<CameraShakeState>,
+    tuning: Option<Res<crate::resources::GameplayTuning>>,
+) {
+    let default_tuning = crate::resources::GameplayTuning::default();
+    let feedback = &tuning.as_deref().unwrap_or(&default_tuning).camera_feedback;
+
+    for event in events.read() {
+        shake_state.trigger(
+            event.intensity,
+            event.duration,
+            feedback.max_shake_intensity,
+            feedback.stack_blend,
+        );
+    }
+}
+
+/// 在跟随逻辑之后叠加镜头震动偏移。
+pub fn apply_camera_shake(
+    mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    mut shake_state: ResMut<CameraShakeState>,
+    tuning: Option<Res<crate::resources::GameplayTuning>>,
+    time: Res<Time>,
+    mut last_offset: Local<Vec2>,
+) {
+    if camera_query.is_empty() {
+        *last_offset = Vec2::ZERO;
+        return;
+    }
+
+    shake_state.tick(time.delta_secs());
+    let default_tuning = crate::resources::GameplayTuning::default();
+    let feedback = &tuning.as_deref().unwrap_or(&default_tuning).camera_feedback;
+
+    let next_offset = if shake_state.remaining > 0.0 && shake_state.duration > 0.0 {
+        let progress = (shake_state.remaining / shake_state.duration).clamp(0.0, 1.0);
+        let amplitude = shake_state.intensity * progress.powf(feedback.decay_power.clamp(0.2, 1.5));
+        let t = time.elapsed_secs() * 58.0 + shake_state.phase;
+        Vec2::new(t.sin() * amplitude, (t * 1.31).cos() * amplitude * 0.72)
+    } else {
+        Vec2::ZERO
+    };
+
+    for mut camera_transform in camera_query.iter_mut() {
+        camera_transform.translation.x -= last_offset.x;
+        camera_transform.translation.y -= last_offset.y;
+        camera_transform.translation.x += next_offset.x;
+        camera_transform.translation.y += next_offset.y;
+    }
+
+    *last_offset = next_offset;
 }
 
 /// 空闲状态下的摄像机行为

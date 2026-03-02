@@ -184,6 +184,7 @@ mod tests {
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<GameState>()
             .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
             .add_systems(Update, crate::systems::combat::apply_damage_events);
 
         let player = app.world_mut().spawn((Player, Health::new(10.0))).id();
@@ -1018,6 +1019,7 @@ mod tests {
             .insert_resource(ButtonInput::<KeyCode>::default())
             .init_resource::<GameStats>()
             .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
             .add_systems(
                 Update,
                 (
@@ -1211,6 +1213,7 @@ mod tests {
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<GameState>()
             .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
             .add_systems(
                 Update,
                 (
@@ -1235,6 +1238,7 @@ mod tests {
                 Enemy,
                 EnemyState::new(5, 100.0),
                 Transform::from_xyz(0.0, 0.0, 0.0),
+                Velocity::default(),
                 crate::systems::collision::CollisionBox::new(Vec2::new(20.0, 20.0)),
             ))
             .id();
@@ -1261,12 +1265,14 @@ mod tests {
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<GameState>()
             .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
             .add_systems(
                 Update,
                 (
                     crate::systems::combat::knife_enemy_collision,
                     crate::systems::combat::apply_damage_events,
-                ),
+                )
+                    .chain(),
             );
 
         let slash = app
@@ -1275,6 +1281,10 @@ mod tests {
                 crate::systems::combat::KnifeSlash {
                     damage: 6.0,
                     lifetime: Timer::from_seconds(0.2, TimerMode::Once),
+                    combo_step: 1,
+                    knockback_x: 60.0,
+                    knockback_y: 10.0,
+                    hit_stop_secs: 0.02,
                 },
                 Transform::from_xyz(0.0, 0.0, 0.0),
                 crate::systems::collision::CollisionBox::new(Vec2::new(30.0, 20.0)),
@@ -1287,6 +1297,7 @@ mod tests {
                 Enemy,
                 EnemyState::new(5, 100.0),
                 Transform::from_xyz(0.0, 0.0, 0.0),
+                Velocity::default(),
                 crate::systems::collision::CollisionBox::new(Vec2::new(20.0, 20.0)),
             ))
             .id();
@@ -1306,6 +1317,266 @@ mod tests {
         assert!(
             app.world().get_entity(slash).is_err(),
             "knife slash should be despawned after hit"
+        );
+    }
+
+    #[test]
+    fn test_knife_combo_buffer_spawns_followup_slash() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+            Velocity::default(),
+            PlayerState::default(),
+            FacingDirection::Right,
+            ShroudState::default(),
+        ));
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(KeyCode::KeyL);
+        for _ in 0..3 {
+            app.update();
+        }
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+        let slash_count_after_buffer_press = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::KnifeSlash>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            slash_count_after_buffer_press, 1,
+            "buffer input should not spawn slash until cooldown reaches zero"
+        );
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(KeyCode::KeyL);
+        for _ in 0..20 {
+            app.update();
+        }
+
+        let slash_steps = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::KnifeSlash>();
+            query
+                .iter(app.world())
+                .map(|slash| slash.combo_step)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            slash_steps.len(),
+            2,
+            "queued combo should add a second slash after cooldown recovery"
+        );
+        assert!(
+            slash_steps.iter().any(|step| *step == 2),
+            "queued slash should enter combo step 2"
+        );
+    }
+
+    #[test]
+    fn test_hit_stop_restores_virtual_speed_after_duration() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(0.02),
+            ))
+            .init_resource::<crate::systems::combat::HitStopState>()
+            .add_systems(Update, crate::systems::combat::maintain_hit_stop_timescale);
+
+        app.world_mut()
+            .resource_mut::<crate::systems::combat::HitStopState>()
+            .trigger(0.05, 0.1);
+
+        app.update();
+        let slowed_speed = app.world().resource::<Time<Virtual>>().relative_speed();
+        assert!(
+            slowed_speed < 0.2,
+            "virtual time should be slowed while hit stop is active"
+        );
+
+        app.world_mut()
+            .resource_mut::<crate::systems::combat::HitStopState>()
+            .remaining = 0.0;
+        app.update();
+        let restored_speed = app.world().resource::<Time<Virtual>>().relative_speed();
+        assert!(
+            (restored_speed - 1.0).abs() < 0.001,
+            "virtual time should recover to normal speed after hit stop ends"
+        );
+    }
+
+    #[test]
+    fn test_enemy_heroic_spirit_charge_transitions_to_dash() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .add_systems(Update, crate::systems::enemy::enemy_patrol_ai);
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+        ));
+
+        let enemy = app
+            .world_mut()
+            .spawn((
+                Enemy,
+                EnemyType::EnemyHeroicSpirit,
+                EnemyState::new(14, 360.0)
+                    .with_spawn_origin(-380.0)
+                    .with_movement(132.0, 19.0, 0.0),
+                Transform::from_xyz(-380.0, GameConfig::GROUND_LEVEL + 30.0, 0.0),
+                Velocity::default(),
+            ))
+            .id();
+
+        app.update();
+        let state_after_lock = app
+            .world()
+            .entity(enemy)
+            .get::<EnemyState>()
+            .expect("heroic enemy state");
+        assert!(
+            state_after_lock.dash_charge_timer > 0.0,
+            "heroic spirit should enter dash charge state"
+        );
+
+        for _ in 0..16 {
+            app.update();
+        }
+        let entity = app.world().entity(enemy);
+        let state_after_dash = entity
+            .get::<EnemyState>()
+            .expect("heroic enemy state after dash");
+        let velocity = entity.get::<Velocity>().expect("heroic velocity");
+        assert!(
+            state_after_dash.dash_active_timer > 0.0,
+            "dash charge should transition into active dash"
+        );
+        assert!(
+            velocity.x > 0.0,
+            "dash should move toward player on positive X direction"
+        );
+    }
+
+    #[test]
+    fn test_familiar_ranged_attack_uses_windup_then_cooldown() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .add_systems(
+                Update,
+                (
+                    crate::systems::enemy::enemy_patrol_ai,
+                    crate::systems::enemy::enemy_ranged_attack,
+                )
+                    .chain(),
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+        ));
+
+        let familiar = app
+            .world_mut()
+            .spawn((
+                Enemy,
+                EnemyType::Familiar,
+                EnemyState::new(6, 300.0)
+                    .with_spawn_origin(-220.0)
+                    .with_movement(92.0, 13.0, 0.0),
+                Transform::from_xyz(-220.0, GameConfig::GROUND_LEVEL + 124.0, 0.0),
+                Velocity::default(),
+            ))
+            .id();
+
+        app.update();
+
+        let (pending_after_start, _windup_after_start) = app
+            .world()
+            .entity(familiar)
+            .get::<EnemyState>()
+            .map(|state| (state.pending_ranged_shot, state.ranged_windup_timer))
+            .expect("familiar state");
+        let projectiles_after_start = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::EnemyProjectile>();
+            query.iter(app.world()).count()
+        };
+        assert!(
+            pending_after_start,
+            "familiar should enter windup before casting"
+        );
+        assert_eq!(
+            projectiles_after_start, 0,
+            "projectile should not spawn before windup ends"
+        );
+
+        for _ in 0..16 {
+            app.update();
+        }
+
+        let (pending_after_fire, cooldown_after_fire) = app
+            .world()
+            .entity(familiar)
+            .get::<EnemyState>()
+            .map(|state| (state.pending_ranged_shot, state.ranged_cooldown))
+            .expect("familiar state after fire");
+        let projectiles_after_fire = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::EnemyProjectile>();
+            query.iter(app.world()).count()
+        };
+        assert!(
+            !pending_after_fire,
+            "familiar should clear pending shot after firing"
+        );
+        assert!(
+            cooldown_after_fire > 0.0,
+            "familiar should enter ranged cooldown after firing"
+        );
+        assert_eq!(
+            projectiles_after_fire, 1,
+            "one projectile should be emitted"
+        );
+
+        app.update();
+        let projectiles_after_short_wait = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::EnemyProjectile>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            projectiles_after_short_wait, 1,
+            "cooldown should block immediate follow-up casts"
         );
     }
 
@@ -1371,6 +1642,106 @@ mod tests {
     }
 
     #[test]
+    fn test_enemy_projectile_hit_player_applies_damage_and_despawns_projectile() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::enemy_projectile_player_collision,
+                    crate::systems::combat::apply_damage_events,
+                ),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Health::new(100.0),
+                DamageInvulnerability::default(),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::collision::CollisionBox::new(Vec2::new(24.0, 24.0)),
+            ))
+            .id();
+
+        let projectile = app
+            .world_mut()
+            .spawn((
+                crate::systems::combat::EnemyProjectile::new(7.0, 2.0),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                crate::systems::collision::CollisionBox::new(Vec2::new(18.0, 18.0)),
+                Velocity::default(),
+            ))
+            .id();
+
+        app.update();
+        app.update();
+
+        let health = app
+            .world()
+            .entity(player)
+            .get::<Health>()
+            .expect("player health");
+        assert!(
+            (health.current - 93.0).abs() < f32::EPSILON,
+            "enemy projectile should damage player"
+        );
+        assert!(
+            app.world().get_entity(projectile).is_err(),
+            "enemy projectile should despawn on hit"
+        );
+    }
+
+    #[test]
+    fn test_player_invulnerability_blocks_repeated_hostile_damage_same_frame() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
+            .add_systems(Update, crate::systems::combat::apply_damage_events);
+
+        let player = app
+            .world_mut()
+            .spawn((Player, Health::new(100.0), DamageInvulnerability::default()))
+            .id();
+
+        {
+            let mut messages = app
+                .world_mut()
+                .resource_mut::<Messages<crate::events::DamageEvent>>();
+            messages.write(crate::events::DamageEvent {
+                target: player,
+                amount: 10.0,
+                source: crate::events::DamageSource::EnemyContact,
+            });
+            messages.write(crate::events::DamageEvent {
+                target: player,
+                amount: 10.0,
+                source: crate::events::DamageSource::EnemyProjectile,
+            });
+        }
+
+        app.update();
+        app.update();
+
+        let health = app
+            .world()
+            .entity(player)
+            .get::<Health>()
+            .expect("player health");
+        assert!(
+            (health.current - 90.0).abs() < f32::EPSILON,
+            "invulnerability should block repeated hostile damage bursts"
+        );
+    }
+
+    #[test]
     fn test_player_enemy_contact_damage_updates_hud_health_text() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -1378,6 +1749,7 @@ mod tests {
             .init_state::<GameState>()
             .init_resource::<GameStats>()
             .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
             .add_systems(
                 Update,
                 (
@@ -1439,6 +1811,7 @@ mod tests {
             .insert_resource(ButtonInput::<KeyCode>::default())
             .init_resource::<GameStats>()
             .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
             .add_systems(
                 Update,
                 (
@@ -1496,6 +1869,7 @@ mod tests {
             .init_state::<GameState>()
             .insert_resource(ButtonInput::<KeyCode>::default())
             .add_message::<crate::events::DamageEvent>()
+            .add_message::<crate::events::CameraImpulseEvent>()
             .add_systems(
                 Update,
                 (

@@ -26,6 +26,8 @@ impl Plugin for PresentationPlugin {
         .add_systems(
             Update,
             (
+                systems::player::sync_player_sprite_facing,
+                systems::enemy::update_enemy_telegraph_visuals,
                 systems::animation::trigger_audio_effects,
                 systems::combat::animate_projectile_visuals,
                 systems::frame_animation::update_frame_animations,

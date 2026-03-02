@@ -2,7 +2,10 @@
 //!
 //! 包含游戏启动时的资源加载和基础设置。
 
-use crate::{asset_paths, resources::GameAssets};
+use crate::{
+    asset_paths,
+    resources::{GameAssets, GameplayTuning},
+};
 use bevy::prelude::*;
 
 /// 加载游戏资源
@@ -74,4 +77,9 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
     crate::debug_log!("摄像机设置完成");
+}
+
+/// 加载可调节的玩法参数。
+pub fn load_gameplay_tuning(mut commands: Commands) {
+    commands.insert_resource(GameplayTuning::load_from_disk());
 }

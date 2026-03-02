@@ -22,11 +22,19 @@ pub struct DamageEvent {
     pub source: DamageSource,
 }
 
+/// Camera impulse event used for hit feedback.
+#[derive(Message, Debug, Clone, Copy)]
+pub struct CameraImpulseEvent {
+    pub intensity: f32,
+    pub duration: f32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DamageSource {
     Projectile,
     Knife,
     EnemyContact,
+    EnemyProjectile,
     Fall,
     ShroudDrain,
 }

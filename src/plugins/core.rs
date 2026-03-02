@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     asset_paths,
-    events::DamageEvent,
+    events::{CameraImpulseEvent, DamageEvent},
     events::{StartLoadGame, StartSaveGame},
     resources::{
         AudioSettings, AudioStateManager, GameAssets, GameStats, PauseManager, SaveFileManager,
@@ -27,6 +27,7 @@ impl Plugin for CorePlugin {
             .add_message::<StartSaveGame>()
             .add_message::<StartLoadGame>()
             .add_message::<DamageEvent>()
+            .add_message::<CameraImpulseEvent>()
             .init_resource::<CharacterSelection>()
             .init_resource::<GameStats>()
             .init_resource::<AudioSettings>()
@@ -51,9 +52,12 @@ impl Plugin for CorePlugin {
             .init_resource::<systems::async_file_ops::AsyncFileManager>()
             .init_resource::<systems::async_file_ops::OperationProgress>()
             .init_resource::<systems::sprite_animation::AnimationRuntimeConfig>()
+            .init_resource::<systems::camera::CameraShakeState>()
+            .init_resource::<systems::combat::HitStopState>()
             .add_systems(
                 Startup,
                 (
+                    systems::setup::load_gameplay_tuning,
                     setup_game_resources,
                     setup_animation_data,
                     systems::save::load_game,

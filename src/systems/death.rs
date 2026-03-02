@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    components::{Health, Player, PlayerState, ShroudState, Velocity},
+    components::{
+        DamageInvulnerability, FacingDirection, Health, Player, PlayerState, ShroudState, Velocity,
+    },
     events::{DamageEvent, DamageSource},
     resources::{GameAssets, GameConfig, GameStats},
     states::GameState,
@@ -108,22 +110,37 @@ pub fn revive_player(
             &mut PlayerState,
             &mut Health,
             &mut ShroudState,
+            Option<&mut FacingDirection>,
+            Option<&mut DamageInvulnerability>,
         ),
         With<Player>,
     >,
     mut game_stats: ResMut<GameStats>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if let Some((mut transform, mut velocity, mut player_state, mut health, mut shroud)) =
-        player_query.iter_mut().next()
+    if let Some((
+        mut transform,
+        mut velocity,
+        mut player_state,
+        mut health,
+        mut shroud,
+        mut facing,
+        mut invulnerability,
+    )) = player_query.iter_mut().next()
     {
         transform.translation = GameConfig::PLAYER_START_POS;
         velocity.x = 0.0;
         velocity.y = 0.0;
         player_state.is_grounded = true;
         player_state.is_crouching = false;
+        if let Some(facing) = facing.as_deref_mut() {
+            *facing = FacingDirection::Right;
+        }
         health.current = health.max;
         shroud.disable_release();
+        if let Some(invulnerability) = invulnerability.as_deref_mut() {
+            invulnerability.remaining = 0.0;
+        }
 
         game_stats.distance_traveled = 0.0;
         game_stats.jump_count = 0;

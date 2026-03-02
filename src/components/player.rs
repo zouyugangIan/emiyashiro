@@ -58,6 +58,38 @@ impl Default for PlayerState {
     }
 }
 
+/// 玩家朝向状态
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FacingDirection {
+    Left,
+    Right,
+}
+
+impl Default for FacingDirection {
+    fn default() -> Self {
+        Self::Right
+    }
+}
+
+impl FacingDirection {
+    pub fn sign(self) -> f32 {
+        match self {
+            Self::Left => -1.0,
+            Self::Right => 1.0,
+        }
+    }
+
+    pub fn from_horizontal_input(move_left: bool, move_right: bool, fallback: Self) -> Self {
+        if move_left && !move_right {
+            Self::Left
+        } else if move_right && !move_left {
+            Self::Right
+        } else {
+            fallback
+        }
+    }
+}
+
 impl PlayerState {
     /// 创建新的玩家状态
     ///
@@ -92,6 +124,34 @@ impl PlayerState {
     /// 设置玩家蹲下状态
     pub fn set_crouching(&mut self, crouching: bool) {
         self.is_crouching = crouching;
+    }
+}
+
+/// 玩家受击无敌帧
+///
+/// 用于降低连续接触伤害的挫败感。
+#[derive(Component, Debug, Clone)]
+pub struct DamageInvulnerability {
+    pub remaining: f32,
+}
+
+impl Default for DamageInvulnerability {
+    fn default() -> Self {
+        Self { remaining: 0.0 }
+    }
+}
+
+impl DamageInvulnerability {
+    pub fn trigger(&mut self, duration: f32) {
+        self.remaining = self.remaining.max(duration);
+    }
+
+    pub fn tick(&mut self, delta_secs: f32) {
+        self.remaining = (self.remaining - delta_secs).max(0.0);
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.remaining > 0.0
     }
 }
 

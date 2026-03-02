@@ -78,6 +78,38 @@ pub fn player_movement(
     }
 }
 
+/// 更新玩家朝向状态，避免攻击朝向依赖瞬时按键查询。
+pub fn update_player_facing_from_input(
+    game_input: Res<crate::systems::input::GameInput>,
+    mut player_query: Query<(&mut FacingDirection, &Velocity), With<Player>>,
+) {
+    if let Ok((mut facing, velocity)) = player_query.single_mut() {
+        let resolved = FacingDirection::from_horizontal_input(
+            game_input.move_left,
+            game_input.move_right,
+            *facing,
+        );
+        *facing = resolved;
+
+        if game_input.move_left == game_input.move_right {
+            if velocity.x < -4.0 {
+                *facing = FacingDirection::Left;
+            } else if velocity.x > 4.0 {
+                *facing = FacingDirection::Right;
+            }
+        }
+    }
+}
+
+/// 同步精灵翻转，确保视觉朝向与逻辑朝向一致。
+pub fn sync_player_sprite_facing(
+    mut player_query: Query<(&FacingDirection, &mut Sprite), With<Player>>,
+) {
+    if let Ok((facing, mut sprite)) = player_query.single_mut() {
+        sprite.flip_x = *facing == FacingDirection::Left;
+    }
+}
+
 /// 玩家跳跃和重力系统
 ///
 /// 处理玩家的跳跃输入、重力应用和地面碰撞检测。
@@ -402,5 +434,15 @@ pub fn update_game_stats(
         && transform.translation.x > game_stats.distance_traveled
     {
         game_stats.distance_traveled = transform.translation.x;
+    }
+}
+
+/// 更新玩家无敌帧计时。
+pub fn update_player_damage_invulnerability(
+    mut player_query: Query<&mut DamageInvulnerability, With<Player>>,
+    time: Res<Time<Fixed>>,
+) {
+    for mut invulnerability in player_query.iter_mut() {
+        invulnerability.tick(time.delta_secs());
     }
 }

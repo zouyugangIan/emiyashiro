@@ -2,15 +2,11 @@
 
 use crate::asset_paths;
 use crate::components::*;
-use crate::resources::GameConfig;
+use crate::resources::{EnemyArchetypeTuning, EnemyDirectorTuning, GameConfig, GameplayTuning};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use rand::rngs::StdRng;
 use rand::{RngExt, SeedableRng};
-
-const MAX_ACTIVE_ENEMIES: usize = 16;
-const ENEMY_SPAWN_INTERVAL_MIN: f32 = 1.6;
-const ENEMY_SPAWN_INTERVAL_MAX: f32 = 3.4;
 
 const SLIME_RENDER_SIZE: Vec2 = Vec2::new(56.0, 44.0);
 const SLIME_COLLISION_SIZE: Vec2 = Vec2::new(42.0, 30.0);
@@ -29,35 +25,60 @@ struct EnemyArchetype {
     spawn_y_offset: f32,
 }
 
-fn enemy_archetype_for_roll(roll: f32) -> EnemyArchetype {
-    if roll < 0.45 {
-        EnemyArchetype {
-            enemy_type: EnemyType::Slime,
-            health: 4,
-            patrol_range: 160.0,
-            base_speed: 56.0,
-            contact_damage: 10.0,
-            spawn_y_offset: 18.0,
-        }
-    } else if roll < 0.78 {
-        EnemyArchetype {
-            enemy_type: EnemyType::Familiar,
-            health: 5,
-            patrol_range: 260.0,
-            base_speed: 88.0,
-            contact_damage: 14.0,
-            spawn_y_offset: 124.0,
-        }
-    } else {
-        EnemyArchetype {
-            enemy_type: EnemyType::EnemyHeroicSpirit,
-            health: 12,
-            patrol_range: 320.0,
-            base_speed: 124.0,
-            contact_damage: 18.0,
-            spawn_y_offset: 30.0,
-        }
+fn enemy_base_color(enemy_type: EnemyType) -> Color {
+    match enemy_type {
+        EnemyType::Slime => Color::srgba(0.45, 0.95, 0.58, 0.96),
+        EnemyType::Familiar => Color::srgba(0.62, 0.64, 0.97, 0.92),
+        EnemyType::EnemyHeroicSpirit => Color::srgba(0.38, 0.42, 0.52, 0.96),
     }
+}
+
+fn enemy_type_for_roll(roll: f32, tuning: &EnemyDirectorTuning) -> EnemyType {
+    let slime = tuning.spawn_weights.slime.max(0.0);
+    let familiar = tuning.spawn_weights.familiar.max(0.0);
+    let heroic = tuning.spawn_weights.heroic_spirit.max(0.0);
+    let sum = (slime + familiar + heroic).max(f32::EPSILON);
+
+    let slime_threshold = slime / sum;
+    let familiar_threshold = slime_threshold + familiar / sum;
+
+    if roll < slime_threshold {
+        EnemyType::Slime
+    } else if roll < familiar_threshold {
+        EnemyType::Familiar
+    } else {
+        EnemyType::EnemyHeroicSpirit
+    }
+}
+
+fn enemy_archetype(enemy_type: EnemyType, tuning: &EnemyDirectorTuning) -> EnemyArchetype {
+    let profile: &EnemyArchetypeTuning = match enemy_type {
+        EnemyType::Slime => &tuning.slime,
+        EnemyType::Familiar => &tuning.familiar,
+        EnemyType::EnemyHeroicSpirit => &tuning.heroic_spirit,
+    };
+
+    EnemyArchetype {
+        enemy_type,
+        health: profile.health.max(1),
+        patrol_range: profile.patrol_range.max(40.0),
+        base_speed: profile.base_speed.max(10.0),
+        contact_damage: profile.contact_damage.max(1.0),
+        spawn_y_offset: profile.spawn_y_offset,
+    }
+}
+
+fn lerp_color(base: Color, target: Color, t: f32, alpha: f32) -> Color {
+    let base = base.to_srgba();
+    let target = target.to_srgba();
+    let ratio = t.clamp(0.0, 1.0);
+
+    Color::srgba(
+        base.red + (target.red - base.red) * ratio,
+        base.green + (target.green - base.green) * ratio,
+        base.blue + (target.blue - base.blue) * ratio,
+        alpha.clamp(0.0, 1.0),
+    )
 }
 
 fn spawn_slime(
@@ -73,7 +94,7 @@ fn spawn_slime(
         .spawn((
             Sprite {
                 image: slime_texture,
-                color: Color::srgba(0.45, 0.95, 0.58, 0.96),
+                color: enemy_base_color(EnemyType::Slime),
                 custom_size: Some(SLIME_RENDER_SIZE),
                 ..default()
             },
@@ -133,7 +154,7 @@ fn spawn_familiar(
         .spawn((
             Sprite {
                 image: familiar_texture,
-                color: Color::srgba(0.62, 0.64, 0.97, 0.92),
+                color: enemy_base_color(EnemyType::Familiar),
                 custom_size: Some(FAMILIAR_RENDER_SIZE),
                 ..default()
             },
@@ -189,7 +210,7 @@ fn spawn_enemy_heroic_spirit(
     commands
         .spawn((
             Sprite {
-                color: Color::srgba(0.38, 0.42, 0.52, 0.96),
+                color: enemy_base_color(EnemyType::EnemyHeroicSpirit),
                 custom_size: Some(HEROIC_SPIRIT_RENDER_SIZE),
                 ..default()
             },
@@ -227,17 +248,21 @@ pub fn spawn_mushroom_enemies(
     asset_server: Res<AssetServer>,
     player_query: Query<&Transform, With<Player>>,
     enemy_query: Query<Entity, With<Enemy>>,
+    tuning: Option<Res<GameplayTuning>>,
     time: Res<Time>,
     mut spawn_cooldown: Local<f32>,
     mut rng_state: Local<Option<StdRng>>,
 ) {
+    let default_tuning = GameplayTuning::default();
+    let enemy_tuning = &tuning.as_deref().unwrap_or(&default_tuning).enemies;
+
     if rng_state.is_none() {
         *rng_state = Some(StdRng::seed_from_u64(0x2026_5EED_A11E));
-        *spawn_cooldown = 1.4;
+        *spawn_cooldown = enemy_tuning.spawn_interval_min_secs.max(0.2);
     }
 
     *spawn_cooldown -= time.delta_secs();
-    if *spawn_cooldown > 0.0 || enemy_query.iter().count() >= MAX_ACTIVE_ENEMIES {
+    if *spawn_cooldown > 0.0 || enemy_query.iter().count() >= enemy_tuning.max_active_enemies {
         return;
     }
 
@@ -253,7 +278,8 @@ pub fn spawn_mushroom_enemies(
         .next()
         .map(|transform| transform.translation.x)
         .unwrap_or_default();
-    let archetype = enemy_archetype_for_roll(rng.random_range(0.0..1.0));
+    let enemy_type = enemy_type_for_roll(rng.random_range(0.0..1.0), enemy_tuning);
+    let archetype = enemy_archetype(enemy_type, enemy_tuning);
 
     let spawn_x = player_x + window.width() * 0.65 + rng.random_range(90.0..260.0);
     let spawn_y = GameConfig::GROUND_LEVEL + archetype.spawn_y_offset;
@@ -279,18 +305,28 @@ pub fn spawn_mushroom_enemies(
         }
     }
 
-    *spawn_cooldown = rng.random_range(ENEMY_SPAWN_INTERVAL_MIN..ENEMY_SPAWN_INTERVAL_MAX);
+    let min_spawn_interval = enemy_tuning.spawn_interval_min_secs.max(0.15);
+    let max_spawn_interval = enemy_tuning
+        .spawn_interval_max_secs
+        .max(min_spawn_interval + 0.05);
+    *spawn_cooldown = rng.random_range(min_spawn_interval..max_spawn_interval);
 }
 
-/// 敵人 AI - 巡邏移動
+/// 敵人 AI - 巡邏與戰鬥行為。
 pub fn enemy_patrol_ai(
     mut enemy_query: Query<
         (&EnemyType, &mut Transform, &mut EnemyState, &mut Velocity),
         With<Enemy>,
     >,
     player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
+    tuning: Option<Res<GameplayTuning>>,
     time: Res<Time>,
 ) {
+    let default_tuning = GameplayTuning::default();
+    let enemy_tuning = &tuning.as_deref().unwrap_or(&default_tuning).enemies;
+    let slime_behavior = &enemy_tuning.slime_behavior;
+    let heroic_behavior = &enemy_tuning.heroic_spirit_behavior;
+
     let player_x = player_query
         .iter()
         .next()
@@ -306,6 +342,25 @@ pub fn enemy_patrol_ai(
             continue;
         }
 
+        let was_charging = state.dash_charge_timer > 0.0;
+        state.tick_timers(delta);
+
+        if was_charging && state.dash_charge_timer <= f32::EPSILON {
+            state.dash_active_timer = heroic_behavior.dash_active_secs.max(0.08);
+            velocity.x = state.base_speed
+                * heroic_behavior.dash_speed_multiplier.max(1.2)
+                * state.dash_direction;
+            state.attack_cooldown = heroic_behavior.dash_cooldown_secs.max(0.6);
+        }
+
+        if state.hit_stun_timer > 0.0 {
+            transform.translation.x += velocity.x * delta;
+            transform.translation.y += velocity.y * delta;
+            velocity.x *= 0.84;
+            velocity.y *= 0.80;
+            continue;
+        }
+
         match enemy_type {
             EnemyType::Slime => {
                 let (patrol_left, patrol_right) = state.patrol_world_bounds();
@@ -316,10 +371,22 @@ pub fn enemy_patrol_ai(
                     state.move_direction = 1.0;
                 }
 
-                velocity.x = state.base_speed * state.move_direction;
-                velocity.y = 0.0;
+                let player_delta = player_x - transform.translation.x;
+                if player_delta.abs() < slime_behavior.engage_distance.max(1.0)
+                    && state.attack_cooldown <= 0.0
+                {
+                    state.move_direction = player_delta.signum();
+                    velocity.x = state.base_speed
+                        * slime_behavior.burst_speed_multiplier
+                        * state.move_direction;
+                    state.attack_cooldown = slime_behavior.burst_cooldown_secs.max(0.1);
+                } else {
+                    velocity.x = state.base_speed * state.move_direction;
+                }
+
                 transform.translation.x += velocity.x * delta;
-                transform.translation.y = GameConfig::GROUND_LEVEL + 18.0;
+                transform.translation.y =
+                    GameConfig::GROUND_LEVEL + enemy_tuning.slime.spawn_y_offset;
             }
             EnemyType::Familiar => {
                 let (patrol_left, patrol_right) = state.patrol_world_bounds();
@@ -330,35 +397,245 @@ pub fn enemy_patrol_ai(
                     state.move_direction = x_delta.signum();
                 }
 
-                velocity.x = state.base_speed * state.move_direction;
+                let speed_factor = if x_delta.abs() > 120.0 { 1.2 } else { 0.8 };
+                velocity.x = state.base_speed * speed_factor * state.move_direction;
+                if state.pending_ranged_shot {
+                    velocity.x *= 0.22;
+                }
+
                 let target_y = GameConfig::GROUND_LEVEL
-                    + 124.0
+                    + enemy_tuning.familiar.spawn_y_offset
                     + (elapsed * 2.7 + state.hover_phase).sin() * 30.0;
-                velocity.y = ((target_y - transform.translation.y) * 4.0).clamp(-120.0, 120.0);
+                velocity.y = ((target_y - transform.translation.y) * 4.2).clamp(-140.0, 140.0);
+                if state.pending_ranged_shot {
+                    velocity.y *= 0.55;
+                }
 
                 transform.translation.x += velocity.x * delta;
                 transform.translation.y += velocity.y * delta;
             }
             EnemyType::EnemyHeroicSpirit => {
                 let player_delta = player_x - transform.translation.x;
+                let base_y = GameConfig::GROUND_LEVEL
+                    + enemy_tuning.heroic_spirit.spawn_y_offset
+                    + (elapsed * 8.0 + state.hover_phase).sin() * 3.0;
+
+                if state.dash_charge_timer > 0.0 {
+                    velocity.x = 0.0;
+                    transform.translation.y = base_y + (elapsed * 45.0).sin() * 2.5;
+                    continue;
+                }
+
+                if state.dash_active_timer > 0.0 {
+                    transform.translation.x += velocity.x * delta;
+                    transform.translation.y = base_y;
+                    continue;
+                }
+
                 if player_delta.abs() > 4.0 {
                     state.move_direction = player_delta.signum();
                 }
 
-                let dash_multiplier = if player_delta.abs() > 260.0 {
-                    1.35
-                } else if player_delta.abs() > 120.0 {
-                    1.15
+                let chase_speed = if player_delta.abs() > 240.0 {
+                    state.base_speed * 1.2
                 } else {
-                    0.95
+                    state.base_speed * 0.92
                 };
+                velocity.x = chase_speed * state.move_direction;
 
-                velocity.x = state.base_speed * dash_multiplier * state.move_direction;
-                velocity.y = 0.0;
                 transform.translation.x += velocity.x * delta;
-                transform.translation.y = GameConfig::GROUND_LEVEL
-                    + 30.0
-                    + (elapsed * 8.0 + state.hover_phase).sin() * 3.0;
+                transform.translation.y = base_y;
+
+                if state.attack_cooldown <= 0.0
+                    && player_delta.abs() > heroic_behavior.dash_trigger_distance.max(1.0)
+                {
+                    state.dash_direction = player_delta.signum();
+                    state.dash_charge_timer = heroic_behavior.dash_charge_secs.max(0.05);
+                    state.attack_cooldown = heroic_behavior.dash_cooldown_secs.max(0.6);
+                }
+            }
+        }
+    }
+}
+
+/// 使魔的远程飞弹攻击。
+pub fn enemy_ranged_attack(
+    mut commands: Commands,
+    player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
+    tuning: Option<Res<GameplayTuning>>,
+    mut enemy_query: Query<(&EnemyType, &Transform, &mut EnemyState), With<Enemy>>,
+) {
+    let default_tuning = GameplayTuning::default();
+    let familiar_tuning = &tuning
+        .as_deref()
+        .unwrap_or(&default_tuning)
+        .enemies
+        .familiar_behavior;
+
+    let Some(player_transform) = player_query.iter().next() else {
+        return;
+    };
+
+    for (enemy_type, enemy_transform, mut enemy_state) in enemy_query.iter_mut() {
+        if *enemy_type != EnemyType::Familiar || !enemy_state.is_alive {
+            continue;
+        }
+
+        if enemy_state.hit_stun_timer > 0.0 {
+            enemy_state.pending_ranged_shot = false;
+            enemy_state.ranged_windup_timer = 0.0;
+            continue;
+        }
+
+        let to_player = player_transform.translation - enemy_transform.translation;
+        let distance = to_player.length();
+        let direction_to_player = to_player.truncate().normalize_or_zero();
+
+        if enemy_state.pending_ranged_shot {
+            if enemy_state.ranged_windup_timer > 0.0 {
+                continue;
+            }
+
+            let fire_direction = if enemy_state.ranged_shot_direction == Vec2::ZERO {
+                direction_to_player
+            } else {
+                enemy_state.ranged_shot_direction.normalize_or_zero()
+            };
+
+            if fire_direction == Vec2::ZERO {
+                enemy_state.pending_ranged_shot = false;
+                enemy_state.ranged_shot_direction = Vec2::ZERO;
+                continue;
+            }
+
+            let spawn_position = enemy_transform.translation
+                + Vec3::new(fire_direction.x * 24.0, fire_direction.y * 18.0, 0.0);
+            crate::systems::combat::spawn_enemy_projectile(
+                &mut commands,
+                spawn_position,
+                fire_direction,
+                familiar_tuning.projectile_speed.max(20.0),
+                enemy_state.contact_damage * 0.85,
+                familiar_tuning.projectile_lifetime_secs.max(0.2),
+            );
+
+            enemy_state.pending_ranged_shot = false;
+            enemy_state.ranged_shot_direction = Vec2::ZERO;
+            enemy_state.ranged_cooldown = familiar_tuning.attack_cooldown_secs.max(0.2);
+            enemy_state.attack_cooldown = enemy_state.attack_cooldown.max(0.24);
+            continue;
+        }
+
+        if enemy_state.ranged_cooldown > 0.0 {
+            continue;
+        }
+
+        let min_distance = familiar_tuning.attack_min_distance.max(0.0);
+        let max_distance = familiar_tuning.attack_max_distance.max(min_distance + 1.0);
+        if !(min_distance..=max_distance).contains(&distance) {
+            continue;
+        }
+
+        let direction = direction_to_player;
+        if direction == Vec2::ZERO {
+            continue;
+        }
+
+        enemy_state.pending_ranged_shot = true;
+        enemy_state.ranged_shot_direction = direction;
+        enemy_state.ranged_windup_timer = familiar_tuning.cast_windup_secs.max(0.01);
+        enemy_state.attack_cooldown = enemy_state.attack_cooldown.max(0.32);
+    }
+}
+
+/// 敌人攻击预警视觉，提升读招公平性。
+pub fn update_enemy_telegraph_visuals(
+    mut enemy_query: Query<(&EnemyType, &EnemyState, &mut Sprite, &mut Transform), With<Enemy>>,
+    tuning: Option<Res<GameplayTuning>>,
+    time: Res<Time>,
+) {
+    let default_tuning = GameplayTuning::default();
+    let enemy_tuning = &tuning.as_deref().unwrap_or(&default_tuning).enemies;
+    let elapsed = time.elapsed_secs();
+
+    for (enemy_type, enemy_state, mut sprite, mut transform) in enemy_query.iter_mut() {
+        let base_color = enemy_base_color(*enemy_type);
+        transform.scale = Vec3::ONE;
+
+        if !enemy_state.is_alive {
+            sprite.color = lerp_color(base_color, Color::BLACK, 0.55, 0.42);
+            continue;
+        }
+
+        match enemy_type {
+            EnemyType::Slime => {
+                let cooldown = enemy_tuning.slime_behavior.burst_cooldown_secs.max(0.1);
+                let warning_window = (cooldown * 0.22).clamp(0.08, 0.35);
+                if enemy_state.attack_cooldown > 0.0
+                    && enemy_state.attack_cooldown <= warning_window
+                {
+                    let progress = 1.0 - enemy_state.attack_cooldown / warning_window;
+                    let pulse = (elapsed * 20.0).sin() * 0.5 + 0.5;
+                    let blend = (progress * 0.68 + pulse * 0.32).clamp(0.0, 1.0);
+                    sprite.color =
+                        lerp_color(base_color, Color::srgba(0.90, 1.0, 0.92, 1.0), blend, 0.98);
+                    transform.scale = Vec3::splat(1.0 + 0.06 * blend);
+                } else {
+                    sprite.color = base_color;
+                }
+            }
+            EnemyType::Familiar => {
+                if enemy_state.pending_ranged_shot {
+                    let windup = enemy_tuning.familiar_behavior.cast_windup_secs.max(0.01);
+                    let progress = 1.0 - (enemy_state.ranged_windup_timer / windup).clamp(0.0, 1.0);
+                    let pulse = (elapsed * 24.0).sin() * 0.5 + 0.5;
+                    let blend = (progress * 0.65 + pulse * 0.35).clamp(0.0, 1.0);
+                    sprite.color =
+                        lerp_color(base_color, Color::srgba(0.92, 0.84, 1.0, 1.0), blend, 0.98);
+                    transform.scale = Vec3::splat(1.0 + 0.08 * blend);
+                } else {
+                    let warning_window = enemy_tuning
+                        .familiar_behavior
+                        .telegraph_window_secs
+                        .max(0.05);
+                    if enemy_state.ranged_cooldown > 0.0
+                        && enemy_state.ranged_cooldown <= warning_window
+                    {
+                        let progress = 1.0 - enemy_state.ranged_cooldown / warning_window;
+                        let pulse = (elapsed * 16.0).sin() * 0.5 + 0.5;
+                        let blend = (progress * 0.52 + pulse * 0.48).clamp(0.0, 1.0);
+                        sprite.color =
+                            lerp_color(base_color, Color::srgba(0.86, 0.88, 1.0, 1.0), blend, 0.95);
+                    } else {
+                        sprite.color = base_color;
+                    }
+                }
+            }
+            EnemyType::EnemyHeroicSpirit => {
+                if enemy_state.dash_charge_timer > 0.0 {
+                    let charge = enemy_tuning
+                        .heroic_spirit_behavior
+                        .dash_charge_secs
+                        .max(0.05);
+                    let progress = 1.0 - (enemy_state.dash_charge_timer / charge).clamp(0.0, 1.0);
+                    let pulse = (elapsed * 34.0).sin() * 0.5 + 0.5;
+                    let blend = (progress * 0.7 + pulse * 0.3).clamp(0.0, 1.0);
+                    sprite.color =
+                        lerp_color(base_color, Color::srgba(1.0, 0.34, 0.27, 1.0), blend, 0.99);
+                    transform.scale = Vec3::splat(1.0 + 0.11 * blend);
+                } else if enemy_state.dash_active_timer > 0.0 {
+                    let active = enemy_tuning
+                        .heroic_spirit_behavior
+                        .dash_active_secs
+                        .max(0.05);
+                    let progress = (enemy_state.dash_active_timer / active).clamp(0.0, 1.0);
+                    let blend = progress.powf(0.45);
+                    sprite.color =
+                        lerp_color(base_color, Color::srgba(1.0, 0.50, 0.4, 1.0), blend, 0.98);
+                    transform.scale = Vec3::splat(1.0 + 0.05 * blend);
+                } else {
+                    sprite.color = base_color;
+                }
             }
         }
     }
