@@ -117,7 +117,7 @@ pub struct ConfirmRenameButton;
 #[derive(Component)]
 pub struct CancelRenameButton;
 
-// 闁插秴鎳￠崥宥堢翻閸忋儴绁┃?
+// 闁插秴镍￠崥宥堢翻閸忋儴绁┃?
 #[derive(Resource, Default)]
 pub struct RenameInput {
     pub current_name: String,
@@ -214,7 +214,7 @@ type HealthTextQuery<'w, 's> = Query<
     ),
 >;
 
-/// 鐠佸墽鐤嗗〒鍛婂灆锟?HUD
+/// 镨佸墽鐤嗗〒锻婂灆锟?HUD
 fn save_player_label(character: &CharacterType) -> &'static str {
     match character {
         CharacterType::Shirou1 => "1P",
@@ -231,7 +231,7 @@ pub fn setup_game_hud(
         return;
     }
 
-    // 閸掓稑锟?HUD 閺嶇濡悙?
+    // 閸掓稑锟?HUD 閺岖濡悙?
     commands
         .spawn((
             Node {
@@ -286,7 +286,7 @@ pub fn setup_game_hud(
                 ));
             }
 
-            // 鐠烘繄顬囬弰鍓с仛
+            // 镨烘繄颥囬弰鍓с仛
             parent.spawn((
                 Text::new(format!(
                     "{}0{}",
@@ -305,7 +305,7 @@ pub fn setup_game_hud(
                 DistanceDisplay,
             ));
 
-            // 閻㈢喎鎳￠崐鍏兼▔缁€?
+            // 阎㈢㖞镍￠崐鍏兼▔缁€?
             parent.spawn((
                 Text::new("HP: 100/100"),
                 TextFont {
@@ -320,7 +320,7 @@ pub fn setup_game_hud(
                 HealthDisplay,
             ));
 
-            // 閹垮秳缍旈幓鎰仛
+            // 阉垮秳缍旈幓镒仛
             parent.spawn((
                 Text::new(crate::systems::text_constants::PauseMenuText::CONTROLS_HINT),
                 TextFont {
@@ -339,7 +339,7 @@ pub fn setup_game_hud(
         });
 }
 
-/// 閺囧瓨鏌婂〒鍛婂灆 HUD
+/// 閺囧瓨镆婂〒锻婂灆 HUD
 pub fn update_game_hud(
     mut score_text_query: ScoreTextQuery,
     mut distance_text_query: DistanceTextQuery,
@@ -349,13 +349,13 @@ pub fn update_game_hud(
 ) {
     use crate::systems::text_constants::GameHUDText;
 
-    // 閺囧瓨鏌婇崚鍡樻殶閺勫墽锟?
+    // 閺囧瓨镆婇崚鍡樻殶閺勫墽锟?
     if let Ok(mut score_text) = score_text_query.single_mut() {
         let score = (game_stats.distance_traveled * 10.0) as u32 + game_stats.jump_count * 50;
         **score_text = format!("{}{}", GameHUDText::SCORE_LABEL, score);
     }
 
-    // 閺囧瓨鏌婄捄婵堫瀲閺勫墽锟?
+    // 閺囧瓨镆婄捄婵堫潋閺勫墽锟?
     if let Ok(mut distance_text) = distance_text_query.single_mut() {
         **distance_text = format!(
             "{}{}{}",
@@ -365,7 +365,7 @@ pub fn update_game_hud(
         );
     }
 
-    // 閺囧瓨鏌婇悽鐔锋嚒閸婂吋妯夌粈?
+    // 閺囧瓨镆婇凄镡锋嚒閸婂吋妯夌粈?
     if let (Ok(mut health_text), Ok(player_health)) =
         (health_text_query.single_mut(), player_health_query.single())
     {
@@ -373,18 +373,18 @@ pub fn update_game_hud(
     }
 }
 
-/// 濞撳懐鎮婂〒鍛婂灆 HUD
+/// 濞揿懐镇婂〒锻婂灆 HUD
 pub fn cleanup_game_hud(mut commands: Commands, hud_query: Query<Entity, With<GameHUD>>) {
     for entity in hud_query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-/// 閺嗗倸浠犻懣婊冨礋缂佸嫪锟?
+/// 閺嗗倸浠犻懑婊冨礋缂佸嫪锟?
 #[derive(Component)]
 pub struct PauseMenu;
 
-/// 鐠佸墽鐤嗘晶鐐插繁閻ㄥ嫭娈忛崑婊嗗綅锟?
+/// 镨佸墽鐤嗘晶镣插繁阎ㄥ嫭娈忛昆婊嗗綅锟?
 pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAssets>>) {
     use crate::systems::text_constants::PauseMenuText;
 
@@ -425,7 +425,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                     BorderColor::all(Color::WHITE),
                 ))
                 .with_children(|parent| {
-                    // 濞撳憡鍨欓弳鍌氫粻閺嶅洭锟?
+                    // 濞揿憡鍨欓弪鍌氢粻閺嶅洭锟?
                     parent.spawn((
                         Text::new(PauseMenuText::TITLE),
                         TextFont {
@@ -440,7 +440,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                         },
                     ));
 
-                    // 缂佈呯敾濞撳憡鍨欓幐澶愭尦
+                    // 缂布呯敾濞揿憡鍨欓幐澶愭尦
                     parent
                         .spawn((
                             Button,
@@ -469,7 +469,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 娣囨繂鐡ㄥ〒鍛婂灆閹稿锟?
+                    // 娣囨繂鐡ㄥ〒锻婂灆阉稿锟?
                     parent
                         .spawn((
                             Button,
@@ -498,7 +498,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 閸旂姾娴囧〒鍛婂灆閹稿锟?
+                    // 閸旂姾娴囧〒锻婂灆阉稿锟?
                     parent
                         .spawn((
                             Button,
@@ -527,7 +527,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 娑撴槒褰嶉崡鏇熷瘻锟?
+                    // 娑撴槒褰嶉崡镟熷瘘锟?
                     parent
                         .spawn((
                             Button,
@@ -556,7 +556,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             ));
                         });
 
-                    // 闁款喚娲忚箛顐ｅ祹闁款喗瀵滈柦?
+                    // 闁款唤娲忚箛顐ｅ祹闁款喗瀵滈柦?
                     parent
                         .spawn((Node {
                             width: Val::Percent(100.0),
@@ -630,14 +630,14 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
         });
 }
 
-/// 濞撳懐鎮婇弳鍌氫粻閼挎粌锟?
+/// 濞揿懐镇婇弪鍌氢粻阏挎粌锟?
 pub fn cleanup_pause_menu(mut commands: Commands, pause_query: Query<Entity, With<PauseMenuRoot>>) {
     for entity in pause_query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-/// 鐠佸墽鐤嗘穱婵嗙摠鐎电鐦藉?
+/// 镨佸墽鐤嗘穱婵嗙摠鐎电锎借?
 pub fn setup_save_dialog(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
@@ -647,11 +647,11 @@ pub fn setup_save_dialog(
 ) {
     use crate::systems::text_constants::SaveLoadText;
 
-    // 闁插秶鐤嗘潏鎾冲弳閻樿埖锟?- 濞撳懐鈹栨潏鎾冲弳锟?
+    // 闁插秶鐤嗘潏鎾冲弪阎樿埖锟?- 濞揿懐铍栨潏鎾冲弪锟?
     save_name_input.current_name.clear();
     save_name_input.is_editing = true;
 
-    // 濠碘偓濞茬粯鏌婇惃鍕瀮閺堫剝绶崗銉ч兇锟?
+    // 濠碘偓濞茬粯镆婇惃鍕瀮閺堫剥绶岗銉ч凶锟?
     text_input_state.activate();
 
     save_load_ui_state.pending_load_index = None;
@@ -721,7 +721,7 @@ pub fn setup_save_dialog(
                         TextColor(Color::WHITE),
                     ));
 
-                    // 鏉堟挸鍙嗛幓鎰仛
+                    // 鏉堟挸鍙嗛幓镒仛
                     parent.spawn((
                         Text::new(SaveLoadText::ENTER_SAVE_NAME),
                         TextFont {
@@ -732,7 +732,7 @@ pub fn setup_save_dialog(
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
                     ));
 
-                    // 鏉堟挸鍙嗗?(閺勫墽銇氳ぐ鎾冲鏉堟挸鍙嗛惃鍕倳锟?
+                    // 鏉堟挸鍙嗗?(閺勫墽銇氲ぐ鎾冲鏉堟挸鍙嗛惃鍕倳锟?
                     parent
                         .spawn((
                             Node {
@@ -748,7 +748,7 @@ pub fn setup_save_dialog(
                             BorderColor::all(Color::srgba(0.5, 0.8, 1.0, 1.0)), // Blue border to indicate active input
                         ))
                         .with_children(|parent| {
-                            // 鏉堟挸鍙嗛弬鍥ㄦ拱
+                            // 鏉堟挸鍙嗛弬锲ㄦ拱
                             parent.spawn((
                                 Text::new(SaveLoadText::NAME_PLACEHOLDER),
                                 TextFont {
@@ -757,7 +757,7 @@ pub fn setup_save_dialog(
                                     ..default()
                                 },
                                 TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)), // Placeholder color
-                                SaveNameInputBox, // 鐏忓棙鐖ｇ拋鐗堝潑閸旂姴鍩岄弬鍥ㄦ拱缂佸嫪娆㈡稉?
+                                SaveNameInputBox, // 鐏忓棙鐖ｇ抛鐗埚泼閸旂姴锘岄弬锲ㄦ拱缂佸嫪娆㈡稉?
                             ));
 
                             // 閸忓锟?
@@ -775,13 +775,13 @@ pub fn setup_save_dialog(
                                 },
                                 Node {
                                     position_type: PositionType::Absolute,
-                                    left: Val::Px(15.0), // 閸掓繂顫愭担宥囩枂閿涘奔绱伴弽瑙勫祦閺傚洦婀伴梹鍨閸斻劍鈧浇鐨熼弫?
+                                    left: Val::Px(15.0), // 閸掓繂颤愭担宥囩枂阌涘奔绱伴弽瑙勫祦閺傚洦婀伴梹鍨閸斻剑钪浇镄熼弫?
                                     ..default()
                                 },
                             ));
                         });
 
-                    // 鏉堟挸鍙嗛幓鎰仛娣団剝锟?
+                    // 鏉堟挸鍙嗛幓镒仛娣団剥锟?
                     parent.spawn((
                         Text::new(initial_status_text.clone()),
                         TextFont {
@@ -793,7 +793,7 @@ pub fn setup_save_dialog(
                         SaveLoadStatusText,
                     ));
 
-                    // 閹稿鎸崇€圭懓锟?
+                    // 阉稿镌崇€圭懓锟?
                     parent
                         .spawn((Node {
                             width: Val::Percent(100.0),
@@ -804,7 +804,7 @@ pub fn setup_save_dialog(
                             ..default()
                         },))
                         .with_children(|parent| {
-                            // 绾喛顓婚幐澶愭尦
+                            // 绾喛颛婚幐澶愭尦
                             parent
                                 .spawn((
                                     Button,
@@ -864,7 +864,7 @@ pub fn setup_save_dialog(
         });
 }
 
-/// 濞撳懐鎮婃穱婵嗙摠鐎电鐦藉?
+/// 濞揿懐镇婃穱婵嗙摠鐎电锎借?
 pub fn cleanup_save_dialog(
     mut commands: Commands,
     dialog_query: Query<Entity, With<SaveDialog>>,
@@ -874,7 +874,7 @@ pub fn cleanup_save_dialog(
         commands.entity(entity).despawn();
     }
 
-    // 閸嬫粎鏁ら弬鍥ㄦ拱鏉堟挸鍙嗙化鑽ょ埠
+    // 閸嬫粎鏁ら弬锲ㄦ拱鏉堟挸鍙嗙化钻ょ埠
     text_input_state.deactivate();
 }
 
@@ -937,8 +937,8 @@ pub fn update_text_cursor(
             };
         }
 
-        // 閺囧瓨鏌婇崗澶嬬垼娴ｅ秶鐤嗛崺杞扮艾瑜版挸澧犻弬鍥ㄦ拱闂€鍨
-        // 濮ｅ繋閲滅€涙顑佹径褏锟?閸嶅繒绀岀€硅棄瀹抽敍?6閸欏嘲鐡ф担鎾舵畱娴兼壆鐣婚敍?
+        // 閺囧瓨镆婇岗澶嬬垼娴ｅ秶鐤嗛崺杞扮艾瑜版挸澧犻弬锲ㄦ拱闂€鍨
+        // 濮ｅ繋阅灭€涙顑佹径褏锟?閸嶅缯绀岀€硅弃瀹抽敍?6閸椤嘲鐡ф担鎾舵畱娴兼壆鐣婚敍?
         let text_width = save_name_input.current_name.len() as f32 * 8.0;
         node.left = Val::Px(15.0 + text_width);
     }
@@ -950,12 +950,12 @@ pub fn handle_save_name_input(
     mut save_name_input: ResMut<SaveNameInput>,
     mut text_query: Query<&mut Text, With<SaveNameInputBox>>,
 ) {
-    // 閸氬本顒為弬鎵畱閺傚洦婀版潏鎾冲弳缁崵绮洪悩鑸碘偓浣稿煂閺冄呮畱娣囨繂鐡ㄩ崥宥囆炴潏鎾冲弳
+    // 閸氩本颙为弬镓畱閺傚洦婀版潏鎾冲弪缁崵绮洪悩鑸碘偓浣稿煂閺冄呮畱娣囨繂鐡ㄩ崥宥囆炴潏鎾冲弪
     if text_input_state.is_active {
         save_name_input.current_name = text_input_state.current_text.clone();
         save_name_input.is_editing = true;
 
-        // 閺囧瓨鏌婇弰鍓с仛閺傚洦锟?
+        // 閺囧瓨镆婇弰鍓с仛閺傚洦锟?
         use crate::systems::text_constants::SaveLoadText;
         for mut text in text_query.iter_mut() {
             text.0 = if text_input_state.current_text.is_empty() {
@@ -969,7 +969,7 @@ pub fn handle_save_name_input(
     }
 }
 
-/// 婢跺嫮鎮婃穱婵嗙摠鐎电鐦藉鍡曟唉锟?
+/// 婢跺嫮镇婃穱婵嗙摠鐎电锎借鍡曟唉锟?
 pub fn handle_save_dialog_interactions(
     mut interaction_query: SaveDialogInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
@@ -984,7 +984,7 @@ pub fn handle_save_dialog_interactions(
     let mut should_save = false;
     let mut should_cancel = false;
 
-    // 婢跺嫮鎮婇柨顔炬磸韫囶偅宓庨柨?
+    // 婢跺嫮镇婇柨颜炬磸韫囶偅宓庨柨?
     if keyboard_input.just_pressed(KeyCode::Enter) && text_input_state.is_active {
         should_save = true;
         crate::debug_log!("Enter key pressed - saving game");
@@ -993,7 +993,7 @@ pub fn handle_save_dialog_interactions(
         crate::debug_log!("Escape key pressed - canceling save");
     }
 
-    // 婢跺嫮鎮婇幐澶愭尦娴溿倓锟?
+    // 婢跺嫮镇婇幐澶愭尦娴溿倓锟?
     for (interaction, mut color, confirm_btn, cancel_btn) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
@@ -1071,13 +1071,13 @@ pub fn handle_save_dialog_interactions(
         }
 
         save_load_ui_state.pending_load_index = None;
-        // 閸欐牗绉锋穱婵嗙摠閿涘矁绻戦崶鐐存畯閸嬫粏褰嶉崡?
+        // 閸欐牗绉锋穱婵嗙摠阌涘矁绻戦崶镣存畯閸嬫粏褰嶉崡?
         next_state.set(GameState::Paused);
         crate::debug_log!("Save canceled");
     }
 }
 
-/// 鐠佸墽鐤嗘晶鐐插繁閻ㄥ嫬濮炴潪鍊熴€冮弽鑲╂櫕锟?
+/// 镨佸墽鐤嗘晶镣插繁阎ㄥ嫬濮炴潪炼熴€冮弽镶╂櫕锟?
 pub fn setup_load_table(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
@@ -1154,7 +1154,7 @@ pub fn setup_load_table(
                 },
             ));
 
-            // 閹垮秳缍旈幓鎰仛
+            // 阉垮秳缍旈幓镒仛
             parent.spawn((
                 Text::new(initial_status_text.clone()),
                 TextFont {
@@ -1170,7 +1170,7 @@ pub fn setup_load_table(
                 },
             ));
 
-            // 鐞涖劍鐗告径鎾劥
+            // 鐞涖剑鐗告径鎾劥
             parent.spawn((
                 Node {
                     width: Val::Percent(100.0),
@@ -1229,7 +1229,7 @@ pub fn setup_load_table(
                     ..default()
                 },
             )).with_children(|parent| {
-                // 閺勫墽銇氱€涙ɑ銆傞弬鍥︽
+                // 閺勫墽銇氱€涙ɑ銆傞弬锲︽
                 if save_file_manager.save_files.is_empty() {
                     parent.spawn((
                         Node {
@@ -1270,14 +1270,14 @@ pub fn setup_load_table(
                             let widths = [18.0, 8.0, 12.0, 12.0, 12.0, 18.0, 20.0];
                             let values = [
                                 save_file.name.clone(),
-                                save_player_label(&save_file.selected_character).to_string(), // 姒涙顓婚崡鏇氭眽濞撳憡鍨欓敍灞炬弓閺夈儱褰叉禒搴＄摠濡楋絾鏆熼幑顔款嚢锟?
+                                save_player_label(&save_file.selected_character).to_string(), // 姒涙颛婚崡镟氭眽濞揿憡鍨欓敍灞炬弓閺夈儱褰叉禒搴＄摠濡楋絾鏆熼幑颜款嚢锟?
                                 save_file.score.to_string(),
                                 format!("{:.1}m", save_file.distance),
                                 format!("{:.1}s", save_file.play_time),
                                 save_file.save_timestamp.format("%m/%d %H:%M").to_string(),
                             ];
 
-                            // 閺勫墽銇氱€涙ɑ銆傛穱鈩冧紖
+                            // 閺勫墽銇氱€涙ɑ銆傛穱鈩冧纼
                             for (i, (value, width)) in values.iter().zip(widths.iter()).enumerate() {
                                 if i < 6 {
                                     // 锟?閸掓妯夌粈鐑樻殶锟?
@@ -1303,7 +1303,7 @@ pub fn setup_load_table(
                                                 ..default()
                                             },
                                             TextColor(if i == 1 {
-                                                // 閻溾晛顔嶉弫浼村櫤閸掓ぞ濞囬悽銊ょ瑝閸氬矂顤侀懝?
+                                                // 阎溾晛颜嶉弫浼村櫤閸掓ぞ濞囬凄銊ょ瑝閸氩矂顤侀懝?
                                                 Color::srgba(0.7, 0.9, 1.0, 1.0)
                                             } else {
                                                 Color::WHITE
@@ -1313,7 +1313,7 @@ pub fn setup_load_table(
                                 }
                             }
 
-                            // 閹垮秳缍旈幐澶愭尦锟?
+                            // 阉垮秳缍旈幐澶愭尦锟?
                             parent.spawn((
                                 Node {
                                     width: Val::Percent(20.0),
@@ -1325,7 +1325,7 @@ pub fn setup_load_table(
                                     ..default()
                                 },
                             )).with_children(|parent| {
-                                // 闁插秴鎳￠崥宥嗗瘻锟?
+                                // 闁插秴镍￠崥宥嗗瘘锟?
                                 parent.spawn((
                                     Button,
                                     Node {
@@ -1396,7 +1396,7 @@ pub fn setup_load_table(
                     ..default()
                 },
             )).with_children(|parent| {
-                // 閸掗攱鏌婇幐澶愭尦
+                // 閸挜攱镆婇幐澶愭尦
                 parent.spawn((
                     Button,
                     Node {
@@ -1409,7 +1409,7 @@ pub fn setup_load_table(
                     },
                     BackgroundColor(Color::srgba(0.15, 0.25, 0.35, 0.8)),
                     BorderColor::all(Color::srgba(0.3, 0.5, 0.7, 1.0)),
-                    LoadButton, // 闁插秶鏁ら崝鐘烘祰閹稿鎸崇紒鍕娴ｆ粈璐熼崚閿嬫煀
+                    LoadButton, // 闁插秶鏁ら崝钟烘祰阉稿镌崇紒鍕娴ｆ粈璐熼崚阌嬫煀
                 )).with_children(|parent| {
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::REFRESH_BUTTON),
@@ -1435,7 +1435,7 @@ pub fn setup_load_table(
                     },
                     BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8)),
                     BorderColor::all(Color::srgba(0.6, 0.3, 0.3, 1.0)),
-                    CancelSaveButton, // 闁插秶鏁ら崣鏍ㄧХ閹稿鎸崇紒鍕
+                    CancelSaveButton, // 闁插秶鏁ら崣镙ㄧХ阉稿镌崇紒鍕
                 )).with_children(|parent| {
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::BACK_BUTTON),
@@ -1452,25 +1452,25 @@ pub fn setup_load_table(
     });
 }
 
-/// 濞撳懐鎮婇崝鐘烘祰鐞涖劍锟?
+/// 濞揿懐镇婇崝钟烘祰鐞涖剑锟?
 pub fn cleanup_load_table(mut commands: Commands, table_query: Query<Entity, With<LoadTableRoot>>) {
     for entity in table_query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-/// 鐠佸墽鐤嗛柌宥呮嚒閸氬秴顕拠婵囶攱
+/// 镨佸墽鐤嗛柌宥呮嚒閸氩秴顕拠婵囶攱
 pub fn setup_rename_dialog(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
     mut rename_input: ResMut<RenameInput>,
     mut text_input_state: ResMut<crate::systems::text_input::TextInputState>,
 ) {
-    // 闁插秶鐤嗘潏鎾冲弳閻樿埖鈧緤绱濇担璺ㄦ暏閸樼喎顫愰崥宥囆炴担婊€璐熸妯款吇锟?
+    // 闁插秶鐤嗘潏鎾冲弪阎樿埖钪緤绱濇担璺ㄦ暏閸樼㖞颤愰崥宥囆炴担婊€璐熸妯款吇锟?
     rename_input.current_name = rename_input.original_name.clone();
     rename_input.is_editing = true;
 
-    // 濠碘偓濞茬粯鏋冮張顒冪翻閸忋儳閮寸紒鐔疯嫙鐠佸墽鐤嗛崚婵嗩潗锟?
+    // 濠碘偓濞茬粯鏋冮张颙幂翻閸忋儳閮寸紒镡疯嫙镨佸墽鐤嗛崚婵唢潗锟?
     text_input_state.activate();
     text_input_state.current_text = rename_input.original_name.clone();
 
@@ -1524,7 +1524,7 @@ pub fn setup_rename_dialog(
                         TextColor(Color::WHITE),
                     ));
 
-                    // 閸樼喎顫愰崥宥囆為弰鍓с仛
+                    // 閸樼㖞颤愰崥宥囆为弰鍓с仛
                     parent.spawn((
                         Text::new(format!("Current name: {}", rename_input.original_name)),
                         TextFont {
@@ -1535,7 +1535,7 @@ pub fn setup_rename_dialog(
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.7)),
                     ));
 
-                    // 鏉堟挸鍙嗛幓鎰仛
+                    // 鏉堟挸鍙嗛幓镒仛
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::ENTER_NEW_NAME),
                         TextFont {
@@ -1574,7 +1574,7 @@ pub fn setup_rename_dialog(
                             ));
                         });
 
-                    // 閹稿鎸崇€圭懓锟?
+                    // 阉稿镌崇€圭懓锟?
                     parent
                         .spawn((Node {
                             width: Val::Percent(100.0),
@@ -1585,7 +1585,7 @@ pub fn setup_rename_dialog(
                             ..default()
                         },))
                         .with_children(|parent| {
-                            // 绾喛顓婚幐澶愭尦
+                            // 绾喛颛婚幐澶愭尦
                             parent
                                 .spawn((
                                     Button,
@@ -1645,7 +1645,7 @@ pub fn setup_rename_dialog(
         });
 }
 
-/// 濞撳懐鎮婇柌宥呮嚒閸氬秴顕拠婵囶攱
+/// 濞揿懐镇婇柌宥呮嚒閸氩秴顕拠婵囶攱
 pub fn cleanup_rename_dialog(
     mut commands: Commands,
     dialog_query: Query<Entity, With<RenameDialog>>,
@@ -1655,11 +1655,11 @@ pub fn cleanup_rename_dialog(
         commands.entity(entity).despawn();
     }
 
-    // 閸嬫粎鏁ら弬鍥ㄦ拱鏉堟挸鍙嗙化鑽ょ埠
+    // 閸嬫粎鏁ら弬锲ㄦ拱鏉堟挸鍙嗙化钻ょ埠
     text_input_state.deactivate();
 }
 
-/// 婢跺嫮鎮婃晶鐐插繁閻ㄥ嫬濮炴潪鍊熴€冮弽闂存唉锟?
+/// 婢跺嫮镇婃晶镣插繁阎ㄥ嫬濮炴潪炼熴€冮弽闂存唉锟?
 pub fn handle_load_table_interactions(
     mut interaction_query: LoadTableInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
@@ -1728,7 +1728,7 @@ pub fn handle_load_table_interactions(
         }
     }
 
-    // 婢跺嫮鎮婇崝鐘烘祰鐎涙ɑ锟?
+    // 婢跺嫮镇婇崝钟烘祰鐎涙ɑ锟?
     if let Some(index) = selected_save_index {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message = "Load operation is already running...".to_string();
@@ -1764,7 +1764,7 @@ pub fn handle_load_table_interactions(
             // async_file_ops should appear.
         }
     }
-    // 婢跺嫮鎮婇柌宥呮嚒锟?
+    // 婢跺嫮镇婇柌宥呮嚒锟?
     else if let Some(index) = rename_index {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message =
@@ -1781,7 +1781,7 @@ pub fn handle_load_table_interactions(
             crate::debug_log!("Renaming save: {}", save_file.name);
         }
     }
-    // 婢跺嫮鎮婇崚鐘绘珟
+    // 婢跺嫮镇婇崚钟绘珟
     else if let Some(index) = delete_index {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message =
@@ -1801,7 +1801,7 @@ pub fn handle_load_table_interactions(
                         crate::systems::text_constants::SaveLoadText::DELETE_SUCCESS,
                         save_name
                     );
-                    // 閸掗攱鏌婄€涙ɑ銆傞崚妤勶拷?
+                    // 閸挜攱镆婄€涙ɑ銆傞崚妤勶拷?
                     should_refresh = true;
                 }
                 Err(e) => {
@@ -1816,7 +1816,7 @@ pub fn handle_load_table_interactions(
             }
         }
     }
-    // 婢跺嫮鎮婇崚閿嬫煀
+    // 婢跺嫮镇婇崚阌嬫煀
     else if should_refresh {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message =
@@ -1828,12 +1828,12 @@ pub fn handle_load_table_interactions(
         save_load_ui_state.error_message.clear();
         save_load_ui_state.status_message = "Save list refreshed".to_string();
 
-        // 鐟欙箑褰傜€涙ɑ銆傞弬鍥︽閹殿偅寮块獮鍫曞櫢閺傛澘濮炴潪绲孖
+        // 鐟欙箑褰傜€涙ɑ銆傞弬锲︽阉殿偅寮块狝鍫曞櫢閺傛澘濮炴潪绲孖
         crate::systems::pause_save::scan_save_files(save_file_manager);
         next_state.set(GameState::LoadTable);
         crate::debug_log!("Refreshing save list and reloading UI");
     }
-    // 婢跺嫮鎮婃潻鏂挎礀
+    // 婢跺嫮镇婃潻鏂挎礀
     else if should_cancel {
         if save_load_ui_state.is_busy {
             save_load_ui_state.status_message = "Load is in progress, please wait...".to_string();
@@ -1846,13 +1846,13 @@ pub fn handle_load_table_interactions(
             save_load_ui_state.error_message.clear();
         }
 
-        // 閺嶈宓侀弶銉︾爱閻樿埖鈧浇绻戦崶鐐插煂濮濓絿鈥橀惃鍕勾锟?
+        // 閺嶈宓侀弶銉︾爱阎樿埖钪浇绻戦崶镣插煂濮濓絿钬橀惃鍕勾锟?
         let target_state = loaded_game_state
             .previous_state
             .clone()
             .unwrap_or(GameState::Menu);
         next_state.set(target_state.clone());
-        loaded_game_state.previous_state = None; // 濞撳懐鎮婇悩鑸碘偓?
+        loaded_game_state.previous_state = None; // 濞揿懐镇婇悩鑸碘偓?
         match target_state {
             GameState::Menu => crate::debug_log!("Back to main menu"),
             GameState::Paused => crate::debug_log!("Back to pause menu"),
@@ -1875,11 +1875,11 @@ pub fn handle_rename_input(
         return;
     }
 
-    // 閸氬本顒為弬鎵畱閺傚洦婀版潏鎾冲弳缁崵绮洪悩鑸碘偓浣稿煂闁插秴鎳￠崥宥堢翻锟?
+    // 閸氩本颙为弬镓畱閺傚洦婀版潏鎾冲弪缁崵绮洪悩鑸碘偓浣稿煂闁插秴镍￠崥宥堢翻锟?
     if text_input_state.is_active {
         rename_input.current_name = text_input_state.current_text.clone();
 
-        // 閺囧瓨鏌婇弰鍓с仛閺傚洦锟?
+        // 閺囧瓨镆婇弰鍓с仛閺傚洦锟?
         for mut text in text_query.iter_mut() {
             text.0 = if text_input_state.current_text.is_empty() {
                 crate::systems::text_constants::SaveLoadText::NAME_PLACEHOLDER.to_string()
@@ -1889,7 +1889,7 @@ pub fn handle_rename_input(
         }
     }
 
-    // 婢跺嫮鎮婇柨顔炬磸韫囶偅宓庨柨?
+    // 婢跺嫮镇婇柨颜炬磸韫囶偅宓庨柨?
     if keyboard_input.just_pressed(KeyCode::Enter) && text_input_state.is_active {
         crate::debug_log!("Enter key pressed - confirming rename");
     } else if keyboard_input.just_pressed(KeyCode::Escape) && text_input_state.is_active {
@@ -1897,7 +1897,7 @@ pub fn handle_rename_input(
     }
 }
 
-/// 婢跺嫮鎮婇柌宥呮嚒閸氬秴顕拠婵囶攱娴溿倓锟?
+/// 婢跺嫮镇婇柌宥呮嚒閸氩秴顕拠婵囶攱娴溿倓锟?
 pub fn handle_rename_dialog_interactions(
     mut interaction_query: RenameDialogInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
@@ -1909,7 +1909,7 @@ pub fn handle_rename_dialog_interactions(
     let mut should_confirm = false;
     let mut should_cancel = false;
 
-    // 婢跺嫮鎮婇柨顔炬磸韫囶偅宓庨柨?
+    // 婢跺嫮镇婇柨颜炬磸韫囶偅宓庨柨?
     if keyboard_input.just_pressed(KeyCode::Enter) && text_input_state.is_active {
         should_confirm = true;
         crate::debug_log!("Enter key pressed - confirming rename");
@@ -1918,7 +1918,7 @@ pub fn handle_rename_dialog_interactions(
         crate::debug_log!("Escape key pressed - canceling rename");
     }
 
-    // 婢跺嫮鎮婇幐澶愭尦娴溿倓锟?
+    // 婢跺嫮镇婇幐澶愭尦娴溿倓锟?
     for (interaction, mut color, confirm_btn, cancel_btn) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
@@ -1947,7 +1947,7 @@ pub fn handle_rename_dialog_interactions(
     }
 
     if should_confirm {
-        // 閹笛嗩攽闁插秴鎳￠崥宥嗘惙锟?
+        // 阉笛唢攽闁插秴镍￠崥宥嗘惙锟?
         let new_name = if text_input_state.current_text.is_empty() {
             rename_input.original_name.clone()
         } else {
@@ -1981,14 +1981,14 @@ pub fn handle_rename_dialog_interactions(
             }
         }
     } else if should_cancel {
-        // 閸欐牗绉烽柌宥呮嚒閸氬稄绱濇潻鏂挎礀閸旂姾娴囩悰銊︾壐
+        // 閸欐牗绉烽柌宥呮嚒閸氩稄绱濇潻鏂挎礀閸旂姾娴囩悰銊︾壐
         rename_input.is_editing = false;
         next_state.set(GameState::LoadTable);
         crate::debug_log!("Rename cancelled");
     }
 }
 
-/// 婢跺嫮鎮婇弳鍌氫粻閼挎粌宕熼幐澶愭尦娴溿倓锟?
+/// 婢跺嫮镇婇弪鍌氢粻阏挎粌宕熼幐澶愭尦娴溿倓锟?
 pub fn handle_pause_menu_interactions(
     mut interaction_query: PauseMenuInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
@@ -2002,15 +2002,15 @@ pub fn handle_pause_menu_interactions(
         match *interaction {
             Interaction::Pressed => {
                 if resume_btn.is_some() || esc_btn.is_some() {
-                    // 缂佈呯敾濞撳憡锟?
+                    // 缂布呯敾濞揿憡锟?
                     next_state.set(GameState::Playing);
                     crate::debug_log!("Resume game");
                 } else if save_btn.is_some() {
-                    // 鏉╂稑鍙嗘穱婵嗙摠鐎电鐦藉?
+                    // 鏉╂稑鍙嗘穱婵嗙摠鐎电锎借?
                     next_state.set(GameState::SaveDialog);
                     crate::debug_log!("Open save dialog");
                 } else if load_btn.is_some() {
-                    // 鏉╂稑鍙嗛崝鐘烘祰鐞涖劍鐗搁敍宀冾唶瑜版洘娼靛┃鎰Ц锟?
+                    // 鏉╂稑鍙嗛崝钟烘祰鐞涖剑鐗搁敍宀冾唶瑜版洘娼靛┃镒Ц锟?
                     loaded_game_state.previous_state = Some(GameState::Paused);
                     save_load_ui_state.pending_load_index = None;
                     save_load_ui_state.error_message.clear();

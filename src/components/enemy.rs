@@ -1,12 +1,12 @@
-//! 敵人相關組件
+//! 敌人相关组件
 
 use bevy::prelude::*;
 
-/// 敵人標記組件
+/// 敌人标记组件
 #[derive(Component, Debug)]
 pub struct Enemy;
 
-/// 敵人類型
+/// 敌人类型
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub enum EnemyType {
     Slime,             // 史莱姆敌人
@@ -14,15 +14,15 @@ pub enum EnemyType {
     EnemyHeroicSpirit, // 敌方英灵
 }
 
-/// 敵人狀態
+/// 敌人状态
 #[derive(Component, Debug, Clone)]
 pub struct EnemyState {
     pub health: i32,
     pub max_health: i32,
     pub is_alive: bool,
-    pub patrol_left: f32,    // 相对生成点的巡邏左邊界
-    pub patrol_right: f32,   // 相对生成点的巡邏右邊界
-    pub move_direction: f32, // 移動方向 (-1.0 或 1.0)
+    pub patrol_left: f32,    // 相对生成点的巡逻左边界
+    pub patrol_right: f32,   // 相对生成点的巡逻右边界
+    pub move_direction: f32, // 移动方向 (-1.0 或 1.0)
     pub spawn_origin_x: f32, // 生成锚点，用于稳定巡逻
     pub base_speed: f32,     // 基础移动速度
     pub contact_damage: f32, // 接触伤害

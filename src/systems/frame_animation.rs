@@ -154,13 +154,13 @@ pub fn update_character_animations(
     _asset_server: Res<AssetServer>,
 ) {
     for (mut animation, player_state, mut anim_state, velocity) in query.iter_mut() {
-        // 根據玩家狀態和速度決定目標動畫
+        // 根据玩家状态和速度决定目标动画
         let target_animation = if !player_state.is_grounded {
             CharacterAnimationType::Jumping
         } else if player_state.is_crouching {
             CharacterAnimationType::Crouching
         } else if let Some(vel) = velocity {
-            // 根據速度判斷是否在跑步（速度閾值：50.0）
+            // 根据速度判断是否在跑步（速度阈值：50.0）
             if vel.x.abs() > 50.0 {
                 CharacterAnimationType::Running
             } else {
@@ -172,7 +172,7 @@ pub fn update_character_animations(
 
         // 如果动画类型改变，切换动画帧
         if anim_state.current_animation != target_animation {
-            // 先獲取幀數據，避免借用衝突
+            // 先获取帧数据，避免借用冲突
             let new_frames = match &target_animation {
                 CharacterAnimationType::Idle => anim_state.idle_frames.clone(),
                 CharacterAnimationType::Running => anim_state.running_frames.clone(),
@@ -196,12 +196,12 @@ pub fn update_character_animations(
                 animation.play();
 
                 crate::debug_log!(
-                    "🎬 切換動畫: {:?} ({}幀)",
+                    "🎬 切换动画: {:?} ({}帧)",
                     target_animation,
                     new_frames.len()
                 );
 
-                // 最後更新狀態
+                // 最后更新状态
                 anim_state.current_animation = target_animation;
             }
         }
@@ -219,7 +219,7 @@ pub fn setup_player_animation(
         let (idle_frames, running_frames, jumping_frames, crouching_frames) =
             match character_selection.selected_character {
                 CharacterType::Shirou1 => {
-                    // 使用優化後的 Shirou 動畫幀序列
+                    // 使用优化后的 Shirou 动画帧序列
                     let idle: Vec<Handle<Image>> = asset_paths::SHIROU_IDLE_FRAMES
                         .iter()
                         .map(|path| asset_server.load(*path))
@@ -239,7 +239,7 @@ pub fn setup_player_animation(
                     (idle, running, jumping, crouching)
                 }
                 CharacterType::Shirou2 => {
-                    // 使用優化後的 Sakura 動畫幀序列
+                    // 使用优化后的 Sakura 动画帧序列
                     let idle: Vec<Handle<Image>> = asset_paths::SAKURA_IDLE_FRAMES
                         .iter()
                         .map(|path| asset_server.load(*path))
@@ -260,13 +260,13 @@ pub fn setup_player_animation(
                 }
             };
 
-        // 記錄幀數用於日誌
+        // 记录帧数用于日志
         let idle_count = idle_frames.len();
         let running_count = running_frames.len();
         let jumping_count = jumping_frames.len();
         let crouching_count = crouching_frames.len();
 
-        // 添加帧动画组件（調整幀率為 0.15 秒，讓動畫更流暢）
+        // 添加帧动画组件（调整帧率为 0.15 秒，让动画更流畅）
         let frame_animation = FrameAnimation::new(idle_frames.clone(), 0.15, true);
 
         // 添加角色动画状态
@@ -283,7 +283,7 @@ pub fn setup_player_animation(
             .insert((frame_animation, char_anim_state));
 
         crate::debug_log!(
-            "🎭 为玩家添加动画组件: {:?} (待機: {}幀, 跑步: {}幀, 跳躍: {}幀, 蹲下: {}幀)",
+            "🎭 为玩家添加动画组件: {:?} (待机: {}帧, 跑步: {}帧, 跳跃: {}帧, 蹲下: {}帧)",
             character_selection.selected_character,
             idle_count,
             running_count,
@@ -293,10 +293,10 @@ pub fn setup_player_animation(
     }
 }
 
-/// 创建动画背景系统（備用 - 目前使用程序化雲彩系統）
+/// 创建动画背景系统（备用 - 目前使用程序化云彩系统）
 ///
-/// 注意：此函數目前未被使用。遊戲使用 `background.rs` 中的程序化雲彩系統。
-/// 如果需要切換到圖片背景，可以在 client.rs 中註冊此系統。
+/// 注意：此函数目前未被使用。游戏使用 `background.rs` 中的程序化云彩系统。
+/// 如果需要切换到图片背景，可以在 client.rs 中注册此系统。
 #[allow(dead_code)]
 pub fn setup_animated_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 创建动态背景 - 使用所有封面图片
@@ -317,7 +317,7 @@ pub fn setup_animated_background(mut commands: Commands, asset_server: Res<Asset
         background_animation,
     ));
 
-    crate::debug_log!("🌅 创建动态背景（圖片模式）");
+    crate::debug_log!("🌅 创建动态背景（图片模式）");
 }
 
 /// 动画调试系统

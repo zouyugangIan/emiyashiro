@@ -2,56 +2,56 @@
 
 ## Introduction
 
-角色動畫系統負責管理遊戲中玩家角色（1P 和 2P）的精靈動畫資源。系統需要支持從 `assets/images/characters/` 目錄中自動加載對應角色的動畫幀序列，並提供統一的接口供遊戲邏輯調用。
+角色动画系统负责管理游戏中玩家角色（1P 和 2P）的精灵动画资源。系统需要支持从 `assets/images/characters/` 目录中自动加载对应角色的动画帧序列，并提供统一的接口供游戏逻辑调用。
 
 ## Glossary
 
-- **Animation System**: 角色動畫系統，負責管理和播放角色的動畫幀序列
-- **Animation Frame**: 動畫幀，單個靜態圖片，多個幀組成完整動畫
+- **Animation System**: 角色动画系统，负责管理和播放角色的动画帧序列
+- **Animation Frame**: 动画帧，单个静态图片，多个帧组成完整动画
 - **1P (Player 1)**: 第一位玩家，使用 Shirou 角色
 - **2P (Player 2)**: 第二位玩家，使用 Sakura 角色
-- **Texture Path**: 紋理路徑，指向資源文件的相對路徑字符串
-- **Character Identifier**: 角色標識符，用於區分不同角色（如 "shirou", "sakura"）
+- **Texture Path**: 纹理路径，指向资源文件的相对路径字符串
+- **Character Identifier**: 角色标识符，用于区分不同角色（如 "shirou", "sakura"）
 
 ## Requirements
 
-### Requirement 1: 角色動畫資源定義
+### Requirement 1: 角色动画资源定义
 
-**User Story:** 作為開發者，我希望系統能夠明確定義每個角色的動畫幀資源路徑，以便在遊戲中正確加載和顯示角色動畫。
+**User Story:** 作为开发者，我希望系统能够明确定义每个角色的动画帧资源路径，以便在游戏中正确加载和显示角色动画。
 
 #### Acceptance Criteria
 
-1. WHEN 系統初始化時 THEN the Animation System SHALL 為 Shirou 角色定義所有可用的動畫幀路徑
-2. WHEN 系統初始化時 THEN the Animation System SHALL 為 Sakura 角色定義所有可用的動畫幀路徑
-3. WHEN 查詢角色動畫幀時 THEN the Animation System SHALL 返回該角色的完整動畫幀路徑列表
-4. WHEN 動畫幀路徑被定義時 THEN the Animation System SHALL 確保路徑格式為 "images/characters/{character_name}_idle{frame_number}.{extension}"
+1. WHEN 系统初始化时 THEN the Animation System SHALL 为 Shirou 角色定义所有可用的动画帧路径
+2. WHEN 系统初始化时 THEN the Animation System SHALL 为 Sakura 角色定义所有可用的动画帧路径
+3. WHEN 查询角色动画帧时 THEN the Animation System SHALL 返回该角色的完整动画帧路径列表
+4. WHEN 动画帧路径被定义时 THEN the Animation System SHALL 确保路径格式为 "images/characters/{character_name}_idle{frame_number}.{extension}"
 
 ### Requirement 2: 玩家角色映射
 
-**User Story:** 作為開發者，我希望系統能夠將玩家編號（1P/2P）映射到對應的角色資源，以便在多人遊戲中正確顯示不同玩家的角色。
+**User Story:** 作为开发者，我希望系统能够将玩家编号（1P/2P）映射到对应的角色资源，以便在多人游戏中正确显示不同玩家的角色。
 
 #### Acceptance Criteria
 
-1. WHEN 創建 1P 玩家實體時 THEN the Animation System SHALL 自動分配 Shirou 角色的動畫資源
-2. WHEN 創建 2P 玩家實體時 THEN the Animation System SHALL 自動分配 Sakura 角色的動畫資源
-3. WHEN 查詢玩家的紋理路徑時 THEN the Animation System SHALL 根據玩家編號返回對應角色的當前動畫幀路徑
+1. WHEN 创建 1P 玩家实体时 THEN the Animation System SHALL 自动分配 Shirou 角色的动画资源
+2. WHEN 创建 2P 玩家实体时 THEN the Animation System SHALL 自动分配 Sakura 角色的动画资源
+3. WHEN 查询玩家的纹理路径时 THEN the Animation System SHALL 根据玩家编号返回对应角色的当前动画帧路径
 
-### Requirement 3: 動畫幀訪問接口
+### Requirement 3: 动画帧访问接口
 
-**User Story:** 作為開發者，我希望通過統一的接口訪問角色的動畫幀，以便在渲染系統中使用。
-
-#### Acceptance Criteria
-
-1. WHEN 調用 get_texture_path() 方法時 THEN the Animation System SHALL 返回當前動畫幀的完整路徑字符串
-2. WHEN 指定動畫幀索引時 THEN the Animation System SHALL 返回該索引對應的動畫幀路徑
-3. WHEN 請求的動畫幀索引超出範圍時 THEN the Animation System SHALL 返回默認的第一幀路徑或錯誤信息
-
-### Requirement 4: 動畫幀序列完整性
-
-**User Story:** 作為開發者，我希望系統能夠驗證動畫幀序列的完整性，確保所有定義的資源文件都存在。
+**User Story:** 作为开发者，我希望通过统一的接口访问角色的动画帧，以便在渲染系统中使用。
 
 #### Acceptance Criteria
 
-1. WHEN 系統加載動畫資源時 THEN the Animation System SHALL 驗證所有定義的動畫幀路徑對應的文件存在於 assets 目錄中
-2. WHEN 發現缺失的動畫幀文件時 THEN the Animation System SHALL 記錄警告信息並使用占位符紋理
-3. WHEN 所有動畫幀文件都存在時 THEN the Animation System SHALL 成功初始化並準備好播放動畫
+1. WHEN 调用 get_texture_path() 方法时 THEN the Animation System SHALL 返回当前动画帧的完整路径字符串
+2. WHEN 指定动画帧索引时 THEN the Animation System SHALL 返回该索引对应的动画帧路径
+3. WHEN 请求的动画帧索引超出范围时 THEN the Animation System SHALL 返回默认的第一帧路径或错误信息
+
+### Requirement 4: 动画帧序列完整性
+
+**User Story:** 作为开发者，我希望系统能够验证动画帧序列的完整性，确保所有定义的资源文件都存在。
+
+#### Acceptance Criteria
+
+1. WHEN 系统加载动画资源时 THEN the Animation System SHALL 验证所有定义的动画帧路径对应的文件存在于 assets 目录中
+2. WHEN 发现缺失的动画帧文件时 THEN the Animation System SHALL 记录警告信息并使用占位符纹理
+3. WHEN 所有动画帧文件都存在时 THEN the Animation System SHALL 成功初始化并准备好播放动画

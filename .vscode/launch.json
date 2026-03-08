@@ -7,7 +7,7 @@
       "name": "Debug client",
       "program": "${cargo:program}",
       "cargo": {
-        "args": ["build", "--bin=client", "--package=s--emiyashiro"],
+        "args": ["build", "--bin=client", "--package=emiyashiro"],
         "filter": {
           "name": "client",
           "kind": "bin",
@@ -30,7 +30,7 @@
           "--bin=server",
           "--no-default-features",
           "--features=server",
-          "--package=s--emiyashiro",
+          "--package=emiyashiro",
         ],
         "filter": {
           "name": "server",
@@ -52,7 +52,7 @@
         "args": [
           "build",
           "--bin=architecture_metrics",
-          "--package=s--emiyashiro",
+          "--package=emiyashiro",
         ],
         "filter": {
           "name": "architecture_metrics",

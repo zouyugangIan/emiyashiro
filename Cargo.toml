@@ -1,5 +1,5 @@
 [package]
-name = "s--emiyashiro"
+name = "emiyashiro"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.93"

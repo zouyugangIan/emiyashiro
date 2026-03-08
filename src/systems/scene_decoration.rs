@@ -1,12 +1,12 @@
-//! 場景裝飾系統
+//! 场景装饰系统
 //!
-//! 為遊戲場景添加更豐富的視覺層次：多層天空、遠景輪廓、雲層與地面裝飾。
+//! 为游戏场景添加更丰富的视觉层次：多层天空、远景轮廓、云层与地面装饰。
 
 use crate::resources::GameConfig;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-/// 場景裝飾組件標記
+/// 场景装饰组件标记
 #[derive(Component)]
 pub struct SceneDecoration {
     pub layer: DecorationLayer,
@@ -28,13 +28,13 @@ pub struct StarPulse {
     phase: f32,
 }
 
-/// 裝飾層級
+/// 装饰层级
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DecorationLayer {
-    FarBackground,  // 遠景（最慢）z = -10.0
+    FarBackground,  // 远景（最慢）z = -10.0
     MidBackground,  // 中景 z = -7.0
     NearBackground, // 近景 z = -3.0
-    Ground,         // 地面裝飾 z = 0.5
+    Ground,         // 地面装饰 z = 0.5
 }
 
 impl DecorationLayer {
@@ -61,7 +61,7 @@ fn pseudo01(seed: f32) -> f32 {
     ((seed.sin() * 43_758.547).abs()).fract()
 }
 
-/// 設置多層視差背景
+/// 设置多层视差背景
 pub fn setup_parallax_background(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -80,7 +80,7 @@ pub fn setup_parallax_background(
     let width = window.width();
     let height = window.height();
 
-    // 1) 遠景天空底色 + 緩慢呼吸。
+    // 1) 远景天空底色 + 缓慢呼吸。
     for i in 0..3 {
         let x_offset = (i as f32) * width;
 
@@ -131,7 +131,7 @@ pub fn setup_parallax_background(
         ));
     }
 
-    // 2) 保留封面圖作為超低透明紋理，降低重複感。
+    // 2) 保留封面图作为超低透明纹理，降低重复感。
     let far_bg_images = [
         "images/ui/cover10.jpg",
         "images/ui/cover11.jpg",
@@ -154,7 +154,7 @@ pub fn setup_parallax_background(
         ));
     }
 
-    // 3) 中景輪廓（山脊/廢墟塊）提供空間深度。
+    // 3) 中景轮廓（山脊/废墟块）提供空间深度。
     for segment in 0..3 {
         for ridge in 0..5 {
             let seed = segment as f32 * 13.0 + ridge as f32 * 7.0;
@@ -179,7 +179,7 @@ pub fn setup_parallax_background(
         }
     }
 
-    // 4) 星點：小尺寸 + 輕微閃爍。
+    // 4) 星点：小尺寸 + 轻微闪烁。
     for i in 0..56 {
         let seed = i as f32 * 17.171;
         let segment = (i % 3) as f32;
@@ -207,10 +207,10 @@ pub fn setup_parallax_background(
         ));
     }
 
-    crate::debug_log!("🎨 設置視差背景完成（多層天空 + 輪廓 + 星點）");
+    crate::debug_log!("🎨 设置视差背景完成（多层天空 + 轮廓 + 星点）");
 }
 
-/// 清理場景裝飾
+/// 清理场景装饰
 pub fn cleanup_scene_decorations(
     mut commands: Commands,
     decorations: Query<Entity, With<SceneDecoration>>,
@@ -232,7 +232,7 @@ pub fn spawn_ground_decorations(
 
     *spawn_timer += time.delta_secs();
 
-    // 每 1.7 秒生成一個裝飾物
+    // 每 1.7 秒生成一个装饰物
     if *spawn_timer > 1.7 {
         *spawn_timer = 0.0;
 
@@ -240,10 +240,10 @@ pub fn spawn_ground_decorations(
         let decoration_type = (pseudo01(seed) * 4.0) as u32;
 
         let (size, color, y_offset) = match decoration_type {
-            0 => (Vec2::new(18.0, 28.0), Color::srgb(0.18, 0.56, 0.23), 12.0), // 草叢
+            0 => (Vec2::new(18.0, 28.0), Color::srgb(0.18, 0.56, 0.23), 12.0), // 草丛
             1 => (Vec2::new(26.0, 14.0), Color::srgb(0.46, 0.46, 0.52), 4.0),  // 碎石
             2 => (Vec2::new(14.0, 42.0), Color::srgb(0.27, 0.42, 0.24), 18.0), // 灌木
-            _ => (Vec2::new(10.0, 48.0), Color::srgb(0.32, 0.40, 0.33), 22.0), // 殘柱
+            _ => (Vec2::new(10.0, 48.0), Color::srgb(0.32, 0.40, 0.33), 22.0), // 残柱
         };
 
         commands.spawn((
@@ -265,7 +265,7 @@ pub fn spawn_ground_decorations(
     }
 }
 
-/// 更新場景裝飾物的移動（視差效果）
+/// 更新场景装饰物的移动（视差效果）
 pub fn move_scene_decorations(
     mut decoration_query: Query<(&mut Transform, &SceneDecoration)>,
     time: Res<Time>,
@@ -273,13 +273,13 @@ pub fn move_scene_decorations(
     const BASE_SPEED: f32 = 58.0;
 
     for (mut transform, decoration) in decoration_query.iter_mut() {
-        // 根據層級應用不同的速度
+        // 根据层级应用不同的速度
         let speed = BASE_SPEED * decoration.speed_multiplier;
         transform.translation.x -= speed * time.delta_secs();
     }
 }
 
-/// 清理離屏的裝飾物
+/// 清理离屏的装饰物
 pub fn cleanup_offscreen_decorations(
     mut commands: Commands,
     decoration_query: Query<(Entity, &Transform, &SceneDecoration)>,
@@ -292,12 +292,12 @@ pub fn cleanup_offscreen_decorations(
     let mut to_despawn = Vec::new();
 
     for (entity, transform, decoration) in decoration_query.iter() {
-        // 遠景背景需要循環，不清理
+        // 远景背景需要循环，不清理
         if decoration.layer == DecorationLayer::FarBackground {
             continue;
         }
 
-        // 其他裝飾物離開屏幕後清理
+        // 其他装饰物离开屏幕后清理
         if transform.translation.x < -260.0 {
             to_despawn.push(entity);
         }
@@ -308,7 +308,7 @@ pub fn cleanup_offscreen_decorations(
     }
 }
 
-/// 增強雲彩系統 - 添加更多變化
+/// 增强云彩系统 - 添加更多变化
 pub fn spawn_enhanced_clouds(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
@@ -322,25 +322,25 @@ pub fn spawn_enhanced_clouds(
 
     *spawn_timer += time.delta_secs();
 
-    // 每 2.6 秒生成一朵雲
+    // 每 2.6 秒生成一朵云
     if *spawn_timer > 2.6 {
         *spawn_timer = 0.0;
 
         let seed = time.elapsed_secs() * 9.17;
 
-        // 隨機選擇雲彩圖片
+        // 随机选择云彩图片
         let cloud_images = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
         let cloud_index = if pseudo01(seed + 0.4) > 0.5 { 1 } else { 0 };
         let cloud_image = asset_server.load(cloud_images[cloud_index]);
 
-        // 隨機高度（中上半部分屏幕）
+        // 随机高度（中上半部分屏幕）
         let cloud_y = -window.height() * 0.08 + pseudo01(seed + 1.1) * window.height() * 0.56;
 
-        // 隨機大小和透明度
+        // 随机大小和透明度
         let scale = 0.65 + pseudo01(seed + 2.2) * 0.75;
         let alpha = 0.35 + pseudo01(seed + 3.3) * 0.50;
 
-        // 隨機選擇層級（近景或中景）
+        // 随机选择层级（近景或中景）
         let layer = if pseudo01(seed + 4.4) > 0.5 {
             DecorationLayer::NearBackground
         } else {
@@ -363,7 +363,7 @@ pub fn spawn_enhanced_clouds(
     }
 }
 
-/// 遠景背景循環系統
+/// 远景背景循环系统
 pub fn loop_far_background(
     mut decoration_query: Query<(&mut Transform, &SceneDecoration)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
@@ -374,7 +374,7 @@ pub fn loop_far_background(
 
     for (mut transform, decoration) in decoration_query.iter_mut() {
         if decoration.layer == DecorationLayer::FarBackground {
-            // 如果移出左側，移到右側
+            // 如果移出左侧，移到右侧
             if transform.translation.x < -window.width() {
                 transform.translation.x += window.width() * 3.0;
             }
@@ -382,7 +382,7 @@ pub fn loop_far_background(
     }
 }
 
-/// 添加動態光照效果（天空呼吸 + 星點閃爍）
+/// 添加动态光照效果（天空呼吸 + 星点闪烁）
 pub fn dynamic_lighting(
     mut decoration_query: Query<(&mut Sprite, Option<&SkyPulse>, Option<&StarPulse>)>,
     time: Res<Time>,

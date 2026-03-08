@@ -15,7 +15,7 @@
 1. `P0` 拆 `UI` 巨文件，建立模块边界。  
    目标：把 `src/systems/ui.rs:641`、`src/systems/ui.rs:1081`、`src/systems/ui.rs:1663`、`src/systems/ui.rs:1992` 这些超长函数拆到 `hud/pause/save/load/rename` 子模块。  
    Rust 提升点：模块系统、可见性控制、函数签名设计、减少可变借用范围。  
-   项目收益：可维护性和迭代速度会显著提升。  
+   项目收益：可维护性和迭代速度会显着提升。  
    额外细节：`src/systems/ui.rs:633` 一带注释存在乱码，建议统一 UTF-8 并清理。
 
 2. `P0` 重构网络快照处理，消除重复逻辑。  

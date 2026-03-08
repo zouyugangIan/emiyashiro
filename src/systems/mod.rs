@@ -48,7 +48,7 @@ pub mod procedural_assets;
 // 视觉效果系统
 pub mod visual_effects;
 
-// 戰鬥和敵人系統
+// 战斗和敌人系统
 pub mod combat;
 pub mod death;
 pub mod enemy;

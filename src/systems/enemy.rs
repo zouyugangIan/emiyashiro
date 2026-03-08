@@ -1,4 +1,4 @@
-//! 敵人系統
+//! 敌人系统
 
 use crate::asset_paths;
 use crate::components::*;
@@ -312,7 +312,7 @@ pub fn spawn_mushroom_enemies(
     *spawn_cooldown = rng.random_range(min_spawn_interval..max_spawn_interval);
 }
 
-/// 敵人 AI - 巡邏與戰鬥行為。
+/// 敌人 AI - 巡逻与战斗行为。
 pub fn enemy_patrol_ai(
     mut enemy_query: Query<
         (&EnemyType, &mut Transform, &mut EnemyState, &mut Velocity),
@@ -641,7 +641,7 @@ pub fn update_enemy_telegraph_visuals(
     }
 }
 
-/// 清理死亡的敵人
+/// 清理死亡的敌人
 pub fn cleanup_dead_enemies(
     mut commands: Commands,
     enemy_query: Query<(Entity, &EnemyState), With<Enemy>>,
@@ -650,21 +650,21 @@ pub fn cleanup_dead_enemies(
 ) {
     for (entity, state) in enemy_query.iter() {
         if !state.is_alive {
-            // 記錄死亡時間
+            // 记录死亡时间
             let timer = death_timer.entry(entity).or_insert(0.0);
             *timer += time.delta_secs();
 
-            // 1 秒後清理
+            // 1 秒后清理
             if *timer > 1.0 {
                 commands.entity(entity).despawn();
                 death_timer.remove(&entity);
-                crate::debug_log!("💀 清理死亡敵人");
+                crate::debug_log!("💀 清理死亡敌人");
             }
         }
     }
 }
 
-/// 清理離屏敵人
+/// 清理离屏敌人
 pub fn cleanup_offscreen_enemies(
     mut commands: Commands,
     enemy_query: Query<(Entity, &Transform), With<Enemy>>,
@@ -680,7 +680,7 @@ pub fn cleanup_offscreen_enemies(
         if transform.translation.x < player_x - 900.0 || transform.translation.x > player_x + 2200.0
         {
             commands.entity(entity).despawn();
-            crate::debug_log!("🗑️ 清理離屏敵人");
+            crate::debug_log!("🗑️ 清理离屏敌人");
         }
     }
 }

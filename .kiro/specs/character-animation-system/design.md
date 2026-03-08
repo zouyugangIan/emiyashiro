@@ -2,13 +2,13 @@
 
 ## Overview
 
-角色動畫系統負責管理 Shirou Runner 遊戲中 1P 和 2P 玩家的角色動畫資源。系統基於 Bevy ECS 架構，通過組件和資源管理角色的動畫幀序列，並提供統一的接口供遊戲邏輯調用。
+角色动画系统负责管理 Shirou Runner 游戏中 1P 和 2P 玩家的角色动画资源。系统基于 Bevy ECS 架构，通过组件和资源管理角色的动画帧序列，并提供统一的接口供游戏逻辑调用。
 
-核心設計理念：
-- **資源集中管理**: 所有動畫幀路徑在 `asset_paths.rs` 中集中定義
-- **玩家角色映射**: 1P 自動使用 Shirou 動畫，2P 自動使用 Sakura 動畫
-- **類型安全**: 使用 Rust 類型系統確保動畫資源的正確性
-- **可擴展性**: 支持未來添加更多角色和動畫狀態
+核心设计理念：
+- **资源集中管理**: 所有动画帧路径在 `asset_paths.rs` 中集中定义
+- **玩家角色映射**: 1P 自动使用 Shirou 动画，2P 自动使用 Sakura 动画
+- **类型安全**: 使用 Rust 类型系统确保动画资源的正确性
+- **可扩展性**: 支持未来添加更多角色和动画状态
 
 ## Architecture
 
@@ -52,14 +52,14 @@ graph TD
 
 ```
 src/
-├── asset_paths.rs              # 資源路徑常量定義
+├── asset_paths.rs              # 资源路径常量定义
 ├── components/
-│   ├── animation.rs            # 動畫組件定義
-│   └── player.rs               # 玩家組件定義
-├── resources.rs                # 遊戲資源定義
+│   ├── animation.rs            # 动画组件定义
+│   └── player.rs               # 玩家组件定义
+├── resources.rs                # 游戏资源定义
 └── systems/
-    ├── frame_animation.rs      # 幀動畫系統
-    └── setup.rs                # 初始化系統
+    ├── frame_animation.rs      # 帧动画系统
+    └── setup.rs                # 初始化系统
 ```
 
 ## Components and Interfaces
@@ -69,23 +69,23 @@ src/
 **Location**: `src/asset_paths.rs`
 
 ```rust
-// Shirou 動畫幀路徑常量
+// Shirou 动画帧路径常量
 pub const IMAGE_CHAR_SHIROU_IDLE1: &str = "images/characters/shirou_idle1.jpg";
 pub const IMAGE_CHAR_SHIROU_IDLE2: &str = "images/characters/shirou_idle2.jpg";
-// ... 更多幀
+// ... 更多帧
 
-// Shirou 動畫幀數組
+// Shirou 动画帧数组
 pub const SHIROU_ANIMATION_FRAMES: &[&str] = &[
     IMAGE_CHAR_SHIROU_IDLE1,
     IMAGE_CHAR_SHIROU_IDLE2,
     // ...
 ];
 
-// Sakura 動畫幀路徑常量
+// Sakura 动画帧路径常量
 pub const IMAGE_CHAR_SAKURA_IDLE01: &str = "images/characters/sakura_idle01.png";
-// ... 更多幀
+// ... 更多帧
 
-// Sakura 動畫幀數組
+// Sakura 动画帧数组
 pub const SAKURA_ANIMATION_FRAMES: &[&str] = &[
     IMAGE_CHAR_SAKURA_IDLE01,
     // ...
@@ -93,8 +93,8 @@ pub const SAKURA_ANIMATION_FRAMES: &[&str] = &[
 ```
 
 **Interface**:
-- `SHIROU_ANIMATION_FRAMES: &[&str]` - 返回 Shirou 所有動畫幀路徑
-- `SAKURA_ANIMATION_FRAMES: &[&str]` - 返回 Sakura 所有動畫幀路徑
+- `SHIROU_ANIMATION_FRAMES: &[&str]` - 返回 Shirou 所有动画帧路径
+- `SAKURA_ANIMATION_FRAMES: &[&str]` - 返回 Sakura 所有动画帧路径
 
 ### 2. CharacterType Enum
 
@@ -104,14 +104,14 @@ pub const SAKURA_ANIMATION_FRAMES: &[&str] = &[
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CharacterType {
     Shirou1,  // 1P - Shirou
-    Shirou2,  // 2P - Sakura (命名保持向後兼容)
+    Shirou2,  // 2P - Sakura (命名保持向后兼容)
 }
 ```
 
 **Methods**:
 ```rust
 impl CharacterType {
-    /// 獲取角色的動畫幀路徑數組
+    /// 获取角色的动画帧路径数组
     pub fn get_animation_frames(&self) -> &'static [&'static str] {
         match self {
             CharacterType::Shirou1 => asset_paths::SHIROU_ANIMATION_FRAMES,
@@ -119,7 +119,7 @@ impl CharacterType {
         }
     }
     
-    /// 獲取角色的紋理路徑（指定幀索引）
+    /// 获取角色的纹理路径（指定帧索引）
     pub fn get_texture_path(&self, frame_index: usize) -> &'static str {
         let frames = self.get_animation_frames();
         frames.get(frame_index).copied().unwrap_or(frames[0])
@@ -129,7 +129,7 @@ impl CharacterType {
 
 ### 3. FrameAnimation Component
 
-**Location**: `src/systems/frame_animation.rs` (已存在，需擴展)
+**Location**: `src/systems/frame_animation.rs` (已存在，需扩展)
 
 ```rust
 #[derive(Component, Debug)]
@@ -145,12 +145,12 @@ pub struct FrameAnimation {
 **Methods**:
 ```rust
 impl FrameAnimation {
-    /// 獲取當前幀的紋理句柄
+    /// 获取当前帧的纹理句柄
     pub fn get_current_texture(&self) -> Option<Handle<Image>> {
         self.frames.get(self.current_frame).cloned()
     }
     
-    /// 獲取當前幀索引
+    /// 获取当前帧索引
     pub fn get_current_frame_index(&self) -> usize {
         self.current_frame
     }
@@ -177,9 +177,9 @@ pub struct CharacterAnimationState {
 **Location**: `src/components/player.rs`
 
 ```rust
-/// 玩家編號組件
+/// 玩家编号组件
 /// 
-/// 用於區分 1P 和 2P 玩家
+/// 用于区分 1P 和 2P 玩家
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlayerNumber {
     Player1,  // 1P - 使用 Shirou
@@ -187,7 +187,7 @@ pub enum PlayerNumber {
 }
 
 impl PlayerNumber {
-    /// 獲取對應的角色類型
+    /// 获取对应的角色类型
     pub fn to_character_type(&self) -> CharacterType {
         match self {
             PlayerNumber::Player1 => CharacterType::Shirou1,
@@ -202,15 +202,15 @@ impl PlayerNumber {
 ### Animation Frame Data Structure
 
 ```rust
-/// 角色動畫數據
+/// 角色动画数据
 pub struct CharacterAnimationData {
-    /// 角色名稱 ("shirou" 或 "sakura")
+    /// 角色名称 ("shirou" 或 "sakura")
     pub character_name: String,
     
-    /// 動畫幀路徑列表
+    /// 动画帧路径列表
     pub frame_paths: Vec<String>,
     
-    /// 動畫幀句柄（運行時加載）
+    /// 动画帧句柄（运行时加载）
     pub frame_handles: Vec<Handle<Image>>,
 }
 ```
@@ -228,7 +228,7 @@ pub struct CharacterAnimationData {
 
 **System**: `load_character_animations`
 
-**Responsibility**: 在遊戲啟動時加載所有角色動畫幀
+**Responsibility**: 在游戏启动时加载所有角色动画帧
 
 **Implementation**:
 ```rust
@@ -236,13 +236,13 @@ pub fn load_character_animations(
     asset_server: Res<AssetServer>,
     mut game_assets: ResMut<GameAssets>,
 ) {
-    // 加載 Shirou 動畫幀
+    // 加载 Shirou 动画帧
     game_assets.shirou_animation_frames = asset_paths::SHIROU_ANIMATION_FRAMES
         .iter()
         .map(|path| asset_server.load(*path))
         .collect();
     
-    // 加載 Sakura 動畫幀
+    // 加载 Sakura 动画帧
     game_assets.sakura_animation_frames = asset_paths::SAKURA_ANIMATION_FRAMES
         .iter()
         .map(|path| asset_server.load(*path))
@@ -254,7 +254,7 @@ pub fn load_character_animations(
 
 **System**: `setup_player_animation`
 
-**Responsibility**: 為新創建的玩家實體附加動畫組件
+**Responsibility**: 为新创建的玩家实体附加动画组件
 
 **Implementation**:
 ```rust
@@ -279,15 +279,15 @@ pub fn setup_player_animation(
 
 **System**: `update_frame_animations`
 
-**Responsibility**: 更新動畫幀並切換紋理
+**Responsibility**: 更新动画帧并切换纹理
 
-**Implementation**: (已存在於 `frame_animation.rs`)
+**Implementation**: (已存在于 `frame_animation.rs`)
 
 ### 4. Texture Path Query Interface
 
 **Helper Function**:
 ```rust
-/// 獲取玩家當前動畫幀的紋理路徑
+/// 获取玩家当前动画帧的纹理路径
 pub fn get_player_texture_path(
     player_number: PlayerNumber,
     frame_index: usize,
@@ -301,17 +301,17 @@ pub fn get_player_texture_path(
 
 ### Unit Tests
 
-測試將位於 `src/tests/animation_tests.rs`
+测试将位于 `src/tests/animation_tests.rs`
 
 **Test Cases**:
-1. **test_character_type_animation_frames**: 驗證每個角色類型返回正確的動畫幀數組
-2. **test_character_type_texture_path**: 驗證 `get_texture_path()` 返回正確的路徑格式
-3. **test_player_number_to_character_mapping**: 驗證玩家編號正確映射到角色類型
-4. **test_frame_index_bounds**: 驗證超出範圍的幀索引返回默認幀
-5. **test_animation_frame_paths_exist**: 驗證所有定義的動畫幀路徑對應的文件存在
+1. **test_character_type_animation_frames**: 验证每个角色类型返回正确的动画帧数组
+2. **test_character_type_texture_path**: 验证 `get_texture_path()` 返回正确的路径格式
+3. **test_player_number_to_character_mapping**: 验证玩家编号正确映射到角色类型
+4. **test_frame_index_bounds**: 验证超出范围的帧索引返回默认帧
+5. **test_animation_frame_paths_exist**: 验证所有定义的动画帧路径对应的文件存在
 
 ### Property-Based Tests
 
-使用 `proptest` 庫進行屬性測試。
+使用 `proptest` 库进行属性测试。
 
 **Property Tests**:

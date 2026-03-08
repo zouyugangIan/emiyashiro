@@ -1,6 +1,6 @@
-//! 鏍稿績娓告垙绯荤粺
+//! 镙稿绩娓告垙绯荤粺
 //!
-//! 鍖呭惈娓告垙鍦烘櫙鐨勮缃€佹竻鐞嗗拰鏍稿績娓告垙閫昏緫绠＄悊銆?
+//! 鍖呭惈娓告垙鍦烘櫙镄勮缃€佹竻鐞嗗拰镙稿绩娓告垙阃昏緫绠＄悊銆?
 use crate::{components::*, resources::*, states::*};
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -125,7 +125,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
 
     crate::debug_log!("Character spawned in frame fallback mode");
 }
-/// 鎭㈠鍔犺浇鐨勬父鎴忕姸鎬佷腑鐨勫疄浣撲綅缃?
+/// 鎭㈠锷犺浇镄勬父鎴忕姸镐佷腑镄勫疄浣扑綅缃?
 pub fn restore_loaded_game_entities(
     mut loaded_game_state: ResMut<crate::systems::ui::LoadedGameState>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &mut PlayerState), With<Player>>,

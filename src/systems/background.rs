@@ -34,22 +34,22 @@ pub fn spawn_clouds_system(
         let cloud_y =
             (pseudo_random % (window.height() * 0.4) as u32) as f32 + window.height() * 0.5;
 
-        // 隨機選擇雲彩圖片（使用偽隨機）
+        // 随机选择云彩图片（使用伪随机）
         let cloud_images = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
         let cloud_index = (pseudo_random % cloud_images.len() as u32) as usize;
         let cloud_image = asset_server.load(cloud_images[cloud_index]);
 
-        // 隨機縮放（0.8 到 1.2 倍）
+        // 随机缩放（0.8 到 1.2 倍）
         let scale_factor = 0.8 + ((pseudo_random % 40) as f32 / 100.0);
 
-        // 使用真實的雲彩圖片
+        // 使用真实的云彩图片
         commands.spawn((
             Sprite {
                 image: cloud_image,
                 custom_size: Some(Vec2::new(150.0 * scale_factor, 100.0 * scale_factor)),
                 ..default()
             },
-            Transform::from_xyz(window.width() + 100.0, cloud_y, -5.0), // z = -5.0 確保在背景
+            Transform::from_xyz(window.width() + 100.0, cloud_y, -5.0), // z = -5.0 确保在背景
             Cloud,
         ));
 
@@ -76,12 +76,12 @@ pub fn despawn_offscreen_clouds_system(
         if transform.translation.x < -200.0 {
             // Despawn when off-screen
             commands.entity(entity).despawn();
-            crate::debug_log!("🗑️ 清理離屏雲彩 at x={:.1}", transform.translation.x);
+            crate::debug_log!("🗑️ 清理离屏云彩 at x={:.1}", transform.translation.x);
         }
     }
 }
 
-/// 調試系統：定期報告雲彩數量
+/// 调试系统：定期报告云彩数量
 pub fn debug_cloud_count(
     cloud_query: Query<&Transform, With<Cloud>>,
     time: Res<Time>,
@@ -89,15 +89,15 @@ pub fn debug_cloud_count(
 ) {
     let current_time = time.elapsed_secs();
 
-    // 每 10 秒報告一次
+    // 每 10 秒报告一次
     if current_time - *last_report > 10.0 {
         let count = cloud_query.iter().count();
-        crate::debug_log!("☁️ 當前雲彩數量: {}", count);
+        crate::debug_log!("☁️ 当前云彩数量: {}", count);
 
-        // 顯示所有雲彩的位置
+        // 显示所有云彩的位置
         for (i, transform) in cloud_query.iter().enumerate() {
             crate::debug_log!(
-                "  雲彩 #{}: x={:.1}, y={:.1}",
+                "  云彩 #{}: x={:.1}, y={:.1}",
                 i + 1,
                 transform.translation.x,
                 transform.translation.y
