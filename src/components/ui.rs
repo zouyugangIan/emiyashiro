@@ -86,7 +86,7 @@ pub struct CoverImage2;
 /// # 示例
 ///
 /// ```rust
-/// use s_emiyashiro::components::CoverFadeState;
+/// use emiyashiro::components::CoverFadeState;
 ///
 /// // 第一张图片从完全不透明开始
 /// let fade_state_1 = CoverFadeState::default();

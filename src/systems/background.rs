@@ -25,7 +25,7 @@ pub fn spawn_clouds_system(
 ) {
     if cloud_spawn_timer.0.tick(time.delta()).just_finished() {
         let Some(window) = window_query.iter().next() else {
-            crate::debug_log!("⚠️ 無法獲取窗口，跳過雲彩生成");
+            crate::debug_log!("⚠️ 无法获取窗口，跳过云彩生成");
             return;
         };
 
@@ -54,7 +54,7 @@ pub fn spawn_clouds_system(
         ));
 
         crate::debug_log!(
-            "☁️ 生成雲彩 at x={}, y={}, scale={:.2}",
+            "☁️ 生成云彩 at x={}, y={}, scale={:.2}",
             window.width() + 100.0,
             cloud_y,
             scale_factor

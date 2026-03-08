@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use serde::Serialize;
 use std::time::Instant;
 
-use s_emiyashiro::protocol::{GamePacket, InputEventKind, PlayerAction, PlayerState};
-use s_emiyashiro::systems::network::ClientPredictionConfig;
-use s_emiyashiro::systems::scene_decoration::{
+use emiyashiro::protocol::{GamePacket, InputEventKind, PlayerAction, PlayerState};
+use emiyashiro::systems::network::ClientPredictionConfig;
+use emiyashiro::systems::scene_decoration::{
     DecorationLayer, SceneDecoration, dynamic_lighting, move_scene_decorations,
 };
 

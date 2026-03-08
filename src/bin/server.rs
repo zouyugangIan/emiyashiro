@@ -1,8 +1,8 @@
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
+use emiyashiro::plugins::server::{NetworkChannels, ServerRuntimePlugin};
+use emiyashiro::protocol::{GamePacket, PlayerAction};
 use futures_util::{SinkExt, StreamExt};
-use s_emiyashiro::plugins::server::{NetworkChannels, ServerRuntimePlugin};
-use s_emiyashiro::protocol::{GamePacket, PlayerAction};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -24,13 +24,13 @@ async fn main() {
 
     #[cfg(feature = "server")]
     {
-        let database = s_emiyashiro::database::Database::new()
+        let database = emiyashiro::database::Database::new()
             .await
             .expect("Failed to connect to database");
         let pool = database.pool.clone();
 
         tokio::spawn(async move {
-            s_emiyashiro::systems::save_worker::run_save_worker(pool).await;
+            emiyashiro::systems::save_worker::run_save_worker(pool).await;
         });
     }
 
@@ -102,7 +102,7 @@ async fn main() {
     );
 
     #[cfg(feature = "server")]
-    app.add_plugins(s_emiyashiro::database::redis::RedisPlugin);
+    app.add_plugins(emiyashiro::database::redis::RedisPlugin);
 
     app.add_plugins(ServerRuntimePlugin {
         channels: NetworkChannels {
