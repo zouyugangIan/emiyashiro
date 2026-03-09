@@ -7,17 +7,17 @@
       "name": "Debug client",
       "program": "${cargo:program}",
       "cargo": {
-        "args": ["build", "--bin=client", "--package=emiyashiro"],
+        "args": ["build", "--bin", "client", "--package", "emiyashiro"],
         "filter": {
           "name": "client",
-          "kind": "bin",
-        },
+          "kind": "bin"
+        }
       },
       "args": [],
       "cwd": "${workspaceFolder}",
       "env": {
-        "RUST_BACKTRACE": "1",
-      },
+        "RUST_BACKTRACE": "1"
+      }
     },
     {
       "type": "lldb",
@@ -27,21 +27,24 @@
       "cargo": {
         "args": [
           "build",
-          "--bin=server",
+          "--bin",
+          "server",
           "--no-default-features",
-          "--features=server",
-          "--package=emiyashiro",
+          "--features",
+          "server",
+          "--package",
+          "emiyashiro"
         ],
         "filter": {
           "name": "server",
-          "kind": "bin",
-        },
+          "kind": "bin"
+        }
       },
       "args": [],
       "cwd": "${workspaceFolder}",
       "env": {
-        "RUST_BACKTRACE": "1",
-      },
+        "RUST_BACKTRACE": "1"
+      }
     },
     {
       "type": "lldb",
@@ -51,19 +54,21 @@
       "cargo": {
         "args": [
           "build",
-          "--bin=architecture_metrics",
-          "--package=emiyashiro",
+          "--bin",
+          "architecture_metrics",
+          "--package",
+          "emiyashiro"
         ],
         "filter": {
           "name": "architecture_metrics",
-          "kind": "bin",
-        },
+          "kind": "bin"
+        }
       },
       "args": [],
       "cwd": "${workspaceFolder}",
       "env": {
-        "RUST_BACKTRACE": "1",
-      },
-    },
-  ],
+        "RUST_BACKTRACE": "1"
+      }
+    }
+  ]
 }
