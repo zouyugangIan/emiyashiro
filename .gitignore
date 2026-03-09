@@ -1,5 +1,7 @@
 # Rust build artifacts
 /target/
+/target-linux/
+/target-linux-devdebug/
 **/*.rs.bk
 
 # Build outputs / packaging

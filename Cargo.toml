@@ -57,3 +57,17 @@ opt-level = 1
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.dev-debug]
+inherits = "dev"
+opt-level = 0
+debug = 2
+debug-assertions = true
+overflow-checks = true
+incremental = true
+codegen-units = 256
+lto = false
+
+[profile.dev-debug.package."*"]
+opt-level = 0
+debug = 2
