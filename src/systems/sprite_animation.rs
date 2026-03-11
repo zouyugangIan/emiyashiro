@@ -1,9 +1,6 @@
-use crate::{
-    components::{
-        animation_data::{AnimationDataMap, CharacterAnimationData, PlaybackMode},
-        *,
-    },
-    resources::GameAssets,
+use crate::components::{
+    animation_data::{AnimationDataMap, CharacterAnimationData, PlaybackMode},
+    *,
 };
 use bevy::prelude::*;
 use std::{collections::HashMap, fs};
@@ -179,6 +176,23 @@ fn apply_atlas_frame(sprite: &mut Sprite, atlas_index: usize) {
     }
 }
 
+fn apply_animation_sheet(
+    sprite: &mut Sprite,
+    sprite_sheets: Option<&SpriteAnimationSheets>,
+    animation_type: &AnimationType,
+) {
+    let Some(sprite_sheets) = sprite_sheets else {
+        return;
+    };
+
+    let (target_texture, target_layout) = sprite_sheets.select_sheet(animation_type);
+    sprite.image = target_texture.clone();
+
+    if let Some(ref mut atlas) = sprite.texture_atlas {
+        atlas.layout = target_layout.clone();
+    }
+}
+
 /// 在启动时加载所有动画配置文件
 pub fn load_animation_data() -> AnimationDataMap {
     let mut animation_map = AnimationDataMap::default();
@@ -340,11 +354,18 @@ pub fn update_sprite_animations(
         }
     }
 }
-
 /// 根据玩家状态更新动画
 pub fn update_character_animation_state(
-    mut query: Query<(&mut SpriteAnimation, &mut Sprite, &PlayerState, &Velocity), With<Player>>,
-    game_assets: Option<Res<GameAssets>>,
+    mut query: Query<
+        (
+            &mut SpriteAnimation,
+            &mut Sprite,
+            &PlayerState,
+            &Velocity,
+            Option<&SpriteAnimationSheets>,
+        ),
+        With<Player>,
+    >,
     game_input: Option<Res<crate::systems::input::GameInput>>,
     runtime_config: Option<Res<AnimationRuntimeConfig>>,
 ) {
@@ -360,7 +381,7 @@ pub fn update_character_animation_state(
         })
         .unwrap_or((false, false));
 
-    for (mut animation, mut sprite, player_state, velocity) in query.iter_mut() {
+    for (mut animation, mut sprite, player_state, velocity, sprite_sheets) in query.iter_mut() {
         let new_animation = resolve_target_animation(
             &mut animation,
             player_state,
@@ -375,32 +396,9 @@ pub fn update_character_animation_state(
             continue;
         }
 
-        // 只有当动画类型改变时才切换
         if animation.current_animation != new_animation {
             apply_animation_change(&mut animation, new_animation.clone(), velocity.x.abs());
-
-            // Running/attacking use dedicated sheets; others use the core sheet.
-            if let Some(assets) = &game_assets {
-                let (target_texture, target_layout) = if new_animation == AnimationType::Running {
-                    (&assets.shirou_spritesheet_run, &assets.shirou_atlas_run)
-                } else if new_animation == AnimationType::Attacking {
-                    (
-                        &assets.shirou_spritesheet_attack,
-                        &assets.shirou_atlas_attack,
-                    )
-                } else {
-                    (&assets.shirou_spritesheet, &assets.shirou_atlas)
-                };
-
-                if let Some(texture) = target_texture {
-                    sprite.image = texture.clone();
-                }
-                if let Some(layout) = target_layout
-                    && let Some(ref mut atlas) = sprite.texture_atlas
-                {
-                    atlas.layout = layout.clone();
-                }
-            }
+            apply_animation_sheet(&mut sprite, sprite_sheets, &new_animation);
 
             if let Some(new_clip) = animation.animations.get(&new_animation) {
                 if let Some(first_atlas_idx) = new_clip.frames.first().copied() {

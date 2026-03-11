@@ -87,9 +87,8 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         ShroudState::default(),
     );
 
-    if let Some(atlas_layout) = &params.game_assets.shirou_atlas
-        && params.character_selection.selected_character == CharacterType::Shirou1
-        && let Some(texture) = &params.game_assets.shirou_spritesheet
+    if params.character_selection.selected_character == CharacterType::Shirou1
+        && let Some(sprite_sheets) = params.game_assets.hf_shirou_sprite_animation_sheets()
     {
         let anim_component = crate::systems::sprite_animation::create_character_animation(
             &params.anim_data_map,
@@ -98,16 +97,17 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
 
         commands.spawn((
             Sprite {
-                image: texture.clone(),
+                image: sprite_sheets.core_texture.clone(),
                 custom_size: Some(PLAYER_RENDER_SIZE),
                 texture_atlas: Some(TextureAtlas {
-                    layout: atlas_layout.clone(),
+                    layout: sprite_sheets.core_layout.clone(),
                     index: 0,
                 }),
                 ..default()
             },
             player_common,
             anim_component,
+            sprite_sheets,
         ));
 
         crate::debug_log!("HF Shirou spawned in atlas mode");

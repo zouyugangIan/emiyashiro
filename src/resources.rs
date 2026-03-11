@@ -1,3 +1,4 @@
+use crate::components::SpriteAnimationSheets;
 use bevy::prelude::*;
 use std::io::ErrorKind;
 
@@ -376,6 +377,32 @@ impl GameAssets {
         self.current_sakura_frame =
             (self.current_sakura_frame + 1) % self.sakura_animation_frames.len();
         self.get_current_sakura_frame()
+    }
+
+    pub fn hf_shirou_sprite_animation_sheets(&self) -> Option<SpriteAnimationSheets> {
+        let core_texture = self.shirou_spritesheet.clone()?;
+        let core_layout = self.shirou_atlas.clone()?;
+
+        Some(SpriteAnimationSheets {
+            core_texture: core_texture.clone(),
+            core_layout: core_layout.clone(),
+            running_texture: self
+                .shirou_spritesheet_run
+                .clone()
+                .unwrap_or_else(|| core_texture.clone()),
+            running_layout: self
+                .shirou_atlas_run
+                .clone()
+                .unwrap_or_else(|| core_layout.clone()),
+            attacking_texture: self
+                .shirou_spritesheet_attack
+                .clone()
+                .unwrap_or_else(|| core_texture.clone()),
+            attacking_layout: self
+                .shirou_atlas_attack
+                .clone()
+                .unwrap_or_else(|| core_layout.clone()),
+        })
     }
 }
 

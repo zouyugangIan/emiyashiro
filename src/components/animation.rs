@@ -51,6 +51,47 @@ impl AnimationType {
             AnimationType::Attacking | AnimationType::Jumping | AnimationType::Landing => false,
         }
     }
+
+    pub fn sprite_sheet_kind(&self) -> SpriteSheetKind {
+        match self {
+            AnimationType::Running => SpriteSheetKind::Running,
+            AnimationType::Attacking => SpriteSheetKind::Attacking,
+            AnimationType::Idle
+            | AnimationType::Jumping
+            | AnimationType::Crouching
+            | AnimationType::Landing => SpriteSheetKind::Core,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpriteSheetKind {
+    Core,
+    Running,
+    Attacking,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct SpriteAnimationSheets {
+    pub core_texture: Handle<Image>,
+    pub core_layout: Handle<TextureAtlasLayout>,
+    pub running_texture: Handle<Image>,
+    pub running_layout: Handle<TextureAtlasLayout>,
+    pub attacking_texture: Handle<Image>,
+    pub attacking_layout: Handle<TextureAtlasLayout>,
+}
+
+impl SpriteAnimationSheets {
+    pub fn select_sheet(
+        &self,
+        animation_type: &AnimationType,
+    ) -> (&Handle<Image>, &Handle<TextureAtlasLayout>) {
+        match animation_type.sprite_sheet_kind() {
+            SpriteSheetKind::Core => (&self.core_texture, &self.core_layout),
+            SpriteSheetKind::Running => (&self.running_texture, &self.running_layout),
+            SpriteSheetKind::Attacking => (&self.attacking_texture, &self.attacking_layout),
+        }
+    }
 }
 
 /// 角色动画组件
@@ -220,5 +261,38 @@ impl AnimationFrames {
 impl Default for AnimationFrames {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn animation_types_map_to_expected_sheet_kind() {
+        assert_eq!(
+            AnimationType::Idle.sprite_sheet_kind(),
+            SpriteSheetKind::Core
+        );
+        assert_eq!(
+            AnimationType::Jumping.sprite_sheet_kind(),
+            SpriteSheetKind::Core
+        );
+        assert_eq!(
+            AnimationType::Crouching.sprite_sheet_kind(),
+            SpriteSheetKind::Core
+        );
+        assert_eq!(
+            AnimationType::Landing.sprite_sheet_kind(),
+            SpriteSheetKind::Core
+        );
+        assert_eq!(
+            AnimationType::Running.sprite_sheet_kind(),
+            SpriteSheetKind::Running
+        );
+        assert_eq!(
+            AnimationType::Attacking.sprite_sheet_kind(),
+            SpriteSheetKind::Attacking
+        );
     }
 }
