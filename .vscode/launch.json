@@ -4,7 +4,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug client",
+      "name": "Ubuntu Dev: client",
       "program": "${cargo:program}",
       "cargo": {
         "args": ["build", "--bin", "client", "--package", "emiyashiro"],
@@ -15,14 +15,16 @@
       },
       "args": [],
       "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
       "env": {
-        "RUST_BACKTRACE": "1"
+        "RUST_BACKTRACE": "full",
+        "RUST_LIB_BACKTRACE": "1"
       }
     },
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug server",
+      "name": "Ubuntu Dev: server",
       "program": "${cargo:program}",
       "cargo": {
         "args": [
@@ -42,14 +44,16 @@
       },
       "args": [],
       "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
       "env": {
-        "RUST_BACKTRACE": "1"
+        "RUST_BACKTRACE": "full",
+        "RUST_LIB_BACKTRACE": "1"
       }
     },
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug architecture_metrics",
+      "name": "Ubuntu Dev: architecture_metrics",
       "program": "${cargo:program}",
       "cargo": {
         "args": [
@@ -66,8 +70,10 @@
       },
       "args": [],
       "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
       "env": {
-        "RUST_BACKTRACE": "1"
+        "RUST_BACKTRACE": "full",
+        "RUST_LIB_BACKTRACE": "1"
       }
     }
   ]

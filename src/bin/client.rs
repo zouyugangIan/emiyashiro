@@ -47,7 +47,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "G-Engine Client (WebGPU)".into(),
-                        resolution: (1024, 768).into(),
+                        resolution: (2048, 1536).into(),
                         ..default()
                     }),
                     ..default()

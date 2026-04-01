@@ -68,6 +68,7 @@ src/
 - `G-ENGINE-SETUP.md`: 联机与基础设施部署指南
 - `SCENE_ENHANCEMENT.md`: 场景视差与装饰系统说明
 - `docs/2026-upgrade-status.md`: 2026 升级状态总览（文档完成状态 SSOT）
+- `docs/ubuntu-dev-workflow.md`: Ubuntu 开发期构建与调试基线
 - `docs/bevy-upgrade-regression-checklist.md`: 引擎升级回归清单
 - `docs/ops-runbook.md`: 运维与发布 runbook
 - `CHANGELOG.md`: 版本化变更记录
