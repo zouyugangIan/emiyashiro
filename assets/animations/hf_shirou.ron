@@ -16,9 +16,9 @@
         min_frame_duration: 0.05,
     ),
     "Attacking": (
-        // attack sheet row 0 (4x1 atlas)
+        // attack sheet row 0 (windup -> slash -> recovery)
         frames: [0, 1, 2, 3],
-        frame_duration: 0.08,
+        frame_duration: 0.07,
         playback_mode: "Once",
     ),
     "Jumping": (

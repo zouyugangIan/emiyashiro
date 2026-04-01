@@ -1,12 +1,13 @@
 # Ubuntu Dev Workflow
 
-本文件定义仓库在 Ubuntu 上的单一开发期构建与调试基线。
+本文件作为仓库在 Ubuntu 上的单一开发期构建、调试和编译加速说明。
 
-## 目标
+## 基线决策
 
-1. 只使用 Cargo 标准产物目录 `target/`。
-2. 只保留一个开发 profile：标准 `dev`。
-3. 让命令行、VS Code 和 Cargo 的默认行为保持一致，避免额外 target 目录和缓存分叉。
+1. 开发期统一使用 Cargo 默认产物目录 `target/`。
+2. 开发期统一使用标准 `dev` profile，不再额外维护 `dev-debug` 一类旁路 profile。
+3. 命令行、VS Code 和 Cargo 保持同一套默认行为，避免缓存和产物目录分叉。
+4. `mold` 和 `sccache` 作为机器级加速能力处理，不在仓库内重复配置。
 
 ## 产物目录
 
@@ -18,14 +19,6 @@
 
 发布产物使用 Cargo 默认目录 `target/release/`。
 
-## 开发 profile
-
-项目使用单一的 `[profile.dev]`：
-
-1. 保留完整调试符号，便于 LLDB 观察变量和回溯。
-2. 保留 Bevy 常见的依赖优化覆盖，避免运行时过慢。
-3. 不再维护单独的 `dev-debug` profile，也不再拆分 `target-linux*` 目录。
-
 ## 推荐命令
 
 ```bash
@@ -33,8 +26,8 @@
 cargo run --bin client
 
 # server
-`cargo run --bin server --no-default-features --features server
-`
+cargo run --bin server --no-default-features --features server
+
 # metrics
 cargo run --bin architecture_metrics
 
@@ -58,6 +51,50 @@ cargo check --all-features --future-incompat-report
 1. 全部使用 CodeLLDB 的 Cargo 集成直接构建并启动。
 2. 统一注入 `RUST_BACKTRACE=full` 和 `RUST_LIB_BACKTRACE=1`。
 3. 全部复用默认 `target/debug/`，不再区分 Fast / Deep。
+
+## 编译加速现状
+
+当前仓库没有在仓库内单独接入 `mold` 或 `sccache`。实际生效的是机器级 Cargo 全局配置：
+
+1. `~/.cargo/config.toml` 中设置了 `rustc-wrapper = "/usr/bin/sccache"`。
+2. `~/.cargo/config.toml` 中为 `x86_64-unknown-linux-gnu` 指定了 `linker = "clang"`。
+3. 同一份全局配置通过 `-C link-arg=-fuse-ld=mold` 启用 `mold`。
+
+这意味着：
+
+1. 本仓库当前确实在吃到 `mold` 和 `sccache` 的收益。
+2. 该收益依赖当前 Ubuntu 机器环境，而不是仓库本身的 checked-in 配置。
+3. 如果换机器，希望复现相同体验，应在机器级 Cargo 配置中统一接入，而不是再给仓库增加重复配置。
+
+## 编译速度评估
+
+评估时间：2026-04-02  
+评估对象：`cargo build --locked --bin client`
+
+对照结果：
+
+1. 关闭 `sccache` 和 `mold`：`315.53s`
+2. 关闭 `sccache`，保留 `mold`：`225.66s`
+3. 保留 `mold`，并在 `sccache` 预热后从空 `target` 重建：`47.13s`
+
+换算结果：
+
+1. `mold` 单独带来约 `28.5%` 的时间下降，约 `1.40x` 加速。
+2. `sccache` 在缓存命中后，相对 `mold` 单独状态再带来约 `79.1%` 的时间下降，约 `4.79x` 加速。
+3. 相对全部关闭工具的基线，当前组合总计约 `85.1%` 的时间下降，约 `6.70x` 加速。
+
+补充说明：
+
+1. `mold` 主要缩短链接阶段，对首次冷编译就有稳定收益。
+2. `sccache` 的价值主要体现在重复构建、删除 `target/` 后重建、分支切换后重建等场景。
+3. 实测中 `sccache` 命中构建阶段 Rust 命中率达到 `100%`。
+4. 如果把大型基准构建放在容量较小的 `tmpfs` 上，可能因为空间配额影响结果，因此完整基准应放在仓库所在磁盘上执行。
+
+## 维护建议
+
+1. 仓库内继续保持单一 `target/` 和单一 `dev` 工作流，不再引入额外 target 目录命名。
+2. `mold` 和 `sccache` 保持在机器级配置，避免仓库配置与开发者个人环境双重维护。
+3. 如果后续团队希望把编译体验做成可复制标准，再单独评估是否把这套全局配置沉淀为明确的 onboarding 文档，而不是直接写死到项目配置里。
 
 ## 常见问题
 

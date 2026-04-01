@@ -1328,7 +1328,14 @@ mod tests {
                 Duration::from_secs_f32(1.0 / 60.0),
             ))
             .insert_resource(ButtonInput::<KeyCode>::default())
-            .add_systems(Update, crate::systems::combat::player_knife_attack);
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
 
         app.world_mut().spawn((
             Player,
@@ -1336,6 +1343,7 @@ mod tests {
             Velocity::default(),
             PlayerState::default(),
             FacingDirection::Right,
+            AttackAnimationState::default(),
             ShroudState::default(),
         ));
 
@@ -1347,7 +1355,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .release(KeyCode::KeyL);
-        for _ in 0..3 {
+        for _ in 0..7 {
             app.update();
         }
 
@@ -1369,7 +1377,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .release(KeyCode::KeyL);
-        for _ in 0..20 {
+        for _ in 0..25 {
             app.update();
         }
 
@@ -1390,6 +1398,91 @@ mod tests {
         assert!(
             slash_steps.iter().any(|step| *step == 2),
             "queued slash should enter combo step 2"
+        );
+    }
+
+    #[test]
+    fn test_default_attack_input_uses_melee_windup_before_hitbox() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<crate::systems::input::GameInput>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        {
+            let mut input = app
+                .world_mut()
+                .resource_mut::<crate::systems::input::GameInput>();
+            input.action1_pressed_this_frame = true;
+            input.action1 = true;
+        }
+        app.update();
+
+        let slash_count_after_press = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::KnifeSlash>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            slash_count_after_press, 0,
+            "default melee attack should wait for windup before spawning hitbox"
+        );
+
+        let attack_state = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("attack animation state");
+        assert!(
+            attack_state.is_active(),
+            "default attack should trigger the melee animation state"
+        );
+
+        {
+            let mut input = app
+                .world_mut()
+                .resource_mut::<crate::systems::input::GameInput>();
+            input.action1_pressed_this_frame = false;
+            input.action1 = false;
+        }
+
+        for _ in 0..7 {
+            app.update();
+        }
+
+        let slash_count_after_windup = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::KnifeSlash>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            slash_count_after_windup, 1,
+            "melee hitbox should appear once the swing reaches its active frames"
         );
     }
 

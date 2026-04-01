@@ -42,6 +42,7 @@ impl Plugin for PresentationPlugin {
         .add_systems(
             Update,
             (
+                systems::sprite_animation::tick_attack_animation_states,
                 systems::sprite_animation::update_character_animation_state,
                 systems::sprite_animation::update_sprite_animations,
             )

@@ -48,9 +48,10 @@ pub struct GameInput {
     pub pause: bool,
 
     // 特殊输入
-    pub action1: bool, // 投影魔术
-    pub action2: bool, // 特殊技能
+    pub action1: bool, // 默认平A / 近战挥刀
+    pub action2: bool, // 投影魔术（远程）
     pub action1_pressed_this_frame: bool,
+    pub action2_pressed_this_frame: bool,
     pub jump_pressed_this_frame: bool,
     pub jump_buffer_seconds: f32,
 
@@ -138,8 +139,7 @@ pub fn update_game_input(
     // 更新动作输入
     let new_action1 =
         keyboard_input.pressed(KeyCode::KeyJ) || keyboard_input.pressed(KeyCode::KeyZ);
-    let new_action2 =
-        keyboard_input.pressed(KeyCode::KeyK) || keyboard_input.pressed(KeyCode::KeyX);
+    let new_action2 = keyboard_input.pressed(KeyCode::KeyX);
 
     // 更新菜单输入
     let new_confirm =
@@ -157,6 +157,7 @@ pub fn update_game_input(
     let old_action2 = game_input.action2;
 
     game_input.action1_pressed_this_frame = new_action1 && !old_action1;
+    game_input.action2_pressed_this_frame = new_action2 && !old_action2;
     game_input.jump_pressed_this_frame = new_jump_just_pressed || (new_jump && !old_jump);
     if game_input.jump_pressed_this_frame {
         game_input.jump_buffer_seconds = JUMP_BUFFER_DURATION;
@@ -441,6 +442,8 @@ impl GameInput {
         self.pause = false;
         self.action1 = false;
         self.action2 = false;
+        self.action1_pressed_this_frame = false;
+        self.action2_pressed_this_frame = false;
         self.jump_pressed_this_frame = false;
         self.jump_buffer_seconds = 0.0;
         self.input_history.clear();

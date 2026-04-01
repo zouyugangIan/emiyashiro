@@ -38,6 +38,7 @@ impl Plugin for GameplayPlugin {
                     systems::shirou::handle_shroud_input,
                     systems::combat::player_shoot_projectile,
                     systems::combat::player_knife_attack,
+                    systems::combat::resolve_pending_knife_attacks,
                 )
                     .chain()
                     .in_set(GameSystemSet::Input)

@@ -28,6 +28,7 @@ pub struct SpriteAnimation {
     pub frame_timer: Timer,
     pub current_frame: usize,
     pub frame_direction: i8,
+    pub last_attack_trigger_serial: u32,
     pub previous_grounded: bool,
     pub apply_immediate_frame: bool,
     /// Holds the animation data cloned from the central resource.
@@ -41,6 +42,7 @@ impl Default for SpriteAnimation {
             frame_timer: Timer::from_seconds(0.1, TimerMode::Repeating),
             current_frame: 0,
             frame_direction: 1,
+            last_attack_trigger_serial: 0,
             previous_grounded: true,
             apply_immediate_frame: true,
             animations: HashMap::new(),
@@ -81,7 +83,7 @@ fn resolve_target_animation(
     animation: &mut SpriteAnimation,
     player_state: &PlayerState,
     velocity: &Velocity,
-    has_attack_input: bool,
+    has_active_attack: bool,
     has_move_input: bool,
     runtime: &AnimationRuntimeConfig,
 ) -> AnimationType {
@@ -90,7 +92,7 @@ fn resolve_target_animation(
 
     let just_landed = !was_grounded && player_state.is_grounded;
 
-    if has_attack_input
+    if has_active_attack
         && player_state.is_grounded
         && animation.animations.contains_key(&AnimationType::Attacking)
     {
@@ -297,6 +299,7 @@ pub fn create_character_animation(
         frame_timer: Timer::from_seconds(initial_duration, TimerMode::Repeating),
         current_frame: 0,
         frame_direction: 1,
+        last_attack_trigger_serial: 0,
         previous_grounded: true,
         apply_immediate_frame: true,
         animations: character_data.animations.clone(),
@@ -354,6 +357,16 @@ pub fn update_sprite_animations(
         }
     }
 }
+
+pub fn tick_attack_animation_states(
+    time: Res<Time>,
+    mut query: Query<&mut AttackAnimationState, With<Player>>,
+) {
+    for mut attack_state in query.iter_mut() {
+        attack_state.tick(time.delta_secs());
+    }
+}
+
 /// 根据玩家状态更新动画
 pub fn update_character_animation_state(
     mut query: Query<
@@ -362,6 +375,7 @@ pub fn update_character_animation_state(
             &mut Sprite,
             &PlayerState,
             &Velocity,
+            &AttackAnimationState,
             Option<&SpriteAnimationSheets>,
         ),
         With<Player>,
@@ -371,34 +385,37 @@ pub fn update_character_animation_state(
 ) {
     let default_runtime = AnimationRuntimeConfig::default();
     let runtime = runtime_config.as_deref().unwrap_or(&default_runtime);
-    let (has_move_input, has_attack_input) = game_input
+    let has_move_input = game_input
         .as_deref()
-        .map(|input| {
-            (
-                input.move_left || input.move_right,
-                input.action1_pressed_this_frame,
-            )
-        })
-        .unwrap_or((false, false));
+        .map(|input| input.move_left || input.move_right)
+        .unwrap_or(false);
 
-    for (mut animation, mut sprite, player_state, velocity, sprite_sheets) in query.iter_mut() {
+    for (mut animation, mut sprite, player_state, velocity, attack_state, sprite_sheets) in
+        query.iter_mut()
+    {
+        let attack_retriggered = attack_state.is_active()
+            && attack_state.trigger_serial != animation.last_attack_trigger_serial;
         let new_animation = resolve_target_animation(
             &mut animation,
             player_state,
             velocity,
-            has_attack_input,
+            attack_state.is_active(),
             has_move_input,
             runtime,
         );
 
         let clip_blocks_switch = current_clip_is_blocking(&animation);
-        if clip_blocks_switch && new_animation != animation.current_animation {
+        if clip_blocks_switch && new_animation != animation.current_animation && !attack_retriggered
+        {
             continue;
         }
 
-        if animation.current_animation != new_animation {
+        if animation.current_animation != new_animation || attack_retriggered {
             apply_animation_change(&mut animation, new_animation.clone(), velocity.x.abs());
             apply_animation_sheet(&mut sprite, sprite_sheets, &new_animation);
+            if new_animation == AnimationType::Attacking {
+                animation.last_attack_trigger_serial = attack_state.trigger_serial;
+            }
 
             if let Some(new_clip) = animation.animations.get(&new_animation) {
                 if let Some(first_atlas_idx) = new_clip.frames.first().copied() {
@@ -423,6 +440,7 @@ pub fn update_character_animation_state(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::animation_data::AnimationClipData;
 
     #[test]
     fn test_frame_guidelines_are_monotonic() {
@@ -459,5 +477,66 @@ mod tests {
         assert_eq!(frame, 1);
         frame = next_frame_index(frame, 4, PlaybackMode::PingPong, &mut direction);
         assert_eq!(frame, 0);
+    }
+
+    #[test]
+    fn test_attack_retrigger_resets_sprite_animation_from_first_frame() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, update_character_animation_state);
+
+        let mut attack_state = AttackAnimationState::default();
+        attack_state.trigger(0.30);
+        attack_state.trigger(0.30);
+
+        let mut animations = HashMap::new();
+        animations.insert(
+            AnimationType::Idle,
+            AnimationClipData {
+                frames: vec![0],
+                frame_duration: 0.1,
+                playback_mode: PlaybackMode::Loop,
+                speed_scale_by_velocity: false,
+                speed_reference: 150.0,
+                min_frame_duration: 0.05,
+            },
+        );
+        animations.insert(
+            AnimationType::Attacking,
+            AnimationClipData {
+                frames: vec![0, 1, 2, 3],
+                frame_duration: 0.07,
+                playback_mode: PlaybackMode::Once,
+                speed_scale_by_velocity: false,
+                speed_reference: 150.0,
+                min_frame_duration: 0.05,
+            },
+        );
+
+        app.world_mut().spawn((
+            Player,
+            Sprite::default(),
+            PlayerState::default(),
+            Velocity::default(),
+            attack_state,
+            SpriteAnimation {
+                current_animation: AnimationType::Attacking,
+                frame_timer: Timer::from_seconds(0.07, TimerMode::Repeating),
+                current_frame: 2,
+                frame_direction: 1,
+                last_attack_trigger_serial: 1,
+                previous_grounded: true,
+                apply_immediate_frame: false,
+                animations,
+            },
+        ));
+
+        app.update();
+
+        let mut query = app.world_mut().query::<&SpriteAnimation>();
+        let animation = query.single(app.world()).expect("sprite animation");
+        assert_eq!(animation.current_animation, AnimationType::Attacking);
+        assert_eq!(animation.current_frame, 0);
+        assert_eq!(animation.last_attack_trigger_serial, 2);
     }
 }

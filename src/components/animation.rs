@@ -71,6 +71,27 @@ pub enum SpriteSheetKind {
     Attacking,
 }
 
+#[derive(Component, Debug, Clone, Default)]
+pub struct AttackAnimationState {
+    pub remaining: f32,
+    pub trigger_serial: u32,
+}
+
+impl AttackAnimationState {
+    pub fn trigger(&mut self, duration_secs: f32) {
+        self.remaining = duration_secs.max(0.0);
+        self.trigger_serial = self.trigger_serial.wrapping_add(1);
+    }
+
+    pub fn tick(&mut self, delta_secs: f32) {
+        self.remaining = (self.remaining - delta_secs).max(0.0);
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.remaining > 0.0
+    }
+}
+
 #[derive(Component, Debug, Clone)]
 pub struct SpriteAnimationSheets {
     pub core_texture: Handle<Image>,

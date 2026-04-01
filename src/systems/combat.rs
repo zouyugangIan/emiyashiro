@@ -42,6 +42,8 @@ struct ProjectileConfig {
 struct KnifeAttackPreset {
     damage: f32,
     cooldown: f32,
+    windup_secs: f32,
+    animation_duration_secs: f32,
     lifetime: f32,
     hitbox_size: Vec2,
     x_offset: f32,
@@ -78,6 +80,16 @@ pub struct KnifeSlash {
     pub knockback_x: f32,
     pub knockback_y: f32,
     pub hit_stop_secs: f32,
+}
+
+#[derive(Component, Debug)]
+pub struct PendingKnifeAttack {
+    owner: Entity,
+    timer: Timer,
+    combo_step: u8,
+    facing: f32,
+    is_crouching: bool,
+    overedge_enabled: bool,
 }
 
 #[derive(Component, Debug, Clone)]
@@ -186,42 +198,48 @@ fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
     let base = match step {
         1 => KnifeAttackPreset {
             damage: 6.0,
-            cooldown: 0.20,
+            cooldown: 0.28,
+            windup_secs: 0.11,
+            animation_duration_secs: 0.30,
             lifetime: 0.09,
             hitbox_size: Vec2::new(72.0, 34.0),
             x_offset: 58.0,
             y_offset: 12.0,
             crouch_y_offset: -8.0,
             slash_render_size: Vec2::new(66.0, 16.0),
-            slash_color: Color::srgba(0.96, 0.96, 1.0, 0.42),
+            slash_color: Color::srgba(0.96, 0.96, 1.0, 0.08),
             knockback_x: 90.0,
             knockback_y: 10.0,
             hit_stop_secs: 0.018,
         },
         2 => KnifeAttackPreset {
             damage: 8.0,
-            cooldown: 0.24,
+            cooldown: 0.26,
+            windup_secs: 0.10,
+            animation_duration_secs: 0.29,
             lifetime: 0.10,
             hitbox_size: Vec2::new(82.0, 38.0),
             x_offset: 66.0,
             y_offset: 14.0,
             crouch_y_offset: -6.0,
             slash_render_size: Vec2::new(74.0, 18.0),
-            slash_color: Color::srgba(0.98, 0.88, 0.84, 0.48),
+            slash_color: Color::srgba(0.98, 0.88, 0.84, 0.10),
             knockback_x: 130.0,
             knockback_y: 20.0,
             hit_stop_secs: 0.024,
         },
         _ => KnifeAttackPreset {
             damage: 12.0,
-            cooldown: 0.32,
+            cooldown: 0.30,
+            windup_secs: 0.08,
+            animation_duration_secs: 0.28,
             lifetime: 0.12,
             hitbox_size: Vec2::new(96.0, 44.0),
             x_offset: 74.0,
             y_offset: 16.0,
             crouch_y_offset: -4.0,
             slash_render_size: Vec2::new(88.0, 22.0),
-            slash_color: Color::srgba(1.0, 0.78, 0.65, 0.54),
+            slash_color: Color::srgba(1.0, 0.78, 0.65, 0.12),
             knockback_x: 220.0,
             knockback_y: 35.0,
             hit_stop_secs: 0.035,
@@ -232,13 +250,15 @@ fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
         KnifeAttackPreset {
             damage: base.damage * 1.25,
             cooldown: (base.cooldown - 0.03).max(0.14),
+            windup_secs: (base.windup_secs - 0.01).max(0.04),
+            animation_duration_secs: (base.animation_duration_secs - 0.02).max(0.18),
             lifetime: base.lifetime,
             hitbox_size: base.hitbox_size * Vec2::new(1.12, 1.06),
             x_offset: base.x_offset + 6.0,
             y_offset: base.y_offset + 2.0,
             crouch_y_offset: base.crouch_y_offset,
             slash_render_size: base.slash_render_size * Vec2::new(1.1, 1.1),
-            slash_color: Color::srgba(1.0, 0.58, 0.48, 0.62),
+            slash_color: Color::srgba(1.0, 0.58, 0.48, 0.16),
             knockback_x: base.knockback_x * 1.25,
             knockback_y: base.knockback_y * 1.2,
             hit_stop_secs: base.hit_stop_secs + 0.008,
@@ -322,39 +342,15 @@ fn spawn_projectile_with_style(
         });
 }
 
-fn perform_knife_attack(
+fn spawn_knife_slash(
     commands: &mut Commands,
-    runtime: &mut KnifeComboRuntime,
     player_transform: &Transform,
-    player_velocity: &Velocity,
     player_state: &PlayerState,
-    facing_sign: f32,
-    knife_tuning: &crate::resources::KnifeCombatTuning,
+    combo_step: u8,
+    facing: f32,
     overedge_enabled: bool,
 ) {
-    let max_combo_steps = knife_tuning.max_combo_steps.max(1);
-    let combo_step = if runtime.combo_reset_timer <= 0.0 || runtime.combo_step >= max_combo_steps {
-        1
-    } else {
-        runtime.combo_step + 1
-    };
-    runtime.combo_step = combo_step;
-    runtime.combo_reset_timer = knife_tuning.combo_reset_window_secs.max(0.1);
-    runtime.queued_attack = false;
-
     let preset = knife_attack_preset(combo_step, overedge_enabled);
-    runtime.cooldown = preset.cooldown;
-
-    let facing = if facing_sign < 0.0 {
-        -1.0
-    } else if facing_sign > 0.0 {
-        1.0
-    } else if player_velocity.x < -5.0 {
-        -1.0
-    } else {
-        1.0
-    };
-
     let y_offset = if player_state.is_crouching {
         preset.crouch_y_offset
     } else {
@@ -392,10 +388,56 @@ fn perform_knife_attack(
     ));
 }
 
+fn perform_knife_attack(
+    commands: &mut Commands,
+    runtime: &mut KnifeComboRuntime,
+    player_entity: Entity,
+    player_velocity: &Velocity,
+    player_state: &PlayerState,
+    facing_sign: f32,
+    knife_tuning: &crate::resources::KnifeCombatTuning,
+    overedge_enabled: bool,
+    attack_animation: &mut AttackAnimationState,
+) {
+    let max_combo_steps = knife_tuning.max_combo_steps.max(1);
+    let combo_step = if runtime.combo_reset_timer <= 0.0 || runtime.combo_step >= max_combo_steps {
+        1
+    } else {
+        runtime.combo_step + 1
+    };
+    runtime.combo_step = combo_step;
+    runtime.combo_reset_timer = knife_tuning.combo_reset_window_secs.max(0.1);
+    runtime.queued_attack = false;
+
+    let preset = knife_attack_preset(combo_step, overedge_enabled);
+    runtime.cooldown = preset.cooldown;
+    attack_animation.trigger(preset.animation_duration_secs);
+
+    let facing = if facing_sign < 0.0 {
+        -1.0
+    } else if facing_sign > 0.0 {
+        1.0
+    } else if player_velocity.x < -5.0 {
+        -1.0
+    } else {
+        1.0
+    };
+
+    commands.spawn((PendingKnifeAttack {
+        owner: player_entity,
+        timer: Timer::from_seconds(preset.windup_secs, TimerMode::Once),
+        combo_step,
+        facing,
+        is_crouching: player_state.is_crouching,
+        overedge_enabled,
+    },));
+}
+
 /// 玩家发射投射物。
 pub fn player_shoot_projectile(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    game_input: Option<Res<crate::systems::input::GameInput>>,
     player_query: Query<(&Transform, Option<&FacingDirection>), With<Player>>,
     mut cooldown: Local<f32>,
     time: Res<Time>,
@@ -403,7 +445,13 @@ pub fn player_shoot_projectile(
 ) {
     *cooldown -= time.delta_secs();
 
-    if keyboard.just_pressed(KeyCode::KeyJ)
+    let projectile_pressed = game_input
+        .as_deref()
+        .map(|input| input.action2_pressed_this_frame)
+        .unwrap_or(false)
+        || keyboard.just_pressed(KeyCode::KeyX);
+
+    if projectile_pressed
         && *cooldown <= 0.0
         && let Some((player_transform, facing)) = player_query.iter().next()
     {
@@ -432,12 +480,14 @@ pub fn player_shoot_projectile(
 pub fn player_knife_attack(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
-    player_query: Query<
+    game_input: Option<Res<crate::systems::input::GameInput>>,
+    mut player_query: Query<
         (
-            &Transform,
+            Entity,
             &Velocity,
             &PlayerState,
             Option<&FacingDirection>,
+            &mut AttackAnimationState,
         ),
         With<Player>,
     >,
@@ -457,12 +507,21 @@ pub fn player_knife_attack(
         runtime.queued_attack = false;
     }
 
-    let knife_pressed =
-        keyboard.just_pressed(KeyCode::KeyL) || keyboard.just_pressed(KeyCode::KeyU);
+    let knife_pressed = game_input
+        .as_deref()
+        .map(|input| input.action1_pressed_this_frame)
+        .unwrap_or(false)
+        || keyboard.just_pressed(KeyCode::KeyL)
+        || keyboard.just_pressed(KeyCode::KeyU);
     if knife_pressed {
         if runtime.cooldown <= 0.0 {
-            if let Some((player_transform, player_velocity, player_state, facing)) =
-                player_query.iter().next()
+            if let Some((
+                player_entity,
+                player_velocity,
+                player_state,
+                facing,
+                mut attack_animation,
+            )) = player_query.iter_mut().next()
             {
                 let overedge_enabled = shroud_query
                     .iter()
@@ -473,12 +532,13 @@ pub fn player_knife_attack(
                 perform_knife_attack(
                     &mut commands,
                     &mut runtime,
-                    player_transform,
+                    player_entity,
                     player_velocity,
                     player_state,
                     facing_sign,
                     knife_tuning,
                     overedge_enabled,
+                    &mut attack_animation,
                 );
             }
             return;
@@ -491,8 +551,8 @@ pub fn player_knife_attack(
 
     if runtime.queued_attack
         && runtime.cooldown <= 0.0
-        && let Some((player_transform, player_velocity, player_state, facing)) =
-            player_query.iter().next()
+        && let Some((player_entity, player_velocity, player_state, facing, mut attack_animation)) =
+            player_query.iter_mut().next()
     {
         let overedge_enabled = shroud_query
             .iter()
@@ -503,13 +563,47 @@ pub fn player_knife_attack(
         perform_knife_attack(
             &mut commands,
             &mut runtime,
-            player_transform,
+            player_entity,
             player_velocity,
             player_state,
             facing_sign,
             knife_tuning,
             overedge_enabled,
+            &mut attack_animation,
         );
+    }
+}
+
+pub fn resolve_pending_knife_attacks(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut pending_query: Query<(Entity, &mut PendingKnifeAttack)>,
+    player_query: Query<&Transform, With<Player>>,
+) {
+    for (pending_entity, mut pending) in pending_query.iter_mut() {
+        pending.timer.tick(time.delta());
+        if !pending.timer.just_finished() && !pending.timer.is_finished() {
+            continue;
+        }
+
+        let Ok(player_transform) = player_query.get(pending.owner) else {
+            commands.entity(pending_entity).despawn();
+            continue;
+        };
+
+        let player_state = PlayerState {
+            is_grounded: true,
+            is_crouching: pending.is_crouching,
+        };
+        spawn_knife_slash(
+            &mut commands,
+            player_transform,
+            &player_state,
+            pending.combo_step,
+            pending.facing,
+            pending.overedge_enabled,
+        );
+        commands.entity(pending_entity).despawn();
     }
 }
 
