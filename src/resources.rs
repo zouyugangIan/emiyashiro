@@ -1,4 +1,4 @@
-use crate::components::SpriteAnimationSheets;
+use crate::{asset_paths, components::SpriteAnimationSheets};
 use bevy::prelude::*;
 use std::io::ErrorKind;
 
@@ -62,22 +62,12 @@ impl GameConfig {
 }
 
 /// Gameplay tuning loaded from disk for faster iteration and balancing.
-#[derive(Resource, Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Resource, Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct GameplayTuning {
     pub knife: KnifeCombatTuning,
     pub enemies: EnemyDirectorTuning,
     pub camera_feedback: CameraFeedbackTuning,
-}
-
-impl Default for GameplayTuning {
-    fn default() -> Self {
-        Self {
-            knife: KnifeCombatTuning::default(),
-            enemies: EnemyDirectorTuning::default(),
-            camera_feedback: CameraFeedbackTuning::default(),
-        }
-    }
 }
 
 impl GameplayTuning {
@@ -327,10 +317,14 @@ pub struct GameAssets {
     pub shirou_spritesheet: Option<Handle<Image>>,
     pub shirou_spritesheet_run: Option<Handle<Image>>,
     pub shirou_spritesheet_attack: Option<Handle<Image>>,
+    pub shirou_spritesheet_overedge_light_attack: Option<Handle<Image>>,
+    pub shirou_spritesheet_overedge_heavy_attack: Option<Handle<Image>>,
     pub sakura_spritesheet: Option<Handle<Image>>,
     pub shirou_atlas: Option<Handle<TextureAtlasLayout>>,
     pub shirou_atlas_run: Option<Handle<TextureAtlasLayout>>,
     pub shirou_atlas_attack: Option<Handle<TextureAtlasLayout>>,
+    pub shirou_atlas_overedge_light_attack: Option<Handle<TextureAtlasLayout>>,
+    pub shirou_atlas_overedge_heavy_attack: Option<Handle<TextureAtlasLayout>>,
     pub sakura_atlas: Option<Handle<TextureAtlasLayout>>,
     // 音效资源
     pub jump_sound: Handle<AudioSource>,
@@ -402,6 +396,28 @@ impl GameAssets {
                 .shirou_atlas_attack
                 .clone()
                 .unwrap_or_else(|| core_layout.clone()),
+            overedge_light_attacking_texture: self.shirou_spritesheet_overedge_light_attack.clone(),
+            overedge_light_attacking_layout: self.shirou_atlas_overedge_light_attack.clone(),
+            overedge_light_attacking_frame_count: if self
+                .shirou_spritesheet_overedge_light_attack
+                .is_some()
+                && self.shirou_atlas_overedge_light_attack.is_some()
+            {
+                asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT
+            } else {
+                0
+            },
+            overedge_heavy_attacking_texture: self.shirou_spritesheet_overedge_heavy_attack.clone(),
+            overedge_heavy_attacking_layout: self.shirou_atlas_overedge_heavy_attack.clone(),
+            overedge_heavy_attacking_frame_count: if self
+                .shirou_spritesheet_overedge_heavy_attack
+                .is_some()
+                && self.shirou_atlas_overedge_heavy_attack.is_some()
+            {
+                asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT
+            } else {
+                0
+            },
         })
     }
 }

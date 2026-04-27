@@ -99,10 +99,14 @@ fn setup_game_resources(
         shirou_spritesheet: None,
         shirou_spritesheet_run: None,
         shirou_spritesheet_attack: None,
+        shirou_spritesheet_overedge_light_attack: None,
+        shirou_spritesheet_overedge_heavy_attack: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
         shirou_atlas_run: None,
         shirou_atlas_attack: None,
+        shirou_atlas_overedge_light_attack: None,
+        shirou_atlas_overedge_heavy_attack: None,
         sakura_atlas: None,
         jump_sound: asset_server.load(asset_paths::SOUND_JUMP),
         land_sound: asset_server.load(asset_paths::SOUND_LAND),
@@ -116,18 +120,42 @@ fn setup_game_resources(
     let core_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_CORE_SHEET);
     let run_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_RUN_SHEET);
     let attack_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_SHEET);
+    let overedge_light_attack_texture_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SHEET);
+    let overedge_heavy_attack_texture_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_OVEREDGE_HEAVY_ATTACK_SHEET);
 
     let core_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 2, None, None);
     let run_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 5, 1, None, None);
     let attack_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 1, None, None);
+    let overedge_light_attack_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(256, 256),
+        asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT as u32,
+        1,
+        None,
+        None,
+    );
+    let overedge_heavy_attack_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(256, 256),
+        asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT as u32,
+        1,
+        None,
+        None,
+    );
 
     let mut assets = game_assets;
     assets.shirou_spritesheet = Some(core_texture_handle);
     assets.shirou_spritesheet_run = Some(run_texture_handle);
     assets.shirou_spritesheet_attack = Some(attack_texture_handle);
+    assets.shirou_spritesheet_overedge_light_attack = Some(overedge_light_attack_texture_handle);
+    assets.shirou_spritesheet_overedge_heavy_attack = Some(overedge_heavy_attack_texture_handle);
     assets.shirou_atlas = Some(texture_atlases.add(core_layout));
     assets.shirou_atlas_run = Some(texture_atlases.add(run_layout));
     assets.shirou_atlas_attack = Some(texture_atlases.add(attack_layout));
+    assets.shirou_atlas_overedge_light_attack =
+        Some(texture_atlases.add(overedge_light_attack_layout));
+    assets.shirou_atlas_overedge_heavy_attack =
+        Some(texture_atlases.add(overedge_heavy_attack_layout));
 
     commands.insert_resource(assets);
 }

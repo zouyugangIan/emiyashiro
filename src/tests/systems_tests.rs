@@ -1396,7 +1396,7 @@ mod tests {
             "queued combo should add a second slash after cooldown recovery"
         );
         assert!(
-            slash_steps.iter().any(|step| *step == 2),
+            slash_steps.contains(&2),
             "queued slash should enter combo step 2"
         );
     }
@@ -1483,6 +1483,164 @@ mod tests {
         assert_eq!(
             slash_count_after_windup, 1,
             "melee hitbox should appear once the swing reaches its active frames"
+        );
+    }
+
+    #[test]
+    fn test_overedge_j_attack_cycles_three_light_punches() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<crate::systems::input::GameInput>()
+            .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+        let mut shroud = ShroudState::default();
+        shroud.enable_release();
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                shroud,
+            ))
+            .id();
+
+        let press_light = |app: &mut App| {
+            {
+                let mut input = app
+                    .world_mut()
+                    .resource_mut::<crate::systems::input::GameInput>();
+                input.action1_pressed_this_frame = true;
+                input.action1 = true;
+            }
+            app.update();
+
+            {
+                let mut input = app
+                    .world_mut()
+                    .resource_mut::<crate::systems::input::GameInput>();
+                input.action1_pressed_this_frame = false;
+                input.action1 = false;
+            }
+        };
+        let advance_past_light_cooldown = |app: &mut App| {
+            for _ in 0..18 {
+                app.update();
+            }
+        };
+
+        press_light(&mut app);
+        let attack_state = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("first attack animation state");
+        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeLight1);
+
+        advance_past_light_cooldown(&mut app);
+        press_light(&mut app);
+        let attack_state = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("second attack animation state");
+        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeLight2);
+
+        advance_past_light_cooldown(&mut app);
+        press_light(&mut app);
+        let attack_state = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("third attack animation state");
+        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeLight3);
+        assert!(
+            attack_state.remaining
+                >= 3.0 * crate::asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS,
+            "each J press should play one complete punch segment"
+        );
+    }
+
+    #[test]
+    fn test_overedge_k_attack_uses_heavy_animation_style() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+        let mut shroud = ShroudState::default();
+        shroud.enable_release();
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                shroud,
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyK);
+        app.update();
+
+        let attack_state = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("attack animation state");
+        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeHeavy);
+        assert!(
+            attack_state.remaining
+                >= crate::asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT as f32
+                    * crate::asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS
+                    - 0.001,
+            "K should keep the 2+3 overedge animation active long enough to play"
+        );
+    }
+
+    #[test]
+    fn test_overedge_disables_player_projectile_casting() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, crate::systems::combat::player_shoot_projectile);
+
+        let mut shroud = ShroudState::default();
+        shroud.enable_release();
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+            FacingDirection::Right,
+            shroud,
+        ));
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyX);
+        app.update();
+
+        let projectile_count = {
+            let mut query = app.world_mut().query::<&Projectile>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            projectile_count, 0,
+            "overedge form should not throw magic/projectile attacks"
         );
     }
 
@@ -1975,12 +2133,42 @@ mod tests {
 
         let player = app
             .world_mut()
-            .spawn((Player, Health::new(20.0), ShroudState::default()))
+            .spawn((
+                Player,
+                Health::new(20.0),
+                ShroudState::default(),
+                AttackAnimationState::default(),
+            ))
             .id();
 
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::KeyK);
+            .press(KeyCode::KeyV);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .clear();
+
+        let entity_ref = app.world().entity(player);
+        let health = entity_ref.get::<Health>().expect("health");
+        let shroud = entity_ref.get::<ShroudState>().expect("shroud");
+        let attack_state = entity_ref
+            .get::<AttackAnimationState>()
+            .expect("attack animation state");
+        assert_eq!(
+            health.current, 15.0,
+            "activation should cost HP through damage events"
+        );
+        assert!(shroud.is_released, "V should enable release state");
+        assert_eq!(
+            attack_state.style,
+            AttackAnimationStyle::OveredgeRelease,
+            "V should play the Overedge release startup animation"
+        );
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyV);
         app.update();
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
@@ -1990,10 +2178,13 @@ mod tests {
         let health = entity_ref.get::<Health>().expect("health");
         let shroud = entity_ref.get::<ShroudState>().expect("shroud");
         assert_eq!(
-            health.current, 18.0,
-            "toggle should cost HP through damage events"
+            health.current, 15.0,
+            "pressing V while active should not repeatedly cost HP"
         );
-        assert!(shroud.is_released, "toggle should enable release state");
+        assert!(
+            shroud.is_released,
+            "repeated V should keep release state active"
+        );
 
         let shroud_after = {
             let mut entity = app.world_mut().entity_mut(player);

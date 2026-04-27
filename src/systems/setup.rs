@@ -49,10 +49,14 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         shirou_spritesheet: None,
         shirou_spritesheet_run: None,
         shirou_spritesheet_attack: None,
+        shirou_spritesheet_overedge_light_attack: None,
+        shirou_spritesheet_overedge_heavy_attack: None,
         sakura_spritesheet: None,
         shirou_atlas: None,
         shirou_atlas_run: None,
         shirou_atlas_attack: None,
+        shirou_atlas_overedge_light_attack: None,
+        shirou_atlas_overedge_heavy_attack: None,
         sakura_atlas: None,
 
         // 音效资源

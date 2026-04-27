@@ -1,37 +1,54 @@
 use bevy::prelude::*;
 
 use crate::{
-    components::{Health, Player, shirou::ShroudState},
+    asset_paths,
+    components::{AttackAnimationState, AttackAnimationStyle, Health, Player, shirou::ShroudState},
     events::{DamageEvent, DamageSource},
 };
 
-/// 处理圣骸布开关输入。
+/// 处理绯红圣骸布开启输入。
 pub fn handle_shroud_input(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(Entity, &mut ShroudState, &Health), With<Player>>,
+    mut query: Query<
+        (
+            Entity,
+            &mut ShroudState,
+            &Health,
+            Option<&mut AttackAnimationState>,
+        ),
+        With<Player>,
+    >,
     mut damage_writer: MessageWriter<DamageEvent>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyK) {
-        for (player_entity, mut shroud, health) in query.iter_mut() {
+    if keyboard.just_pressed(KeyCode::KeyV) {
+        for (player_entity, mut shroud, health, attack_animation) in query.iter_mut() {
             if health.is_dead() {
                 continue;
             }
 
-            let released = shroud.toggle();
+            if !shroud.try_enable_release() {
+                info!("Shroud activation ignored: Overedge mode is already active");
+                continue;
+            }
+
             damage_writer.write(DamageEvent {
                 target: player_entity,
-                amount: shroud.toggle_health_cost,
+                amount: shroud.activation_health_cost,
                 source: DamageSource::ShroudDrain,
             });
 
-            if released {
-                info!(
-                    "Shroud released: Overedge mode activated for {:.1}s",
-                    ShroudState::OVEREDGE_DURATION_SECS
-                );
-            } else {
-                info!("Shroud sealed: normal mode restored");
+            if let Some(mut attack_animation) = attack_animation {
+                let release_duration = (asset_paths::HF_SHIROU_OVEREDGE_RELEASE_FRAME_COUNT as f32
+                    + 1.0)
+                    * asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS;
+                attack_animation
+                    .trigger_with_style(release_duration, AttackAnimationStyle::OveredgeRelease);
             }
+
+            info!(
+                "Shroud released: Crimson Overedge mode activated for {:.1}s",
+                ShroudState::OVEREDGE_DURATION_SECS
+            );
         }
     }
 }

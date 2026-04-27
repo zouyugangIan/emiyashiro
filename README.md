@@ -35,10 +35,10 @@ export DATABASE_URL="postgresql://username:password@localhost/shirou_runner"
 - `A/D` 或 `←/→`: 移动
 - `W` 或 `Space`: 跳跃
 - `S` 或 `↓`: 蹲下
-- `J` 或 `Z`: 默认平A，近战挥刀
+- `J/Z/L/U`: 默认平A，近战挥刀
 - `X`: 投影攻击（远程）
-- `L` 或 `U`: 近战挥刀兼容按键
-- `K`: 圣骸布开关
+- `V`: 绯红圣骸布开启，持续 10 秒并消耗 5 HP
+- 绯红圣骸布期间：`V` 播放解放起势，`J/Z/L/U` 逐次打出三段轻攻击模组，`K` 使用重攻击模组，`X` 远程攻击禁用
 - `Esc`: 暂停
 - `R`: GameOver 后复活
 - `M`: GameOver 返回主菜单

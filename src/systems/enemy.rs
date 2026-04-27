@@ -242,6 +242,7 @@ fn spawn_enemy_heroic_spirit(
 }
 
 /// 生成敌人（保留原系统名以兼容已有调度）
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_mushroom_enemies(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,

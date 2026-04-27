@@ -59,16 +59,11 @@ impl Default for PlayerState {
 }
 
 /// 玩家朝向状态
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FacingDirection {
     Left,
+    #[default]
     Right,
-}
-
-impl Default for FacingDirection {
-    fn default() -> Self {
-        Self::Right
-    }
 }
 
 impl FacingDirection {

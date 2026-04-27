@@ -71,16 +71,33 @@ pub enum SpriteSheetKind {
     Attacking,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AttackAnimationStyle {
+    #[default]
+    Normal,
+    OveredgeRelease,
+    OveredgeLight1,
+    OveredgeLight2,
+    OveredgeLight3,
+    OveredgeHeavy,
+}
+
 #[derive(Component, Debug, Clone, Default)]
 pub struct AttackAnimationState {
     pub remaining: f32,
     pub trigger_serial: u32,
+    pub style: AttackAnimationStyle,
 }
 
 impl AttackAnimationState {
     pub fn trigger(&mut self, duration_secs: f32) {
+        self.trigger_with_style(duration_secs, AttackAnimationStyle::Normal);
+    }
+
+    pub fn trigger_with_style(&mut self, duration_secs: f32, style: AttackAnimationStyle) {
         self.remaining = duration_secs.max(0.0);
         self.trigger_serial = self.trigger_serial.wrapping_add(1);
+        self.style = style;
     }
 
     pub fn tick(&mut self, delta_secs: f32) {
@@ -92,6 +109,17 @@ impl AttackAnimationState {
     }
 }
 
+impl AttackAnimationStyle {
+    pub fn is_overedge_light(self) -> bool {
+        matches!(
+            self,
+            AttackAnimationStyle::OveredgeLight1
+                | AttackAnimationStyle::OveredgeLight2
+                | AttackAnimationStyle::OveredgeLight3
+        )
+    }
+}
+
 #[derive(Component, Debug, Clone)]
 pub struct SpriteAnimationSheets {
     pub core_texture: Handle<Image>,
@@ -100,6 +128,12 @@ pub struct SpriteAnimationSheets {
     pub running_layout: Handle<TextureAtlasLayout>,
     pub attacking_texture: Handle<Image>,
     pub attacking_layout: Handle<TextureAtlasLayout>,
+    pub overedge_light_attacking_texture: Option<Handle<Image>>,
+    pub overedge_light_attacking_layout: Option<Handle<TextureAtlasLayout>>,
+    pub overedge_light_attacking_frame_count: usize,
+    pub overedge_heavy_attacking_texture: Option<Handle<Image>>,
+    pub overedge_heavy_attacking_layout: Option<Handle<TextureAtlasLayout>>,
+    pub overedge_heavy_attacking_frame_count: usize,
 }
 
 impl SpriteAnimationSheets {
@@ -111,6 +145,63 @@ impl SpriteAnimationSheets {
             SpriteSheetKind::Core => (&self.core_texture, &self.core_layout),
             SpriteSheetKind::Running => (&self.running_texture, &self.running_layout),
             SpriteSheetKind::Attacking => (&self.attacking_texture, &self.attacking_layout),
+        }
+    }
+
+    pub fn select_sheet_for_attack_style(
+        &self,
+        animation_type: &AnimationType,
+        attack_style: AttackAnimationStyle,
+    ) -> (&Handle<Image>, &Handle<TextureAtlasLayout>) {
+        if *animation_type == AnimationType::Attacking {
+            match attack_style {
+                AttackAnimationStyle::OveredgeRelease
+                | AttackAnimationStyle::OveredgeLight1
+                | AttackAnimationStyle::OveredgeLight2
+                | AttackAnimationStyle::OveredgeLight3 => {
+                    if let (Some(texture), Some(layout)) = (
+                        self.overedge_light_attacking_texture.as_ref(),
+                        self.overedge_light_attacking_layout.as_ref(),
+                    ) {
+                        return (texture, layout);
+                    }
+                }
+                AttackAnimationStyle::OveredgeHeavy => {
+                    if let (Some(texture), Some(layout)) = (
+                        self.overedge_heavy_attacking_texture.as_ref(),
+                        self.overedge_heavy_attacking_layout.as_ref(),
+                    ) {
+                        return (texture, layout);
+                    }
+                }
+                AttackAnimationStyle::Normal => {}
+            }
+        }
+
+        self.select_sheet(animation_type)
+    }
+
+    pub fn overedge_attacking_frame_count(
+        &self,
+        attack_style: AttackAnimationStyle,
+    ) -> Option<usize> {
+        match attack_style {
+            AttackAnimationStyle::OveredgeRelease
+            | AttackAnimationStyle::OveredgeLight1
+            | AttackAnimationStyle::OveredgeLight2
+            | AttackAnimationStyle::OveredgeLight3 => {
+                (self.overedge_light_attacking_texture.is_some()
+                    && self.overedge_light_attacking_layout.is_some()
+                    && self.overedge_light_attacking_frame_count > 0)
+                    .then_some(self.overedge_light_attacking_frame_count)
+            }
+            AttackAnimationStyle::OveredgeHeavy => {
+                (self.overedge_heavy_attacking_texture.is_some()
+                    && self.overedge_heavy_attacking_layout.is_some()
+                    && self.overedge_heavy_attacking_frame_count > 0)
+                    .then_some(self.overedge_heavy_attacking_frame_count)
+            }
+            AttackAnimationStyle::Normal => None,
         }
     }
 }

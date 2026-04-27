@@ -16,16 +16,15 @@ fn resolve_asset_dir() -> PathBuf {
         return PathBuf::from(v).join("assets");
     }
     // 4) 最后回退（从 target/debug 启动时尝试回到项目根）
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(root) = exe
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(root) = exe
             .parent()
             .and_then(|p| p.parent())
             .and_then(|p| p.parent())
-        {
-            let candidate = root.join("assets");
-            if candidate.exists() {
-                return candidate;
-            }
+    {
+        let candidate = root.join("assets");
+        if candidate.exists() {
+            return candidate;
         }
     }
     PathBuf::from("assets")

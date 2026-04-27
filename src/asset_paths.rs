@@ -176,6 +176,15 @@ pub const IMAGE_HF_SHIROU_SPRITESHEET: &str =
 pub const IMAGE_HF_SHIROU_CORE_SHEET: &str = "images/characters/hf_shirou_core_sheet.png";
 pub const IMAGE_HF_SHIROU_RUN_SHEET: &str = "images/characters/hf_shirou_run_sheet.png";
 pub const IMAGE_HF_SHIROU_ATTACK_SHEET: &str = "images/characters/hf_shirou_attack_sheet.png";
+pub const IMAGE_HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SHEET: &str =
+    "images/characters/hf_shirou_overedge_light_combo_sheet.png";
+pub const IMAGE_HF_SHIROU_OVEREDGE_HEAVY_ATTACK_SHEET: &str =
+    "images/characters/hf_shirou_overedge_heavy_combo_sheet.png";
+pub const HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT: usize = 11;
+pub const HF_SHIROU_OVEREDGE_RELEASE_FRAME_COUNT: usize = 3;
+pub const HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SEGMENT_FRAME_COUNT: usize = 3;
+pub const HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT: usize = 17;
+pub const HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS: f32 = 0.07;
 
 // CLOUD ASSETS (背景云彩图片)
 pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud01.png";

@@ -1,6 +1,7 @@
 //! 战斗系统 - 攻击、投射物、命中与伤害结算
 
 use crate::{
+    asset_paths,
     components::*,
     events::{CameraImpulseEvent, DamageEvent, DamageSource},
     resources::GameplayTuning,
@@ -61,7 +62,7 @@ pub struct KnifeComboRuntime {
     cooldown: f32,
     combo_step: u8,
     combo_reset_timer: f32,
-    queued_attack: bool,
+    queued_attack: Option<AttackAnimationStyle>,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
@@ -90,6 +91,25 @@ pub struct PendingKnifeAttack {
     facing: f32,
     is_crouching: bool,
     overedge_enabled: bool,
+}
+
+type PlayerKnifeAttackItem<'a> = (
+    Entity,
+    &'a Velocity,
+    &'a PlayerState,
+    Option<&'a FacingDirection>,
+    &'a ShroudState,
+    &'a mut AttackAnimationState,
+);
+
+struct KnifeAttackRequest<'a> {
+    player_entity: Entity,
+    player_velocity: &'a Velocity,
+    player_state: &'a PlayerState,
+    facing_sign: f32,
+    knife_tuning: &'a crate::resources::KnifeCombatTuning,
+    overedge_enabled: bool,
+    requested_style: AttackAnimationStyle,
 }
 
 #[derive(Component, Debug, Clone)]
@@ -268,6 +288,29 @@ fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
     }
 }
 
+fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
+    let frame_count = match style {
+        AttackAnimationStyle::OveredgeRelease => {
+            asset_paths::HF_SHIROU_OVEREDGE_RELEASE_FRAME_COUNT
+        }
+        AttackAnimationStyle::OveredgeLight1
+        | AttackAnimationStyle::OveredgeLight2
+        | AttackAnimationStyle::OveredgeLight3 => {
+            asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SEGMENT_FRAME_COUNT
+        }
+        AttackAnimationStyle::OveredgeHeavy => {
+            asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT
+        }
+        AttackAnimationStyle::Normal => return None,
+    };
+
+    Some((frame_count as f32 + 1.0) * asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS)
+}
+
+fn attack_cooldown_floor(style: AttackAnimationStyle) -> f32 {
+    overedge_animation_duration(style).unwrap_or(0.0)
+}
+
 fn spawn_projectile_with_style(
     commands: &mut Commands,
     spawn_position: Vec3,
@@ -391,45 +434,58 @@ fn spawn_knife_slash(
 fn perform_knife_attack(
     commands: &mut Commands,
     runtime: &mut KnifeComboRuntime,
-    player_entity: Entity,
-    player_velocity: &Velocity,
-    player_state: &PlayerState,
-    facing_sign: f32,
-    knife_tuning: &crate::resources::KnifeCombatTuning,
-    overedge_enabled: bool,
     attack_animation: &mut AttackAnimationState,
+    request: KnifeAttackRequest,
 ) {
-    let max_combo_steps = knife_tuning.max_combo_steps.max(1);
-    let combo_step = if runtime.combo_reset_timer <= 0.0 || runtime.combo_step >= max_combo_steps {
+    let max_combo_steps = request.knife_tuning.max_combo_steps.max(1);
+    let requested_style = if request.overedge_enabled {
+        request.requested_style
+    } else {
+        AttackAnimationStyle::Normal
+    };
+    let combo_step = if requested_style == AttackAnimationStyle::OveredgeHeavy {
+        max_combo_steps
+    } else if runtime.combo_reset_timer <= 0.0 || runtime.combo_step >= max_combo_steps {
         1
     } else {
         runtime.combo_step + 1
     };
+    let attack_style = if request.overedge_enabled && requested_style.is_overedge_light() {
+        match combo_step {
+            1 => AttackAnimationStyle::OveredgeLight1,
+            2 => AttackAnimationStyle::OveredgeLight2,
+            _ => AttackAnimationStyle::OveredgeLight3,
+        }
+    } else {
+        requested_style
+    };
     runtime.combo_step = combo_step;
-    runtime.combo_reset_timer = knife_tuning.combo_reset_window_secs.max(0.1);
-    runtime.queued_attack = false;
+    runtime.combo_reset_timer = request.knife_tuning.combo_reset_window_secs.max(0.1);
+    runtime.queued_attack = None;
 
-    let preset = knife_attack_preset(combo_step, overedge_enabled);
-    runtime.cooldown = preset.cooldown;
-    attack_animation.trigger(preset.animation_duration_secs);
+    let preset = knife_attack_preset(combo_step, request.overedge_enabled);
+    runtime.cooldown = preset.cooldown.max(attack_cooldown_floor(attack_style));
+    let animation_duration =
+        overedge_animation_duration(attack_style).unwrap_or(preset.animation_duration_secs);
+    attack_animation.trigger_with_style(animation_duration, attack_style);
 
-    let facing = if facing_sign < 0.0 {
+    let facing = if request.facing_sign < 0.0 {
         -1.0
-    } else if facing_sign > 0.0 {
+    } else if request.facing_sign > 0.0 {
         1.0
-    } else if player_velocity.x < -5.0 {
+    } else if request.player_velocity.x < -5.0 {
         -1.0
     } else {
         1.0
     };
 
     commands.spawn((PendingKnifeAttack {
-        owner: player_entity,
+        owner: request.player_entity,
         timer: Timer::from_seconds(preset.windup_secs, TimerMode::Once),
         combo_step,
         facing,
-        is_crouching: player_state.is_crouching,
-        overedge_enabled,
+        is_crouching: request.player_state.is_crouching,
+        overedge_enabled: request.overedge_enabled,
     },));
 }
 
@@ -450,19 +506,23 @@ pub fn player_shoot_projectile(
         .map(|input| input.action2_pressed_this_frame)
         .unwrap_or(false)
         || keyboard.just_pressed(KeyCode::KeyX);
+    let overedge_active = shroud_query
+        .iter()
+        .next()
+        .map(|state| state.is_released)
+        .unwrap_or(false);
+
+    if projectile_pressed && overedge_active {
+        return;
+    }
 
     if projectile_pressed
         && *cooldown <= 0.0
         && let Some((player_transform, facing)) = player_query.iter().next()
     {
-        let use_overedge = shroud_query
-            .iter()
-            .next()
-            .map(|state| state.is_released)
-            .unwrap_or(false);
         let facing_sign = facing.copied().unwrap_or_default().sign();
 
-        let config = projectile_config(use_overedge);
+        let config = projectile_config(false);
         *cooldown = config.cooldown;
 
         let spawn_position = Vec3::new(
@@ -481,17 +541,7 @@ pub fn player_knife_attack(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     game_input: Option<Res<crate::systems::input::GameInput>>,
-    mut player_query: Query<
-        (
-            Entity,
-            &Velocity,
-            &PlayerState,
-            Option<&FacingDirection>,
-            &mut AttackAnimationState,
-        ),
-        With<Player>,
-    >,
-    shroud_query: Query<&ShroudState, With<Player>>,
+    mut player_query: Query<PlayerKnifeAttackItem, With<Player>>,
     tuning: Option<Res<GameplayTuning>>,
     mut runtime: Local<KnifeComboRuntime>,
     time: Res<Time>,
@@ -504,72 +554,98 @@ pub fn player_knife_attack(
 
     if runtime.combo_reset_timer <= 0.0 {
         runtime.combo_step = 0;
-        runtime.queued_attack = false;
+        runtime.queued_attack = None;
     }
 
-    let knife_pressed = game_input
+    let overedge_enabled = player_query
+        .iter_mut()
+        .next()
+        .map(|(_, _, _, _, shroud, _)| shroud.is_released)
+        .unwrap_or(false);
+    let light_attack_pressed = game_input
         .as_deref()
         .map(|input| input.action1_pressed_this_frame)
         .unwrap_or(false)
         || keyboard.just_pressed(KeyCode::KeyL)
         || keyboard.just_pressed(KeyCode::KeyU);
-    if knife_pressed {
+    let heavy_attack_pressed = overedge_enabled && keyboard.just_pressed(KeyCode::KeyK);
+    let requested_attack = if heavy_attack_pressed {
+        Some(AttackAnimationStyle::OveredgeHeavy)
+    } else if light_attack_pressed {
+        Some(if overedge_enabled {
+            AttackAnimationStyle::OveredgeLight1
+        } else {
+            AttackAnimationStyle::Normal
+        })
+    } else {
+        None
+    };
+
+    if let Some(attack_style) = requested_attack {
         if runtime.cooldown <= 0.0 {
             if let Some((
                 player_entity,
                 player_velocity,
                 player_state,
                 facing,
+                shroud,
                 mut attack_animation,
             )) = player_query.iter_mut().next()
             {
-                let overedge_enabled = shroud_query
-                    .iter()
-                    .next()
-                    .map(|state| state.is_released)
-                    .unwrap_or(false);
                 let facing_sign = facing.copied().unwrap_or_default().sign();
                 perform_knife_attack(
                     &mut commands,
                     &mut runtime,
-                    player_entity,
-                    player_velocity,
-                    player_state,
-                    facing_sign,
-                    knife_tuning,
-                    overedge_enabled,
                     &mut attack_animation,
+                    KnifeAttackRequest {
+                        player_entity,
+                        player_velocity,
+                        player_state,
+                        facing_sign,
+                        knife_tuning,
+                        overedge_enabled: shroud.is_released,
+                        requested_style: attack_style,
+                    },
                 );
             }
             return;
         }
 
         if runtime.cooldown <= knife_tuning.combo_buffer_window_secs {
-            runtime.queued_attack = true;
+            runtime.queued_attack = Some(attack_style);
         }
     }
 
-    if runtime.queued_attack
+    if let Some(attack_style) = runtime.queued_attack
         && runtime.cooldown <= 0.0
-        && let Some((player_entity, player_velocity, player_state, facing, mut attack_animation)) =
-            player_query.iter_mut().next()
+        && let Some((
+            player_entity,
+            player_velocity,
+            player_state,
+            facing,
+            shroud,
+            mut attack_animation,
+        )) = player_query.iter_mut().next()
     {
-        let overedge_enabled = shroud_query
-            .iter()
-            .next()
-            .map(|state| state.is_released)
-            .unwrap_or(false);
+        if attack_style == AttackAnimationStyle::OveredgeHeavy && !shroud.is_released {
+            runtime.queued_attack = None;
+            return;
+        }
+
         let facing_sign = facing.copied().unwrap_or_default().sign();
         perform_knife_attack(
             &mut commands,
             &mut runtime,
-            player_entity,
-            player_velocity,
-            player_state,
-            facing_sign,
-            knife_tuning,
-            overedge_enabled,
             &mut attack_animation,
+            KnifeAttackRequest {
+                player_entity,
+                player_velocity,
+                player_state,
+                facing_sign,
+                knife_tuning,
+                overedge_enabled: shroud.is_released,
+                requested_style: attack_style,
+            },
         );
     }
 }

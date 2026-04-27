@@ -13,6 +13,16 @@ use crate::{
 
 const DEATH_ZONE_Y: f32 = -400.0;
 
+type RevivePlayerItem<'a> = (
+    &'a mut Transform,
+    &'a mut Velocity,
+    &'a mut PlayerState,
+    &'a mut Health,
+    &'a mut ShroudState,
+    Option<&'a mut FacingDirection>,
+    Option<&'a mut DamageInvulnerability>,
+);
+
 #[derive(Component)]
 pub struct GameOverUiRoot;
 
@@ -103,18 +113,7 @@ pub fn handle_game_over_input(
 
 /// 执行复活流程并恢复可控状态。
 pub fn revive_player(
-    mut player_query: Query<
-        (
-            &mut Transform,
-            &mut Velocity,
-            &mut PlayerState,
-            &mut Health,
-            &mut ShroudState,
-            Option<&mut FacingDirection>,
-            Option<&mut DamageInvulnerability>,
-        ),
-        With<Player>,
-    >,
+    mut player_query: Query<RevivePlayerItem, With<Player>>,
     mut game_stats: ResMut<GameStats>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {

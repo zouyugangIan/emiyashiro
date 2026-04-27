@@ -66,6 +66,7 @@ pub async fn initialize_database() -> Result<DatabaseService, Box<dyn std::error
 }
 
 /// 保存玩家记录到数据库
+#[allow(clippy::needless_return)]
 pub fn save_player_to_database(
     _game_stats: Res<GameStats>,
     _character_selection: Res<CharacterSelection>,
@@ -84,6 +85,7 @@ pub fn save_player_to_database(
 }
 
 /// 从数据库加载玩家记录
+#[allow(clippy::needless_return)]
 pub fn load_player_from_database(
     database_service: ResMut<DatabaseService>,
     _character_selection: ResMut<CharacterSelection>,
@@ -128,6 +130,7 @@ pub fn database_stats_system(
 }
 
 #[cfg(not(feature = "server"))]
+#[allow(clippy::needless_return)]
 pub fn database_stats_system(
     database_service: Res<DatabaseService>,
     mut _timer: Local<Timer>,
@@ -161,6 +164,7 @@ pub fn cleanup_old_sessions(
 }
 
 #[cfg(not(feature = "server"))]
+#[allow(clippy::needless_return)]
 pub fn cleanup_old_sessions(
     database_service: Res<DatabaseService>,
     mut _timer: Local<Timer>,

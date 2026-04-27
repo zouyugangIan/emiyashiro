@@ -3,18 +3,18 @@ use std::time::Duration;
 
 /// 圣骸布状态
 ///
-/// 控制卫宫士郎的"圣骸布解放"机制。
+/// 控制卫宫士郎的"绯红圣骸布解放"机制。
 /// 解放后攻击切换为 Overedge，持续固定时间后自动恢复。
 ///
 /// # 字段
 /// * `is_released` - 圣骸布是否已解开
 /// * `overedge_timer` - Overedge 持续计时器
-/// * `toggle_health_cost` - 每次切换时扣除的生命值
+/// * `activation_health_cost` - 每次开启时扣除的生命值
 #[derive(Component, Debug, Clone)] // derive Clone for simple fields
 pub struct ShroudState {
     pub is_released: bool,
     pub overedge_timer: Timer,
-    pub toggle_health_cost: f32,
+    pub activation_health_cost: f32,
 }
 
 impl Default for ShroudState {
@@ -24,16 +24,14 @@ impl Default for ShroudState {
 
         Self {
             is_released: false,
-            // 每次解放持续 10 秒
             overedge_timer,
-            // 每次切换扣 2HP
-            toggle_health_cost: 2.0,
+            activation_health_cost: 5.0,
         }
     }
 }
 
 impl ShroudState {
-    pub const OVEREDGE_DURATION_SECS: f32 = 3.0;
+    pub const OVEREDGE_DURATION_SECS: f32 = 10.0;
 
     pub fn toggle(&mut self) -> bool {
         if self.is_released {
@@ -42,6 +40,16 @@ impl ShroudState {
             self.enable_release();
         }
         self.is_released
+    }
+
+    /// 尝试开启圣骸布。已开启时返回 false，避免重复扣血或刷新持续时间。
+    pub fn try_enable_release(&mut self) -> bool {
+        if self.is_released {
+            return false;
+        }
+
+        self.enable_release();
+        true
     }
 
     pub fn enable_release(&mut self) {
@@ -84,6 +92,17 @@ mod tests {
         shroud.toggle();
         assert!(shroud.is_released);
         assert!(!shroud.overedge_timer.is_finished());
+    }
+
+    #[test]
+    fn try_enable_release_is_ignored_while_active() {
+        let mut shroud = ShroudState::default();
+
+        assert!(shroud.try_enable_release());
+        shroud.overedge_timer.tick(Duration::from_secs_f32(1.0));
+
+        assert!(!shroud.try_enable_release());
+        assert!(shroud.is_released);
     }
 
     #[test]

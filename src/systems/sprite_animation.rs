@@ -1,6 +1,9 @@
-use crate::components::{
-    animation_data::{AnimationDataMap, CharacterAnimationData, PlaybackMode},
-    *,
+use crate::{
+    asset_paths,
+    components::{
+        animation_data::{AnimationDataMap, CharacterAnimationData, PlaybackMode},
+        *,
+    },
 };
 use bevy::prelude::*;
 use std::{collections::HashMap, fs};
@@ -49,6 +52,25 @@ impl Default for SpriteAnimation {
         }
     }
 }
+
+type SpriteAnimationUpdateItem<'a> = (
+    &'a mut SpriteAnimation,
+    &'a mut Sprite,
+    Option<&'a Velocity>,
+    Option<&'a AttackAnimationState>,
+    Option<&'a SpriteAnimationSheets>,
+    Option<&'a ShroudState>,
+);
+
+type PlayerAnimationStateItem<'a> = (
+    &'a mut SpriteAnimation,
+    &'a mut Sprite,
+    &'a PlayerState,
+    &'a Velocity,
+    &'a AttackAnimationState,
+    Option<&'a SpriteAnimationSheets>,
+    Option<&'a ShroudState>,
+);
 
 /// 2026推荐：先给出最小可用品质，再给理想帧数。
 pub fn frame_count_guideline(animation_type: &AnimationType) -> (usize, usize) {
@@ -110,11 +132,82 @@ fn resolve_target_animation(
     }
 }
 
-fn current_clip_is_blocking(animation: &SpriteAnimation) -> bool {
-    let Some(clip) = animation.animations.get(&animation.current_animation) else {
-        return false;
-    };
+fn resolved_attack_style(
+    animation_type: &AnimationType,
+    attack_style: AttackAnimationStyle,
+    shroud: Option<&ShroudState>,
+) -> AttackAnimationStyle {
+    if *animation_type == AnimationType::Attacking
+        && shroud.map(|state| state.is_released).unwrap_or(false)
+    {
+        attack_style
+    } else {
+        AttackAnimationStyle::Normal
+    }
+}
 
+fn bounded_frame_range(
+    start: usize,
+    count: usize,
+    available_frame_count: usize,
+) -> Option<Vec<usize>> {
+    let end = start.checked_add(count)?;
+    (count > 0 && end <= available_frame_count).then(|| (start..end).collect())
+}
+
+fn overedge_attack_frames(
+    attack_style: AttackAnimationStyle,
+    available_frame_count: usize,
+) -> Option<Vec<usize>> {
+    match attack_style {
+        AttackAnimationStyle::OveredgeRelease => bounded_frame_range(
+            0,
+            asset_paths::HF_SHIROU_OVEREDGE_RELEASE_FRAME_COUNT,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::OveredgeLight1 => bounded_frame_range(
+            2,
+            asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SEGMENT_FRAME_COUNT,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::OveredgeLight2 => bounded_frame_range(
+            5,
+            asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SEGMENT_FRAME_COUNT,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::OveredgeLight3 => bounded_frame_range(
+            8,
+            asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SEGMENT_FRAME_COUNT,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::OveredgeHeavy => {
+            (available_frame_count > 0).then(|| (0..available_frame_count).collect())
+        }
+        AttackAnimationStyle::Normal => None,
+    }
+}
+
+fn resolved_animation_clip(
+    animation: &SpriteAnimation,
+    animation_type: &AnimationType,
+    sprite_sheets: Option<&SpriteAnimationSheets>,
+    shroud: Option<&ShroudState>,
+    attack_style: AttackAnimationStyle,
+) -> Option<AnimationClipData> {
+    let mut clip = animation.animations.get(animation_type)?.clone();
+    let attack_style = resolved_attack_style(animation_type, attack_style, shroud);
+
+    if let Some(frame_count) =
+        sprite_sheets.and_then(|sheets| sheets.overedge_attacking_frame_count(attack_style))
+        && let Some(frames) = overedge_attack_frames(attack_style, frame_count)
+    {
+        clip.frames = frames;
+    }
+
+    Some(clip)
+}
+
+fn current_clip_is_blocking(animation: &SpriteAnimation, clip: &AnimationClipData) -> bool {
     let is_once = clip.playback_mode() == PlaybackMode::Once;
     let not_finished = animation.current_frame + 1 < clip.frames.len();
     is_once && not_finished
@@ -182,12 +275,14 @@ fn apply_animation_sheet(
     sprite: &mut Sprite,
     sprite_sheets: Option<&SpriteAnimationSheets>,
     animation_type: &AnimationType,
+    attack_style: AttackAnimationStyle,
 ) {
     let Some(sprite_sheets) = sprite_sheets else {
         return;
     };
 
-    let (target_texture, target_layout) = sprite_sheets.select_sheet(animation_type);
+    let (target_texture, target_layout) =
+        sprite_sheets.select_sheet_for_attack_style(animation_type, attack_style);
     sprite.image = target_texture.clone();
 
     if let Some(ref mut atlas) = sprite.texture_atlas {
@@ -307,19 +402,36 @@ pub fn create_character_animation(
 }
 
 /// 更新精灵动画系统
-pub fn update_sprite_animations(
-    time: Res<Time>,
-    mut query: Query<(&mut SpriteAnimation, &mut Sprite, Option<&Velocity>)>,
-) {
-    for (mut animation, mut sprite, velocity) in query.iter_mut() {
+pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimationUpdateItem>) {
+    for (mut animation, mut sprite, velocity, attack_state, sprite_sheets, shroud) in
+        query.iter_mut()
+    {
         let current_key = animation.current_animation.clone();
+        let attack_style = attack_state
+            .map(|state| state.style)
+            .unwrap_or(AttackAnimationStyle::Normal);
 
-        let Some(current_clip) = animation.animations.get(&current_key).cloned() else {
+        let Some(current_clip) = resolved_animation_clip(
+            &animation,
+            &current_key,
+            sprite_sheets,
+            shroud,
+            attack_style,
+        ) else {
             continue;
         };
 
         if current_clip.frames.is_empty() {
             continue;
+        }
+
+        if animation.current_frame >= current_clip.frames.len() {
+            animation.current_frame = current_clip.frames.len().saturating_sub(1);
+        }
+
+        if current_key == AnimationType::Attacking {
+            let attack_style = resolved_attack_style(&current_key, attack_style, shroud);
+            apply_animation_sheet(&mut sprite, sprite_sheets, &current_key, attack_style);
         }
 
         let horizontal_speed_abs = velocity.map(|v| v.x.abs()).unwrap_or(0.0);
@@ -369,17 +481,7 @@ pub fn tick_attack_animation_states(
 
 /// 根据玩家状态更新动画
 pub fn update_character_animation_state(
-    mut query: Query<
-        (
-            &mut SpriteAnimation,
-            &mut Sprite,
-            &PlayerState,
-            &Velocity,
-            &AttackAnimationState,
-            Option<&SpriteAnimationSheets>,
-        ),
-        With<Player>,
-    >,
+    mut query: Query<PlayerAnimationStateItem, With<Player>>,
     game_input: Option<Res<crate::systems::input::GameInput>>,
     runtime_config: Option<Res<AnimationRuntimeConfig>>,
 ) {
@@ -390,7 +492,7 @@ pub fn update_character_animation_state(
         .map(|input| input.move_left || input.move_right)
         .unwrap_or(false);
 
-    for (mut animation, mut sprite, player_state, velocity, attack_state, sprite_sheets) in
+    for (mut animation, mut sprite, player_state, velocity, attack_state, sprite_sheets, shroud) in
         query.iter_mut()
     {
         let attack_retriggered = attack_state.is_active()
@@ -404,7 +506,16 @@ pub fn update_character_animation_state(
             runtime,
         );
 
-        let clip_blocks_switch = current_clip_is_blocking(&animation);
+        let clip_blocks_switch = resolved_animation_clip(
+            &animation,
+            &animation.current_animation,
+            sprite_sheets,
+            shroud,
+            attack_state.style,
+        )
+        .as_ref()
+        .map(|clip| current_clip_is_blocking(&animation, clip))
+        .unwrap_or(false);
         if clip_blocks_switch && new_animation != animation.current_animation && !attack_retriggered
         {
             continue;
@@ -412,12 +523,19 @@ pub fn update_character_animation_state(
 
         if animation.current_animation != new_animation || attack_retriggered {
             apply_animation_change(&mut animation, new_animation.clone(), velocity.x.abs());
-            apply_animation_sheet(&mut sprite, sprite_sheets, &new_animation);
+            let attack_style = resolved_attack_style(&new_animation, attack_state.style, shroud);
+            apply_animation_sheet(&mut sprite, sprite_sheets, &new_animation, attack_style);
             if new_animation == AnimationType::Attacking {
                 animation.last_attack_trigger_serial = attack_state.trigger_serial;
             }
 
-            if let Some(new_clip) = animation.animations.get(&new_animation) {
+            if let Some(new_clip) = resolved_animation_clip(
+                &animation,
+                &new_animation,
+                sprite_sheets,
+                shroud,
+                attack_state.style,
+            ) {
                 if let Some(first_atlas_idx) = new_clip.frames.first().copied() {
                     apply_atlas_frame(&mut sprite, first_atlas_idx);
                 }
@@ -477,6 +595,66 @@ mod tests {
         assert_eq!(frame, 1);
         frame = next_frame_index(frame, 4, PlaybackMode::PingPong, &mut direction);
         assert_eq!(frame, 0);
+    }
+
+    #[test]
+    fn test_overedge_attack_frame_segments_match_runtime_sheets() {
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::OveredgeRelease,
+                crate::asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT
+            ),
+            Some(vec![0, 1, 2])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::OveredgeLight1,
+                crate::asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT
+            ),
+            Some(vec![2, 3, 4])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::OveredgeLight2,
+                crate::asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT
+            ),
+            Some(vec![5, 6, 7])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::OveredgeLight3,
+                crate::asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT
+            ),
+            Some(vec![8, 9, 10])
+        );
+
+        let heavy_frames = overedge_attack_frames(
+            AttackAnimationStyle::OveredgeHeavy,
+            crate::asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT,
+        )
+        .expect("heavy frames");
+        assert_eq!(
+            heavy_frames.len(),
+            crate::asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT
+        );
+        assert_eq!(heavy_frames.first().copied(), Some(0));
+        assert_eq!(heavy_frames.last().copied(), Some(16));
+    }
+
+    #[test]
+    fn test_overedge_attack_frame_segments_do_not_overrun_available_frames() {
+        assert_eq!(
+            overedge_attack_frames(AttackAnimationStyle::OveredgeRelease, 2),
+            None
+        );
+        assert_eq!(
+            overedge_attack_frames(AttackAnimationStyle::OveredgeLight3, 10),
+            None
+        );
+        assert_eq!(
+            overedge_attack_frames(AttackAnimationStyle::OveredgeHeavy, 0),
+            None
+        );
     }
 
     #[test]
