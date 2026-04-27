@@ -4,8 +4,9 @@
     "adapter": "CodeLLDB",
     "build": {
       "command": "cargo",
-      "args": ["run", "--bin", "client", "--features", "client"],
+      "args": ["build", "--bin", "client", "--features", "client"],
     },
+    "program": "$ZED_WORKTREE_ROOT/target/debug/client",
     "sourceLanguages": ["rust"],
     "request": "launch",
     "cwd": "$ZED_WORKTREE_ROOT",
