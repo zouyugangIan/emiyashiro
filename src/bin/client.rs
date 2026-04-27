@@ -45,8 +45,8 @@ fn main() {
                 })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "G-Engine Client (WebGPU)".into(),
-                        resolution: (2048, 1536).into(),
+                        title: "EmiyaShiro(G-Engine)".into(),
+                        resolution: (1024, 768).into(),
                         ..default()
                     }),
                     ..default()

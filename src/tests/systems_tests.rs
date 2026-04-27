@@ -2145,9 +2145,35 @@ mod tests {
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::KeyV);
         app.update();
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .clear();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyV);
+            keyboard.clear();
+        }
+
+        {
+            let entity_ref = app.world().entity(player);
+            let health = entity_ref.get::<Health>().expect("health");
+            let shroud = entity_ref.get::<ShroudState>().expect("shroud");
+            assert_eq!(health.current, 20.0, "plain V should not cost HP");
+            assert!(
+                !shroud.is_released,
+                "plain V should not enable the reference attack module"
+            );
+        }
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.press(KeyCode::KeyV);
+            keyboard.press(KeyCode::ShiftLeft);
+        }
+        app.update();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyV);
+            keyboard.release(KeyCode::ShiftLeft);
+            keyboard.clear();
+        }
 
         let entity_ref = app.world().entity(player);
         let health = entity_ref.get::<Health>().expect("health");
@@ -2159,16 +2185,18 @@ mod tests {
             health.current, 15.0,
             "activation should cost HP through damage events"
         );
-        assert!(shroud.is_released, "V should enable release state");
+        assert!(shroud.is_released, "Shift+V should enable release state");
         assert_eq!(
             attack_state.style,
             AttackAnimationStyle::OveredgeRelease,
-            "V should play the Overedge release startup animation"
+            "Shift+V should play the Overedge release startup animation"
         );
 
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::KeyV);
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.press(KeyCode::KeyV);
+            keyboard.press(KeyCode::ShiftLeft);
+        }
         app.update();
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()

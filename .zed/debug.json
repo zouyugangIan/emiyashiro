@@ -1,0 +1,17 @@
+[
+  {
+    "label": "Debug client",
+    "adapter": "CodeLLDB",
+    "build": {
+      "command": "cargo",
+      "args": ["run", "--bin", "client", "--features", "client"],
+    },
+    "sourceLanguages": ["rust"],
+    "request": "launch",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "env": {
+      "EMIYASHIRO_ASSET_DIR": "$ZED_WORKTREE_ROOT/assets",
+      "RUST_BACKTRACE": "1",
+    },
+  },
+]

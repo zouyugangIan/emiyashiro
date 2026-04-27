@@ -6,6 +6,10 @@ use crate::{
     events::{DamageEvent, DamageSource},
 };
 
+fn shift_pressed(keyboard: &ButtonInput<KeyCode>) -> bool {
+    keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight)
+}
+
 /// 处理绯红圣骸布开启输入。
 pub fn handle_shroud_input(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -20,7 +24,7 @@ pub fn handle_shroud_input(
     >,
     mut damage_writer: MessageWriter<DamageEvent>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyV) {
+    if shift_pressed(&keyboard) && keyboard.just_pressed(KeyCode::KeyV) {
         for (player_entity, mut shroud, health, attack_animation) in query.iter_mut() {
             if health.is_dead() {
                 continue;
