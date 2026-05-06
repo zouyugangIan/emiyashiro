@@ -1377,7 +1377,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .release(KeyCode::KeyL);
-        for _ in 0..25 {
+        for _ in 0..50 {
             app.update();
         }
 

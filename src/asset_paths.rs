@@ -204,6 +204,39 @@ pub const IMAGE_HF_SHIROU_ATTACK_ULTIMATE_REFERENCE: &str =
 pub const IMAGE_HF_SHIROU_ATTACK_WEAPON_PROJECTION_REFERENCE: &str =
     "images/characters/reference/hf_shirou_attack_weapon_projection_reference.png";
 
+// Reference Board 精灵表参数（用于 texture atlas 布局）
+// 分析: ground_light/air_combo/ultimate/ninjutsu/weapon_proj/mobility: 1491x1055 → 7列x5行 @ 213x211px
+//        heavy: 1672x941 → 8列x5行 @ 209x188px
+//        overview: 1536x1024 → 8列x5行 @ 192x204px
+//        advanced_overview: 1402x1122 → 8列x6行 @ 175x187px
+pub const REFERENCE_BOARD_GROUND_LIGHT_COLS: u32 = 7;
+pub const REFERENCE_BOARD_GROUND_LIGHT_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_GROUND_LIGHT_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_HEAVY_COLS: u32 = 8;
+pub const REFERENCE_BOARD_HEAVY_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_HEAVY_CELL: (u32, u32) = (209, 188);
+pub const REFERENCE_BOARD_AIR_COMBO_COLS: u32 = 7;
+pub const REFERENCE_BOARD_AIR_COMBO_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_AIR_COMBO_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_MOBILITY_COLS: u32 = 7;
+pub const REFERENCE_BOARD_MOBILITY_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_MOBILITY_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_NINJUTSU_COLS: u32 = 7;
+pub const REFERENCE_BOARD_NINJUTSU_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_NINJUTSU_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_ULTIMATE_COLS: u32 = 7;
+pub const REFERENCE_BOARD_ULTIMATE_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_ULTIMATE_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_WEAPON_PROJ_COLS: u32 = 7;
+pub const REFERENCE_BOARD_WEAPON_PROJ_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_WEAPON_PROJ_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_OVERVIEW_COLS: u32 = 8;
+pub const REFERENCE_BOARD_OVERVIEW_ROWS: u32 = 5;
+pub const REFERENCE_BOARD_OVERVIEW_CELL: (u32, u32) = (192, 204);
+pub const REFERENCE_BOARD_ADVANCED_OVERVIEW_COLS: u32 = 8;
+pub const REFERENCE_BOARD_ADVANCED_OVERVIEW_ROWS: u32 = 6;
+pub const REFERENCE_BOARD_ADVANCED_OVERVIEW_CELL: (u32, u32) = (175, 187);
+
 // CLOUD ASSETS (背景云彩图片)
 pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud01.png";
 pub const IMAGE_CLOUD_02: &str = "images/cloud/cloud02.png";

@@ -75,11 +75,21 @@ pub enum SpriteSheetKind {
 pub enum AttackAnimationStyle {
     #[default]
     Normal,
+    // --- Overedge 模组（Shift+V 激活后使用 overedge 精灵表）---
     OveredgeRelease,
     OveredgeLight1,
     OveredgeLight2,
     OveredgeLight3,
     OveredgeHeavy,
+    // --- Reference Board 模组（Shift+V 未激活时使用 reference board 精灵表）---
+    GroundLight,  // J/L 站立轻攻击
+    AirCombo,     // J/L 空中轻攻击
+    HeavyRef,    // K 站立重攻击（地面）
+    UltimateRef,  // K 蹲着重攻击（必杀技）
+    MobilityRef,  // Shift+方向 移动攻击
+    NinjutsuRef,  // X 忍术投射
+    WeaponProjRef, // X 蹲下 武器投射
+    AdvanceRef,   // Shift+V（模块激活中）高级总览
 }
 
 #[derive(Component, Debug, Clone, Default)]
@@ -118,6 +128,33 @@ impl AttackAnimationStyle {
                 | AttackAnimationStyle::OveredgeLight3
         )
     }
+
+    /// Reference board 模组使用 overedge 精灵表（Shift+V 激活）
+    pub fn uses_overedge_sheet(self) -> bool {
+        matches!(
+            self,
+            AttackAnimationStyle::OveredgeRelease
+                | AttackAnimationStyle::OveredgeLight1
+                | AttackAnimationStyle::OveredgeLight2
+                | AttackAnimationStyle::OveredgeLight3
+                | AttackAnimationStyle::OveredgeHeavy
+        )
+    }
+
+    /// Reference board 模组使用 reference board 精灵表（Shift+V 未激活）
+    pub fn uses_reference_sheet(self) -> bool {
+        matches!(
+            self,
+            AttackAnimationStyle::GroundLight
+                | AttackAnimationStyle::AirCombo
+                | AttackAnimationStyle::HeavyRef
+                | AttackAnimationStyle::UltimateRef
+                | AttackAnimationStyle::MobilityRef
+                | AttackAnimationStyle::NinjutsuRef
+                | AttackAnimationStyle::WeaponProjRef
+                | AttackAnimationStyle::AdvanceRef
+        )
+    }
 }
 
 #[derive(Component, Debug, Clone)]
@@ -128,12 +165,38 @@ pub struct SpriteAnimationSheets {
     pub running_layout: Handle<TextureAtlasLayout>,
     pub attacking_texture: Handle<Image>,
     pub attacking_layout: Handle<TextureAtlasLayout>,
+    // --- Overedge 精灵表（Shift+V 激活后使用）---
     pub overedge_light_attacking_texture: Option<Handle<Image>>,
     pub overedge_light_attacking_layout: Option<Handle<TextureAtlasLayout>>,
     pub overedge_light_attacking_frame_count: usize,
     pub overedge_heavy_attacking_texture: Option<Handle<Image>>,
     pub overedge_heavy_attacking_layout: Option<Handle<TextureAtlasLayout>>,
     pub overedge_heavy_attacking_frame_count: usize,
+    // --- Reference Board 精灵表（Shift+V 未激活时使用）---
+    pub reference_ground_light_texture: Option<Handle<Image>>,
+    pub reference_ground_light_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_ground_light_frame_count: usize,
+    pub reference_air_combo_texture: Option<Handle<Image>>,
+    pub reference_air_combo_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_air_combo_frame_count: usize,
+    pub reference_heavy_texture: Option<Handle<Image>>,
+    pub reference_heavy_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_heavy_frame_count: usize,
+    pub reference_ultimate_texture: Option<Handle<Image>>,
+    pub reference_ultimate_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_ultimate_frame_count: usize,
+    pub reference_mobility_texture: Option<Handle<Image>>,
+    pub reference_mobility_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_mobility_frame_count: usize,
+    pub reference_ninjutsu_texture: Option<Handle<Image>>,
+    pub reference_ninjutsu_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_ninjutsu_frame_count: usize,
+    pub reference_weapon_proj_texture: Option<Handle<Image>>,
+    pub reference_weapon_proj_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_weapon_proj_frame_count: usize,
+    pub reference_advance_texture: Option<Handle<Image>>,
+    pub reference_advance_layout: Option<Handle<TextureAtlasLayout>>,
+    pub reference_advance_frame_count: usize,
 }
 
 impl SpriteAnimationSheets {
@@ -152,8 +215,47 @@ impl SpriteAnimationSheets {
         &self,
         animation_type: &AnimationType,
         attack_style: AttackAnimationStyle,
-    ) -> (&Handle<Image>, &Handle<TextureAtlasLayout>) {
+    ) -> Option<(&Handle<Image>, &Handle<TextureAtlasLayout>)> {
         if *animation_type == AnimationType::Attacking {
+            // Reference board 模组优先
+            if attack_style.uses_reference_sheet() {
+                return match attack_style {
+                    AttackAnimationStyle::GroundLight => Some((
+                        self.reference_ground_light_texture.as_ref()?,
+                        self.reference_ground_light_layout.as_ref()?,
+                    )),
+                    AttackAnimationStyle::AirCombo => Some((
+                        self.reference_air_combo_texture.as_ref()?,
+                        self.reference_air_combo_layout.as_ref()?,
+                    )),
+                    AttackAnimationStyle::HeavyRef => Some((
+                        self.reference_heavy_texture.as_ref()?,
+                        self.reference_heavy_layout.as_ref()?,
+                    )),
+                    AttackAnimationStyle::UltimateRef => Some((
+                        self.reference_ultimate_texture.as_ref()?,
+                        self.reference_ultimate_layout.as_ref()?,
+                    )),
+                    AttackAnimationStyle::MobilityRef => Some((
+                        self.reference_mobility_texture.as_ref()?,
+                        self.reference_mobility_layout.as_ref()?,
+                    )),
+                    AttackAnimationStyle::NinjutsuRef => Some((
+                        self.reference_ninjutsu_texture.as_ref()?,
+                        self.reference_ninjutsu_layout.as_ref()?,
+                    )),
+                    AttackAnimationStyle::WeaponProjRef => Some((
+                        self.reference_weapon_proj_texture.as_ref()?,
+                        self.reference_weapon_proj_layout.as_ref()?,
+                    )),
+                    AttackAnimationStyle::AdvanceRef => Some((
+                        self.reference_advance_texture.as_ref()?,
+                        self.reference_advance_layout.as_ref()?,
+                    )),
+                    _ => None,
+                };
+            }
+            // Overedge 模组
             match attack_style {
                 AttackAnimationStyle::OveredgeRelease
                 | AttackAnimationStyle::OveredgeLight1
@@ -163,7 +265,7 @@ impl SpriteAnimationSheets {
                         self.overedge_light_attacking_texture.as_ref(),
                         self.overedge_light_attacking_layout.as_ref(),
                     ) {
-                        return (texture, layout);
+                        return Some((texture, layout));
                     }
                 }
                 AttackAnimationStyle::OveredgeHeavy => {
@@ -171,38 +273,87 @@ impl SpriteAnimationSheets {
                         self.overedge_heavy_attacking_texture.as_ref(),
                         self.overedge_heavy_attacking_layout.as_ref(),
                     ) {
-                        return (texture, layout);
+                        return Some((texture, layout));
                     }
                 }
                 AttackAnimationStyle::Normal => {}
+                _ => {}
             }
         }
 
-        self.select_sheet(animation_type)
+        Some(self.select_sheet(animation_type))
     }
 
-    pub fn overedge_attacking_frame_count(
-        &self,
-        attack_style: AttackAnimationStyle,
-    ) -> Option<usize> {
+    pub fn attacking_frame_count(&self, attack_style: AttackAnimationStyle) -> Option<usize> {
+        use AttackAnimationStyle::*;
         match attack_style {
-            AttackAnimationStyle::OveredgeRelease
-            | AttackAnimationStyle::OveredgeLight1
-            | AttackAnimationStyle::OveredgeLight2
-            | AttackAnimationStyle::OveredgeLight3 => {
+            OveredgeRelease | OveredgeLight1 | OveredgeLight2 | OveredgeLight3 => {
                 (self.overedge_light_attacking_texture.is_some()
                     && self.overedge_light_attacking_layout.is_some()
                     && self.overedge_light_attacking_frame_count > 0)
                     .then_some(self.overedge_light_attacking_frame_count)
             }
-            AttackAnimationStyle::OveredgeHeavy => {
+            OveredgeHeavy => {
                 (self.overedge_heavy_attacking_texture.is_some()
                     && self.overedge_heavy_attacking_layout.is_some()
                     && self.overedge_heavy_attacking_frame_count > 0)
                     .then_some(self.overedge_heavy_attacking_frame_count)
             }
-            AttackAnimationStyle::Normal => None,
+            GroundLight => {
+                (self.reference_ground_light_texture.is_some()
+                    && self.reference_ground_light_layout.is_some()
+                    && self.reference_ground_light_frame_count > 0)
+                    .then_some(self.reference_ground_light_frame_count)
+            }
+            AirCombo => {
+                (self.reference_air_combo_texture.is_some()
+                    && self.reference_air_combo_layout.is_some()
+                    && self.reference_air_combo_frame_count > 0)
+                    .then_some(self.reference_air_combo_frame_count)
+            }
+            HeavyRef => {
+                (self.reference_heavy_texture.is_some()
+                    && self.reference_heavy_layout.is_some()
+                    && self.reference_heavy_frame_count > 0)
+                    .then_some(self.reference_heavy_frame_count)
+            }
+            UltimateRef => {
+                (self.reference_ultimate_texture.is_some()
+                    && self.reference_ultimate_layout.is_some()
+                    && self.reference_ultimate_frame_count > 0)
+                    .then_some(self.reference_ultimate_frame_count)
+            }
+            MobilityRef => {
+                (self.reference_mobility_texture.is_some()
+                    && self.reference_mobility_layout.is_some()
+                    && self.reference_mobility_frame_count > 0)
+                    .then_some(self.reference_mobility_frame_count)
+            }
+            NinjutsuRef => {
+                (self.reference_ninjutsu_texture.is_some()
+                    && self.reference_ninjutsu_layout.is_some()
+                    && self.reference_ninjutsu_frame_count > 0)
+                    .then_some(self.reference_ninjutsu_frame_count)
+            }
+            WeaponProjRef => {
+                (self.reference_weapon_proj_texture.is_some()
+                    && self.reference_weapon_proj_layout.is_some()
+                    && self.reference_weapon_proj_frame_count > 0)
+                    .then_some(self.reference_weapon_proj_frame_count)
+            }
+            AdvanceRef => {
+                (self.reference_advance_texture.is_some()
+                    && self.reference_advance_layout.is_some()
+                    && self.reference_advance_frame_count > 0)
+                    .then_some(self.reference_advance_frame_count)
+            }
+            Normal => None,
         }
+    }
+
+    /// 兼容旧方法（overedge 特化）
+    pub fn overedge_attacking_frame_count(&self, attack_style: AttackAnimationStyle) -> Option<usize> {
+        self.attacking_frame_count(attack_style)
     }
 }
 

@@ -60,6 +60,7 @@ type SpriteAnimationUpdateItem<'a> = (
     Option<&'a AttackAnimationState>,
     Option<&'a SpriteAnimationSheets>,
     Option<&'a ShroudState>,
+    Option<&'a PlayerState>,
 );
 
 type PlayerAnimationStateItem<'a> = (
@@ -136,13 +137,48 @@ fn resolved_attack_style(
     animation_type: &AnimationType,
     attack_style: AttackAnimationStyle,
     shroud: Option<&ShroudState>,
+    player_state: Option<&PlayerState>,
 ) -> AttackAnimationStyle {
-    if *animation_type == AnimationType::Attacking
-        && shroud.map(|state| state.is_released).unwrap_or(false)
-    {
-        attack_style
+    let is_overedge = shroud.map(|state| state.is_released).unwrap_or(false);
+    let is_airborne = player_state.map(|s| !s.is_grounded).unwrap_or(false);
+    let is_crouching = player_state.map(|s| s.is_crouching).unwrap_or(false);
+
+    if *animation_type == AnimationType::Attacking {
+        if is_overedge {
+            attack_style
+        } else if attack_style != AttackAnimationStyle::Normal {
+            // Reference Board 模组：根据玩家状态映射
+            match attack_style {
+                AttackAnimationStyle::GroundLight | AttackAnimationStyle::AirCombo => {
+                    if is_airborne {
+                        AttackAnimationStyle::AirCombo
+                    } else if is_crouching {
+                        AttackAnimationStyle::MobilityRef
+                    } else {
+                        AttackAnimationStyle::GroundLight
+                    }
+                }
+                AttackAnimationStyle::HeavyRef | AttackAnimationStyle::UltimateRef => {
+                    if is_crouching {
+                        AttackAnimationStyle::UltimateRef
+                    } else {
+                        AttackAnimationStyle::HeavyRef
+                    }
+                }
+                AttackAnimationStyle::NinjutsuRef | AttackAnimationStyle::WeaponProjRef => {
+                    if is_crouching {
+                        AttackAnimationStyle::WeaponProjRef
+                    } else {
+                        AttackAnimationStyle::NinjutsuRef
+                    }
+                }
+                other => other,
+            }
+        } else {
+            AttackAnimationStyle::Normal
+        }
     } else {
-        AttackAnimationStyle::Normal
+        attack_style
     }
 }
 
@@ -183,6 +219,17 @@ fn overedge_attack_frames(
         AttackAnimationStyle::OveredgeHeavy => {
             (available_frame_count > 0).then(|| (0..available_frame_count).collect())
         }
+        // Reference Board 模组播放全部帧
+        AttackAnimationStyle::GroundLight
+        | AttackAnimationStyle::AirCombo
+        | AttackAnimationStyle::HeavyRef
+        | AttackAnimationStyle::UltimateRef
+        | AttackAnimationStyle::MobilityRef
+        | AttackAnimationStyle::NinjutsuRef
+        | AttackAnimationStyle::WeaponProjRef
+        | AttackAnimationStyle::AdvanceRef => {
+            (available_frame_count > 0).then(|| (0..available_frame_count).collect())
+        }
         AttackAnimationStyle::Normal => None,
     }
 }
@@ -193,12 +240,13 @@ fn resolved_animation_clip(
     sprite_sheets: Option<&SpriteAnimationSheets>,
     shroud: Option<&ShroudState>,
     attack_style: AttackAnimationStyle,
+    player_state: Option<&PlayerState>,
 ) -> Option<AnimationClipData> {
     let mut clip = animation.animations.get(animation_type)?.clone();
-    let attack_style = resolved_attack_style(animation_type, attack_style, shroud);
+    let attack_style = resolved_attack_style(animation_type, attack_style, shroud, player_state);
 
     if let Some(frame_count) =
-        sprite_sheets.and_then(|sheets| sheets.overedge_attacking_frame_count(attack_style))
+        sprite_sheets.and_then(|sheets| sheets.attacking_frame_count(attack_style))
         && let Some(frames) = overedge_attack_frames(attack_style, frame_count)
     {
         clip.frames = frames;
@@ -281,8 +329,11 @@ fn apply_animation_sheet(
         return;
     };
 
-    let (target_texture, target_layout) =
-        sprite_sheets.select_sheet_for_attack_style(animation_type, attack_style);
+    let Some((target_texture, target_layout)) =
+        sprite_sheets.select_sheet_for_attack_style(animation_type, attack_style)
+    else {
+        return;
+    };
     sprite.image = target_texture.clone();
 
     if let Some(ref mut atlas) = sprite.texture_atlas {
@@ -403,7 +454,7 @@ pub fn create_character_animation(
 
 /// 更新精灵动画系统
 pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimationUpdateItem>) {
-    for (mut animation, mut sprite, velocity, attack_state, sprite_sheets, shroud) in
+    for (mut animation, mut sprite, velocity, attack_state, sprite_sheets, shroud, player_state) in
         query.iter_mut()
     {
         let current_key = animation.current_animation.clone();
@@ -417,6 +468,7 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
             sprite_sheets,
             shroud,
             attack_style,
+            player_state,
         ) else {
             continue;
         };
@@ -430,7 +482,7 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
         }
 
         if current_key == AnimationType::Attacking {
-            let attack_style = resolved_attack_style(&current_key, attack_style, shroud);
+            let attack_style = resolved_attack_style(&current_key, attack_style, shroud, player_state);
             apply_animation_sheet(&mut sprite, sprite_sheets, &current_key, attack_style);
         }
 
@@ -512,6 +564,7 @@ pub fn update_character_animation_state(
             sprite_sheets,
             shroud,
             attack_state.style,
+            Some(player_state),
         )
         .as_ref()
         .map(|clip| current_clip_is_blocking(&animation, clip))
@@ -523,7 +576,7 @@ pub fn update_character_animation_state(
 
         if animation.current_animation != new_animation || attack_retriggered {
             apply_animation_change(&mut animation, new_animation.clone(), velocity.x.abs());
-            let attack_style = resolved_attack_style(&new_animation, attack_state.style, shroud);
+            let attack_style = resolved_attack_style(&new_animation, attack_state.style, shroud, Some(player_state));
             apply_animation_sheet(&mut sprite, sprite_sheets, &new_animation, attack_style);
             if new_animation == AnimationType::Attacking {
                 animation.last_attack_trigger_serial = attack_state.trigger_serial;
@@ -535,6 +588,7 @@ pub fn update_character_animation_state(
                 sprite_sheets,
                 shroud,
                 attack_state.style,
+                Some(player_state),
             ) {
                 if let Some(first_atlas_idx) = new_clip.frames.first().copied() {
                     apply_atlas_frame(&mut sprite, first_atlas_idx);

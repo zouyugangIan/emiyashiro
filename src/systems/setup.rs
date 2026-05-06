@@ -58,6 +58,23 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         shirou_atlas_overedge_light_attack: None,
         shirou_atlas_overedge_heavy_attack: None,
         sakura_atlas: None,
+        // Reference Board 精灵表
+        shirou_ref_ground_light: None,
+        shirou_ref_air_combo: None,
+        shirou_ref_heavy: None,
+        shirou_ref_ultimate: None,
+        shirou_ref_mobility: None,
+        shirou_ref_ninjutsu: None,
+        shirou_ref_weapon_proj: None,
+        shirou_ref_advance: None,
+        shirou_atlas_ref_ground_light: None,
+        shirou_atlas_ref_air_combo: None,
+        shirou_atlas_ref_heavy: None,
+        shirou_atlas_ref_ultimate: None,
+        shirou_atlas_ref_mobility: None,
+        shirou_atlas_ref_ninjutsu: None,
+        shirou_atlas_ref_weapon_proj: None,
+        shirou_atlas_ref_advance: None,
 
         // 音效资源
         jump_sound: asset_server.load(asset_paths::SOUND_JUMP),

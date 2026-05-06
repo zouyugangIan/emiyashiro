@@ -108,6 +108,23 @@ fn setup_game_resources(
         shirou_atlas_overedge_light_attack: None,
         shirou_atlas_overedge_heavy_attack: None,
         sakura_atlas: None,
+        // Reference Board 精灵表
+        shirou_ref_ground_light: None,
+        shirou_ref_air_combo: None,
+        shirou_ref_heavy: None,
+        shirou_ref_ultimate: None,
+        shirou_ref_mobility: None,
+        shirou_ref_ninjutsu: None,
+        shirou_ref_weapon_proj: None,
+        shirou_ref_advance: None,
+        shirou_atlas_ref_ground_light: None,
+        shirou_atlas_ref_air_combo: None,
+        shirou_atlas_ref_heavy: None,
+        shirou_atlas_ref_ultimate: None,
+        shirou_atlas_ref_mobility: None,
+        shirou_atlas_ref_ninjutsu: None,
+        shirou_atlas_ref_weapon_proj: None,
+        shirou_atlas_ref_advance: None,
         jump_sound: asset_server.load(asset_paths::SOUND_JUMP),
         land_sound: asset_server.load(asset_paths::SOUND_LAND),
         menu_music: asset_server.load(asset_paths::SOUND_MENU_MUSIC),
@@ -128,20 +145,98 @@ fn setup_game_resources(
     let core_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 2, None, None);
     let run_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 5, 1, None, None);
     let attack_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 1, None, None);
+    // Overedge light sheet: 2816x256, 11帧 1行
     let overedge_light_attack_layout = TextureAtlasLayout::from_grid(
         UVec2::new(256, 256),
-        asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT as u32,
+        11,
         1,
         None,
         None,
     );
+    // Overedge heavy sheet: 4352x256, 17帧 1行
     let overedge_heavy_attack_layout = TextureAtlasLayout::from_grid(
         UVec2::new(256, 256),
-        asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT as u32,
+        17,
         1,
         None,
         None,
     );
+
+    // Reference Board 精灵表布局（Shift+V 未激活时使用）
+    let ref_ground_light_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(213, 211),
+        7,
+        5,
+        None,
+        None,
+    );
+    let ref_air_combo_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(213, 211),
+        7,
+        5,
+        None,
+        None,
+    );
+    let ref_heavy_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(209, 188),
+        8,
+        5,
+        None,
+        None,
+    );
+    let ref_ultimate_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(213, 211),
+        7,
+        5,
+        None,
+        None,
+    );
+    let ref_mobility_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(213, 211),
+        7,
+        5,
+        None,
+        None,
+    );
+    let ref_ninjutsu_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(213, 211),
+        7,
+        5,
+        None,
+        None,
+    );
+    let ref_weapon_proj_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(213, 211),
+        7,
+        5,
+        None,
+        None,
+    );
+    let ref_advance_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(175, 187),
+        8,
+        6,
+        None,
+        None,
+    );
+
+    // Reference Board 精灵表图片加载
+    let ref_ground_light_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_GROUND_LIGHT_REFERENCE);
+    let ref_air_combo_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_AIR_COMBO_REFERENCE);
+    let ref_heavy_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_HEAVY_REFERENCE);
+    let ref_ultimate_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_ULTIMATE_REFERENCE);
+    let ref_mobility_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_MOBILITY_REFERENCE);
+    let ref_ninjutsu_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_NINJUTSU_PROJECTILES_REFERENCE);
+    let ref_weapon_proj_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_WEAPON_PROJECTION_REFERENCE);
+    let ref_advance_handle =
+        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ADVANCED_ATTACK_MODULES_OVERVIEW);
 
     let mut assets = game_assets;
     assets.shirou_spritesheet = Some(core_texture_handle);
@@ -156,6 +251,24 @@ fn setup_game_resources(
         Some(texture_atlases.add(overedge_light_attack_layout));
     assets.shirou_atlas_overedge_heavy_attack =
         Some(texture_atlases.add(overedge_heavy_attack_layout));
+
+    // Reference Board 精灵表资源
+    assets.shirou_ref_ground_light = Some(ref_ground_light_handle);
+    assets.shirou_ref_air_combo = Some(ref_air_combo_handle);
+    assets.shirou_ref_heavy = Some(ref_heavy_handle);
+    assets.shirou_ref_ultimate = Some(ref_ultimate_handle);
+    assets.shirou_ref_mobility = Some(ref_mobility_handle);
+    assets.shirou_ref_ninjutsu = Some(ref_ninjutsu_handle);
+    assets.shirou_ref_weapon_proj = Some(ref_weapon_proj_handle);
+    assets.shirou_ref_advance = Some(ref_advance_handle);
+    assets.shirou_atlas_ref_ground_light = Some(texture_atlases.add(ref_ground_light_layout));
+    assets.shirou_atlas_ref_air_combo = Some(texture_atlases.add(ref_air_combo_layout));
+    assets.shirou_atlas_ref_heavy = Some(texture_atlases.add(ref_heavy_layout));
+    assets.shirou_atlas_ref_ultimate = Some(texture_atlases.add(ref_ultimate_layout));
+    assets.shirou_atlas_ref_mobility = Some(texture_atlases.add(ref_mobility_layout));
+    assets.shirou_atlas_ref_ninjutsu = Some(texture_atlases.add(ref_ninjutsu_layout));
+    assets.shirou_atlas_ref_weapon_proj = Some(texture_atlases.add(ref_weapon_proj_layout));
+    assets.shirou_atlas_ref_advance = Some(texture_atlases.add(ref_advance_layout));
 
     commands.insert_resource(assets);
 }

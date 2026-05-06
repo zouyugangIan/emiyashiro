@@ -301,6 +301,39 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
         AttackAnimationStyle::OveredgeHeavy => {
             asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT
         }
+        // Reference Board 模组帧数
+        AttackAnimationStyle::GroundLight => {
+            (asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
+                * asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS) as usize
+        }
+        AttackAnimationStyle::AirCombo => {
+            (asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
+                * asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS) as usize
+        }
+        AttackAnimationStyle::HeavyRef => {
+            (asset_paths::REFERENCE_BOARD_HEAVY_COLS * asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
+                as usize
+        }
+        AttackAnimationStyle::UltimateRef => {
+            (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS)
+                as usize
+        }
+        AttackAnimationStyle::MobilityRef => {
+            (asset_paths::REFERENCE_BOARD_MOBILITY_COLS * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS)
+                as usize
+        }
+        AttackAnimationStyle::NinjutsuRef => {
+            (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS)
+                as usize
+        }
+        AttackAnimationStyle::WeaponProjRef => {
+            (asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
+                * asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS) as usize
+        }
+        AttackAnimationStyle::AdvanceRef => {
+            (asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_COLS
+                * asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_ROWS) as usize
+        }
         AttackAnimationStyle::Normal => return None,
     };
 
@@ -438,26 +471,27 @@ fn perform_knife_attack(
     request: KnifeAttackRequest,
 ) {
     let max_combo_steps = request.knife_tuning.max_combo_steps.max(1);
-    let requested_style = if request.overedge_enabled {
+    // 只有 overedge 激活时使用 overedge 样式，否则使用 reference board 样式或 Normal
+    let base_style = if request.overedge_enabled {
         request.requested_style
     } else {
-        AttackAnimationStyle::Normal
+        request.requested_style
     };
-    let combo_step = if requested_style == AttackAnimationStyle::OveredgeHeavy {
+    let combo_step = if base_style == AttackAnimationStyle::OveredgeHeavy {
         max_combo_steps
     } else if runtime.combo_reset_timer <= 0.0 || runtime.combo_step >= max_combo_steps {
         1
     } else {
         runtime.combo_step + 1
     };
-    let attack_style = if request.overedge_enabled && requested_style.is_overedge_light() {
+    let attack_style = if request.overedge_enabled && base_style.is_overedge_light() {
         match combo_step {
             1 => AttackAnimationStyle::OveredgeLight1,
             2 => AttackAnimationStyle::OveredgeLight2,
             _ => AttackAnimationStyle::OveredgeLight3,
         }
     } else {
-        requested_style
+        base_style
     };
     runtime.combo_step = combo_step;
     runtime.combo_reset_timer = request.knife_tuning.combo_reset_window_secs.max(0.1);
@@ -537,6 +571,7 @@ pub fn player_shoot_projectile(
 
 /// 玩家近战刀攻击（L/U）：
 /// 支持轻量三段连击与输入缓冲。
+/// 也支持 Reference Board 攻击模组（Shift+V 未激活时）。
 pub fn player_knife_attack(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -557,11 +592,22 @@ pub fn player_knife_attack(
         runtime.queued_attack = None;
     }
 
-    let overedge_enabled = player_query
-        .iter_mut()
-        .next()
-        .map(|(_, _, _, _, shroud, _)| shroud.is_released)
-        .unwrap_or(false);
+    let Some((
+        player_entity,
+        player_velocity,
+        player_state,
+        facing,
+        shroud,
+        mut attack_animation,
+    )) = player_query.iter_mut().next()
+    else {
+        return;
+    };
+
+    let overedge_enabled = shroud.is_released;
+    let is_airborne = !player_state.is_grounded;
+    let is_crouching = player_state.is_crouching;
+
     let light_attack_pressed = game_input
         .as_deref()
         .map(|input| input.action1_pressed_this_frame)
@@ -569,45 +615,41 @@ pub fn player_knife_attack(
         || keyboard.just_pressed(KeyCode::KeyL)
         || keyboard.just_pressed(KeyCode::KeyU);
     let heavy_attack_pressed = overedge_enabled && keyboard.just_pressed(KeyCode::KeyK);
-    let requested_attack = if heavy_attack_pressed {
+
+    // 解析请求的攻击样式
+    let requested_attack: Option<AttackAnimationStyle> = if heavy_attack_pressed {
         Some(AttackAnimationStyle::OveredgeHeavy)
     } else if light_attack_pressed {
-        Some(if overedge_enabled {
-            AttackAnimationStyle::OveredgeLight1
+        if overedge_enabled {
+            Some(AttackAnimationStyle::OveredgeLight1)
+        } else if is_airborne {
+            Some(AttackAnimationStyle::AirCombo)
+        } else if is_crouching {
+            Some(AttackAnimationStyle::MobilityRef)
         } else {
-            AttackAnimationStyle::Normal
-        })
+            Some(AttackAnimationStyle::GroundLight)
+        }
     } else {
         None
     };
 
     if let Some(attack_style) = requested_attack {
         if runtime.cooldown <= 0.0 {
-            if let Some((
-                player_entity,
-                player_velocity,
-                player_state,
-                facing,
-                shroud,
-                mut attack_animation,
-            )) = player_query.iter_mut().next()
-            {
-                let facing_sign = facing.copied().unwrap_or_default().sign();
-                perform_knife_attack(
-                    &mut commands,
-                    &mut runtime,
-                    &mut attack_animation,
-                    KnifeAttackRequest {
-                        player_entity,
-                        player_velocity,
-                        player_state,
-                        facing_sign,
-                        knife_tuning,
-                        overedge_enabled: shroud.is_released,
-                        requested_style: attack_style,
-                    },
-                );
-            }
+            let facing_sign = facing.copied().unwrap_or_default().sign();
+            perform_knife_attack(
+                &mut commands,
+                &mut runtime,
+                &mut attack_animation,
+                KnifeAttackRequest {
+                    player_entity,
+                    player_velocity,
+                    player_state,
+                    facing_sign,
+                    knife_tuning,
+                    overedge_enabled,
+                    requested_style: attack_style,
+                },
+            );
             return;
         }
 
@@ -618,20 +660,7 @@ pub fn player_knife_attack(
 
     if let Some(attack_style) = runtime.queued_attack
         && runtime.cooldown <= 0.0
-        && let Some((
-            player_entity,
-            player_velocity,
-            player_state,
-            facing,
-            shroud,
-            mut attack_animation,
-        )) = player_query.iter_mut().next()
     {
-        if attack_style == AttackAnimationStyle::OveredgeHeavy && !shroud.is_released {
-            runtime.queued_attack = None;
-            return;
-        }
-
         let facing_sign = facing.copied().unwrap_or_default().sign();
         perform_knife_attack(
             &mut commands,
@@ -643,7 +672,7 @@ pub fn player_knife_attack(
                 player_state,
                 facing_sign,
                 knife_tuning,
-                overedge_enabled: shroud.is_released,
+                overedge_enabled,
                 requested_style: attack_style,
             },
         );
