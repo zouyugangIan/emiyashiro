@@ -96,6 +96,7 @@ fn setup_game_resources(
         current_shirou_frame: 0,
         current_sakura_frame: 0,
         font: asset_server.load(asset_paths::FONT_FIRA_SANS),
+        volume_icon: asset_server.load(asset_paths::IMAGE_UI_VOLUME_ICON),
         shirou_spritesheet: None,
         shirou_spritesheet_run: None,
         shirou_spritesheet_attack: None,
@@ -146,87 +147,72 @@ fn setup_game_resources(
     let run_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 5, 1, None, None);
     let attack_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 1, None, None);
     // Overedge light sheet: 2816x256, 11帧 1行
-    let overedge_light_attack_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(256, 256),
-        11,
-        1,
-        None,
-        None,
-    );
+    let overedge_light_attack_layout =
+        TextureAtlasLayout::from_grid(UVec2::new(256, 256), 11, 1, None, None);
     // Overedge heavy sheet: 4352x256, 17帧 1行
-    let overedge_heavy_attack_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(256, 256),
-        17,
-        1,
-        None,
-        None,
-    );
+    let overedge_heavy_attack_layout =
+        TextureAtlasLayout::from_grid(UVec2::new(256, 256), 17, 1, None, None);
 
     // Reference Board 精灵表布局（Shift+V 未激活时使用）
     let ref_ground_light_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(213, 211),
-        7,
-        5,
+        UVec2::from(asset_paths::REFERENCE_BOARD_GROUND_LIGHT_CELL),
+        asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS,
+        asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS,
         None,
-        None,
+        Some(UVec2::from(
+            asset_paths::REFERENCE_BOARD_GROUND_LIGHT_OFFSET,
+        )),
     );
     let ref_air_combo_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(213, 211),
-        7,
-        5,
+        UVec2::from(asset_paths::REFERENCE_BOARD_AIR_COMBO_CELL),
+        asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS,
+        asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS,
         None,
-        None,
+        Some(UVec2::from(asset_paths::REFERENCE_BOARD_AIR_COMBO_OFFSET)),
     );
     let ref_heavy_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(209, 188),
-        8,
-        5,
+        UVec2::from(asset_paths::REFERENCE_BOARD_HEAVY_CELL),
+        asset_paths::REFERENCE_BOARD_HEAVY_COLS,
+        asset_paths::REFERENCE_BOARD_HEAVY_ROWS,
         None,
-        None,
+        Some(UVec2::from(asset_paths::REFERENCE_BOARD_HEAVY_OFFSET)),
     );
     let ref_ultimate_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(213, 211),
-        7,
-        5,
+        UVec2::from(asset_paths::REFERENCE_BOARD_ULTIMATE_CELL),
+        asset_paths::REFERENCE_BOARD_ULTIMATE_COLS,
+        asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS,
         None,
-        None,
+        Some(UVec2::from(asset_paths::REFERENCE_BOARD_ULTIMATE_OFFSET)),
     );
     let ref_mobility_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(213, 211),
-        7,
-        5,
+        UVec2::from(asset_paths::REFERENCE_BOARD_MOBILITY_CELL),
+        asset_paths::REFERENCE_BOARD_MOBILITY_COLS,
+        asset_paths::REFERENCE_BOARD_MOBILITY_ROWS,
         None,
-        None,
+        Some(UVec2::from(asset_paths::REFERENCE_BOARD_MOBILITY_OFFSET)),
     );
     let ref_ninjutsu_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(213, 211),
-        7,
-        5,
+        UVec2::from(asset_paths::REFERENCE_BOARD_NINJUTSU_CELL),
+        asset_paths::REFERENCE_BOARD_NINJUTSU_COLS,
+        asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS,
         None,
-        None,
+        Some(UVec2::from(asset_paths::REFERENCE_BOARD_NINJUTSU_OFFSET)),
     );
     let ref_weapon_proj_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(213, 211),
-        7,
-        5,
+        UVec2::from(asset_paths::REFERENCE_BOARD_WEAPON_PROJ_CELL),
+        asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS,
+        asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS,
         None,
-        None,
+        Some(UVec2::from(asset_paths::REFERENCE_BOARD_WEAPON_PROJ_OFFSET)),
     );
-    let ref_advance_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(175, 187),
-        8,
-        6,
-        None,
-        None,
-    );
+    let ref_advance_layout = TextureAtlasLayout::from_grid(UVec2::new(175, 187), 8, 6, None, None);
 
     // Reference Board 精灵表图片加载
     let ref_ground_light_handle =
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_GROUND_LIGHT_REFERENCE);
     let ref_air_combo_handle =
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_AIR_COMBO_REFERENCE);
-    let ref_heavy_handle =
-        asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_HEAVY_REFERENCE);
+    let ref_heavy_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_HEAVY_REFERENCE);
     let ref_ultimate_handle =
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_ULTIMATE_REFERENCE);
     let ref_mobility_handle =

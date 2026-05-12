@@ -3,6 +3,7 @@
 //! 包含背景音乐、音效播放和音频状态管理。
 
 use crate::resources::*;
+use bevy::audio::{AudioSink, AudioSinkPlayback, Volume};
 use bevy::prelude::*;
 
 /// 音频管理资源
@@ -24,6 +25,14 @@ pub enum GameMusicTrack {
     Game, // game.ogg - 第二首歌
 }
 
+fn music_volume(audio_settings: &AudioSettings) -> Volume {
+    Volume::Linear(audio_settings.music_volume * audio_settings.master_volume)
+}
+
+fn sfx_volume(audio_settings: &AudioSettings) -> Volume {
+    Volume::Linear(audio_settings.sfx_volume * audio_settings.master_volume)
+}
+
 /// 播放菜单音乐
 pub fn play_menu_music(
     mut commands: Commands,
@@ -38,7 +47,8 @@ pub fn play_menu_music(
     {
         commands.spawn((
             AudioPlayer(assets.menu_music.clone()),
-            PlaybackSettings::LOOP,
+            PlaybackSettings::LOOP.with_volume(music_volume(&audio_settings)),
+            GameMusicMarker,
         ));
         audio_manager.menu_music_playing = true;
         crate::debug_log!("🎵 开始播放菜单音乐");
@@ -59,7 +69,8 @@ pub fn play_game_music(
     {
         commands.spawn((
             AudioPlayer(assets.game_music.clone()),
-            PlaybackSettings::LOOP,
+            PlaybackSettings::LOOP.with_volume(music_volume(&audio_settings)),
+            GameMusicMarker,
         ));
         audio_manager.game_music_playing = true;
         crate::debug_log!("🎵 开始播放游戏音乐");
@@ -156,7 +167,7 @@ pub fn start_game_music_sequence(
         let entity = commands
             .spawn((
                 AudioPlayer(assets.game_whyifight_music.clone()),
-                PlaybackSettings::DESPAWN, // 播放完后自动销毁
+                PlaybackSettings::DESPAWN.with_volume(music_volume(&audio_settings)),
                 GameMusicMarker,
             ))
             .id();
@@ -197,7 +208,7 @@ pub fn handle_music_transitions(
                     let entity = commands
                         .spawn((
                             AudioPlayer(assets.game_music.clone()),
-                            PlaybackSettings::DESPAWN, // 播放完后自动销毁，不循环
+                            PlaybackSettings::DESPAWN.with_volume(music_volume(&audio_settings)),
                             GameMusicMarker,
                         ))
                         .id();
@@ -212,7 +223,7 @@ pub fn handle_music_transitions(
                     let entity = commands
                         .spawn((
                             AudioPlayer(assets.game_whyifight_music.clone()),
-                            PlaybackSettings::DESPAWN, // 播放完后自动销毁，不循环
+                            PlaybackSettings::DESPAWN.with_volume(music_volume(&audio_settings)),
                             GameMusicMarker,
                         ))
                         .id();
@@ -309,7 +320,8 @@ pub fn restore_audio_state(
             // 开始播放游戏音乐
             commands.spawn((
                 AudioPlayer(assets.game_music.clone()),
-                PlaybackSettings::LOOP,
+                PlaybackSettings::LOOP.with_volume(music_volume(&audio_settings)),
+                GameMusicMarker,
             ));
 
             audio_manager.game_music_playing = true;
@@ -330,6 +342,23 @@ pub fn restore_audio_state(
     crate::debug_log!("   Music playing: {}", audio_state.music_playing);
     crate::debug_log!("   Music volume: {:.1}", audio_state.music_volume);
     crate::debug_log!("   Music enabled: {}", audio_state.music_enabled);
+}
+
+pub fn apply_audio_settings(
+    audio_settings: Res<AudioSettings>,
+    mut music_sinks: Query<&mut AudioSink, With<GameMusicMarker>>,
+    mut sfx_sinks: Query<&mut AudioSink, Without<GameMusicMarker>>,
+) {
+    let music_volume = music_volume(&audio_settings);
+    let sfx_volume = sfx_volume(&audio_settings);
+
+    for mut sink in music_sinks.iter_mut() {
+        sink.set_volume(music_volume);
+    }
+
+    for mut sink in sfx_sinks.iter_mut() {
+        sink.set_volume(sfx_volume);
+    }
 }
 
 /// 音频状态结构

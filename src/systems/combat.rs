@@ -306,6 +306,9 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
             (asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
                 * asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS) as usize
         }
+        AttackAnimationStyle::GroundLightRow(_) => {
+            asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS as usize
+        }
         AttackAnimationStyle::AirCombo => {
             (asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
                 * asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS) as usize
@@ -314,17 +317,18 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
             (asset_paths::REFERENCE_BOARD_HEAVY_COLS * asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
                 as usize
         }
+        AttackAnimationStyle::HeavyRefRow(_) => asset_paths::REFERENCE_BOARD_HEAVY_COLS as usize,
         AttackAnimationStyle::UltimateRef => {
-            (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS)
-                as usize
+            (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
+                * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS) as usize
         }
         AttackAnimationStyle::MobilityRef => {
-            (asset_paths::REFERENCE_BOARD_MOBILITY_COLS * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS)
-                as usize
+            (asset_paths::REFERENCE_BOARD_MOBILITY_COLS
+                * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS) as usize
         }
         AttackAnimationStyle::NinjutsuRef => {
-            (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS)
-                as usize
+            (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
+                * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS) as usize
         }
         AttackAnimationStyle::WeaponProjRef => {
             (asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
@@ -341,7 +345,33 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
 }
 
 fn attack_cooldown_floor(style: AttackAnimationStyle) -> f32 {
-    overedge_animation_duration(style).unwrap_or(0.0)
+    match style {
+        AttackAnimationStyle::OveredgeRelease
+        | AttackAnimationStyle::OveredgeLight1
+        | AttackAnimationStyle::OveredgeLight2
+        | AttackAnimationStyle::OveredgeLight3
+        | AttackAnimationStyle::OveredgeHeavy
+        | AttackAnimationStyle::GroundLightRow(_)
+        | AttackAnimationStyle::HeavyRefRow(_) => overedge_animation_duration(style).unwrap_or(0.0),
+        _ => 0.0,
+    }
+}
+
+fn reference_attack_row_key(keyboard: &ButtonInput<KeyCode>) -> Option<u8> {
+    [
+        KeyCode::KeyY,
+        KeyCode::KeyU,
+        KeyCode::KeyI,
+        KeyCode::KeyO,
+        KeyCode::KeyP,
+    ]
+    .into_iter()
+    .position(|key| keyboard.just_pressed(key))
+    .map(|index| index as u8 + 1)
+}
+
+fn shift_pressed(keyboard: &ButtonInput<KeyCode>) -> bool {
+    keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight)
 }
 
 fn spawn_projectile_with_style(
@@ -569,7 +599,7 @@ pub fn player_shoot_projectile(
     }
 }
 
-/// 玩家近战刀攻击（L/U）：
+/// 玩家近战刀攻击：
 /// 支持轻量三段连击与输入缓冲。
 /// 也支持 Reference Board 攻击模组（Shift+V 未激活时）。
 pub fn player_knife_attack(
@@ -592,14 +622,8 @@ pub fn player_knife_attack(
         runtime.queued_attack = None;
     }
 
-    let Some((
-        player_entity,
-        player_velocity,
-        player_state,
-        facing,
-        shroud,
-        mut attack_animation,
-    )) = player_query.iter_mut().next()
+    let Some((player_entity, player_velocity, player_state, facing, shroud, mut attack_animation)) =
+        player_query.iter_mut().next()
     else {
         return;
     };
@@ -608,30 +632,39 @@ pub fn player_knife_attack(
     let is_airborne = !player_state.is_grounded;
     let is_crouching = player_state.is_crouching;
 
+    let reference_row_attack = reference_attack_row_key(&keyboard).map(|row| {
+        if shift_pressed(&keyboard) {
+            AttackAnimationStyle::HeavyRefRow(row)
+        } else {
+            AttackAnimationStyle::GroundLightRow(row)
+        }
+    });
     let light_attack_pressed = game_input
         .as_deref()
         .map(|input| input.action1_pressed_this_frame)
         .unwrap_or(false)
-        || keyboard.just_pressed(KeyCode::KeyL)
-        || keyboard.just_pressed(KeyCode::KeyU);
+        || keyboard.just_pressed(KeyCode::KeyL);
     let heavy_attack_pressed = overedge_enabled && keyboard.just_pressed(KeyCode::KeyK);
 
     // 解析请求的攻击样式
-    let requested_attack: Option<AttackAnimationStyle> = if heavy_attack_pressed {
-        Some(AttackAnimationStyle::OveredgeHeavy)
-    } else if light_attack_pressed {
-        if overedge_enabled {
-            Some(AttackAnimationStyle::OveredgeLight1)
-        } else if is_airborne {
-            Some(AttackAnimationStyle::AirCombo)
-        } else if is_crouching {
-            Some(AttackAnimationStyle::MobilityRef)
+    let requested_attack: Option<AttackAnimationStyle> =
+        if let Some(attack_style) = reference_row_attack {
+            Some(attack_style)
+        } else if heavy_attack_pressed {
+            Some(AttackAnimationStyle::OveredgeHeavy)
+        } else if light_attack_pressed {
+            if overedge_enabled {
+                Some(AttackAnimationStyle::OveredgeLight1)
+            } else if is_airborne {
+                Some(AttackAnimationStyle::AirCombo)
+            } else if is_crouching {
+                Some(AttackAnimationStyle::MobilityRef)
+            } else {
+                Some(AttackAnimationStyle::GroundLight)
+            }
         } else {
-            Some(AttackAnimationStyle::GroundLight)
-        }
-    } else {
-        None
-    };
+            None
+        };
 
     if let Some(attack_style) = requested_attack {
         if runtime.cooldown <= 0.0 {

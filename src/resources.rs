@@ -313,6 +313,7 @@ pub struct GameAssets {
     pub current_sakura_frame: usize,
 
     pub font: Handle<Font>,
+    pub volume_icon: Handle<Image>,
     // 精灵表资源
     pub shirou_spritesheet: Option<Handle<Image>>,
     pub shirou_spritesheet_run: Option<Handle<Image>>,
@@ -461,8 +462,8 @@ impl GameAssets {
             reference_heavy_frame_count: if self.shirou_ref_heavy.is_some()
                 && self.shirou_atlas_ref_heavy.is_some()
             {
-                (asset_paths::REFERENCE_BOARD_HEAVY_COLS
-                    * asset_paths::REFERENCE_BOARD_HEAVY_ROWS) as usize
+                (asset_paths::REFERENCE_BOARD_HEAVY_COLS * asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
+                    as usize
             } else {
                 0
             },

@@ -22,6 +22,8 @@ These images are design references. Runtime combat still uses transparent 256px-
 ## Runtime Mapping
 
 - `Shift+V`: enables the reference module mode and shows the overview board.
-- `J/Z/L/U`: ground light board, or air combo board while airborne, or mobility board while crouching.
+- `J/Z/L`: ground light board, or air combo board while airborne, or mobility board while crouching.
+- `Y/U/I/O/P`: 1P ground light rows 1-5.
+- `Shift+Y/U/I/O/P`: 1P heavy rows 1-5.
 - `K`: heavy board, or ultimate board while crouching.
 - `X`: ninjutsu/projectile board, or weapon projection board while crouching.

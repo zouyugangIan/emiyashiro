@@ -858,7 +858,9 @@ pub fn send_ping_system(input: Res<ButtonInput<KeyCode>>, net: Res<NetworkResour
         return;
     }
 
-    if input.just_pressed(KeyCode::KeyP)
+    let ctrl_pressed = input.pressed(KeyCode::ControlLeft) || input.pressed(KeyCode::ControlRight);
+    if ctrl_pressed
+        && input.just_pressed(KeyCode::KeyP)
         && let Some(tx) = &net.action_tx
     {
         let _ = tx.send(PlayerAction::Ping(0));

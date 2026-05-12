@@ -18,6 +18,7 @@ fn create_mock_game_assets() -> GameAssets {
         current_shirou_frame: 0,
         current_sakura_frame: 0,
         font: Handle::default(),
+        volume_icon: Handle::default(),
         shirou_spritesheet: None,
         shirou_spritesheet_run: None,
         shirou_spritesheet_attack: None,

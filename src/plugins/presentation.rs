@@ -17,6 +17,10 @@ impl Plugin for PresentationPlugin {
                 .run_if(in_state(GameState::Menu)),
         )
         .add_systems(
+            Update,
+            systems::audio::apply_audio_settings.in_set(GameSystemSet::Audio),
+        )
+        .add_systems(
             OnEnter(GameState::Playing),
             (
                 systems::audio::play_game_music_and_stop_menu,

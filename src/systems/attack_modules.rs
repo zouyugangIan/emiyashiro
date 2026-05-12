@@ -146,11 +146,25 @@ struct ReferenceAttackModuleInput {
 pub struct ReferenceAttackModulePreview {
     timer: Timer,
     frame_timer: Timer,
+    frame_start: usize,
     frame_count: usize,
 }
 
 fn shift_pressed(keyboard: &ButtonInput<KeyCode>) -> bool {
     keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight)
+}
+
+fn reference_attack_row_key(keyboard: &ButtonInput<KeyCode>) -> Option<u8> {
+    [
+        KeyCode::KeyY,
+        KeyCode::KeyU,
+        KeyCode::KeyI,
+        KeyCode::KeyO,
+        KeyCode::KeyP,
+    ]
+    .into_iter()
+    .position(|key| keyboard.just_pressed(key))
+    .map(|index| index as u8 + 1)
 }
 
 fn resolve_reference_attack_module(
@@ -206,6 +220,7 @@ fn spawn_reference_attack_module_preview(
     player_transform: &Transform,
     facing: Option<&FacingDirection>,
     kind: ReferenceAttackModuleKind,
+    row: Option<u8>,
     preview_query: &Query<Entity, With<ReferenceAttackModulePreview>>,
 ) {
     for entity in preview_query.iter() {
@@ -219,8 +234,21 @@ fn spawn_reference_attack_module_preview(
         PREVIEW_Z,
     );
     let grid = kind.grid();
+    let frame_start = grid
+        .zip(row)
+        .and_then(|(grid, row)| {
+            (row > 0 && row <= grid.rows as u8)
+                .then_some((row as usize - 1) * grid.columns as usize)
+        })
+        .unwrap_or(0);
     let frame_count = grid
-        .map(|grid| (grid.columns * grid.rows) as usize)
+        .map(|grid| {
+            if row.is_some() {
+                grid.columns as usize
+            } else {
+                (grid.columns * grid.rows) as usize
+            }
+        })
         .unwrap_or(0);
     let duration = if frame_count > 0 {
         frame_count as f32 * MODULE_FRAME_DURATION_SECS
@@ -235,7 +263,7 @@ fn spawn_reference_attack_module_preview(
             None,
             Some(grid.offset),
         )),
-        index: 0,
+        index: frame_start,
     });
     let custom_size = grid
         .map(|grid| grid.preview_size)
@@ -254,6 +282,7 @@ fn spawn_reference_attack_module_preview(
         ReferenceAttackModulePreview {
             timer: Timer::from_seconds(duration, TimerMode::Once),
             frame_timer: Timer::from_seconds(MODULE_FRAME_DURATION_SECS, TimerMode::Repeating),
+            frame_start,
             frame_count,
         },
     ));
@@ -273,12 +302,24 @@ pub fn handle_reference_attack_module_input(
     };
 
     let shift_is_pressed = shift_pressed(&keyboard);
+    let reference_row = reference_attack_row_key(&keyboard);
+    let row_kind_override = (shroud.is_released)
+        .then(|| {
+            reference_row.map(|_| {
+                if shift_is_pressed {
+                    ReferenceAttackModuleKind::Heavy
+                } else {
+                    ReferenceAttackModuleKind::GroundLight
+                }
+            })
+        })
+        .flatten();
     let light_pressed = game_input
         .as_deref()
         .map(|input| input.action1_pressed_this_frame)
         .unwrap_or(false)
         || keyboard.just_pressed(KeyCode::KeyL)
-        || keyboard.just_pressed(KeyCode::KeyU);
+        || (reference_row.is_some() && !shift_is_pressed);
     let projectile_pressed = game_input
         .as_deref()
         .map(|input| input.action2_pressed_this_frame)
@@ -301,7 +342,14 @@ pub fn handle_reference_attack_module_input(
         shift_move_pressed,
     };
 
-    if let Some(kind) = resolve_reference_attack_module(module_input) {
+    if let Some(kind) = row_kind_override.or_else(|| resolve_reference_attack_module(module_input))
+    {
+        let selected_row = row_kind_override.and(reference_row).filter(|_| {
+            matches!(
+                kind,
+                ReferenceAttackModuleKind::GroundLight | ReferenceAttackModuleKind::Heavy
+            )
+        });
         spawn_reference_attack_module_preview(
             &mut commands,
             &asset_server,
@@ -309,6 +357,7 @@ pub fn handle_reference_attack_module_input(
             player_transform,
             facing,
             kind,
+            selected_row,
             &preview_query,
         );
     }
@@ -347,7 +396,10 @@ pub fn update_reference_attack_module_previews(
             if preview.frame_timer.just_finished()
                 && let Some(atlas) = sprite.texture_atlas.as_mut()
             {
-                atlas.index = (atlas.index + 1).min(preview.frame_count.saturating_sub(1));
+                let frame_end = preview
+                    .frame_start
+                    .saturating_add(preview.frame_count.saturating_sub(1));
+                atlas.index = (atlas.index + 1).min(frame_end);
             }
         }
     }

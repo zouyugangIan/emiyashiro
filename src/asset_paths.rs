@@ -20,6 +20,7 @@ pub const IMAGE_UI_COVER15: &str = "images/ui/cover15.png";
 pub const IMAGE_UI_COVER16: &str = "images/ui/cover16.png";
 pub const IMAGE_UI_COVER17: &str = "images/ui/cover17.png";
 pub const IMAGE_UI_COVER18: &str = "images/ui/cover18.png";
+pub const IMAGE_UI_VOLUME_ICON: &str = "images/ui/volume_icon.png";
 
 // 所有封面图片的数组，用于轮流显示
 pub const UI_COVER_IMAGES: &[&str] = &[
@@ -205,31 +206,35 @@ pub const IMAGE_HF_SHIROU_ATTACK_WEAPON_PROJECTION_REFERENCE: &str =
     "images/characters/reference/hf_shirou_attack_weapon_projection_reference.png";
 
 // Reference Board 精灵表参数（用于 texture atlas 布局）
-// 分析: ground_light/air_combo/ultimate/ninjutsu/weapon_proj/mobility: 1491x1055 → 7列x5行 @ 213x211px
-//        heavy: 1672x941 → 8列x5行 @ 209x188px
-//        overview: 1536x1024 → 8列x5行 @ 192x204px
-//        advanced_overview: 1402x1122 → 8列x6行 @ 175x187px
-pub const REFERENCE_BOARD_GROUND_LIGHT_COLS: u32 = 7;
+// These values crop the playable frame grid inside the labeled reference boards.
+pub const REFERENCE_BOARD_GROUND_LIGHT_COLS: u32 = 8;
 pub const REFERENCE_BOARD_GROUND_LIGHT_ROWS: u32 = 5;
-pub const REFERENCE_BOARD_GROUND_LIGHT_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_GROUND_LIGHT_CELL: (u32, u32) = (183, 178);
+pub const REFERENCE_BOARD_GROUND_LIGHT_OFFSET: (u32, u32) = (14, 82);
 pub const REFERENCE_BOARD_HEAVY_COLS: u32 = 8;
 pub const REFERENCE_BOARD_HEAVY_ROWS: u32 = 5;
-pub const REFERENCE_BOARD_HEAVY_CELL: (u32, u32) = (209, 188);
-pub const REFERENCE_BOARD_AIR_COMBO_COLS: u32 = 7;
+pub const REFERENCE_BOARD_HEAVY_CELL: (u32, u32) = (206, 153);
+pub const REFERENCE_BOARD_HEAVY_OFFSET: (u32, u32) = (15, 84);
+pub const REFERENCE_BOARD_AIR_COMBO_COLS: u32 = 8;
 pub const REFERENCE_BOARD_AIR_COMBO_ROWS: u32 = 5;
-pub const REFERENCE_BOARD_AIR_COMBO_CELL: (u32, u32) = (213, 211);
-pub const REFERENCE_BOARD_MOBILITY_COLS: u32 = 7;
-pub const REFERENCE_BOARD_MOBILITY_ROWS: u32 = 5;
-pub const REFERENCE_BOARD_MOBILITY_CELL: (u32, u32) = (213, 211);
-pub const REFERENCE_BOARD_NINJUTSU_COLS: u32 = 7;
-pub const REFERENCE_BOARD_NINJUTSU_ROWS: u32 = 5;
-pub const REFERENCE_BOARD_NINJUTSU_CELL: (u32, u32) = (213, 211);
-pub const REFERENCE_BOARD_ULTIMATE_COLS: u32 = 7;
-pub const REFERENCE_BOARD_ULTIMATE_ROWS: u32 = 5;
-pub const REFERENCE_BOARD_ULTIMATE_CELL: (u32, u32) = (213, 211);
-pub const REFERENCE_BOARD_WEAPON_PROJ_COLS: u32 = 7;
-pub const REFERENCE_BOARD_WEAPON_PROJ_ROWS: u32 = 5;
-pub const REFERENCE_BOARD_WEAPON_PROJ_CELL: (u32, u32) = (213, 211);
+pub const REFERENCE_BOARD_AIR_COMBO_CELL: (u32, u32) = (183, 178);
+pub const REFERENCE_BOARD_AIR_COMBO_OFFSET: (u32, u32) = (14, 82);
+pub const REFERENCE_BOARD_MOBILITY_COLS: u32 = 6;
+pub const REFERENCE_BOARD_MOBILITY_ROWS: u32 = 4;
+pub const REFERENCE_BOARD_MOBILITY_CELL: (u32, u32) = (244, 207);
+pub const REFERENCE_BOARD_MOBILITY_OFFSET: (u32, u32) = (15, 110);
+pub const REFERENCE_BOARD_NINJUTSU_COLS: u32 = 8;
+pub const REFERENCE_BOARD_NINJUTSU_ROWS: u32 = 4;
+pub const REFERENCE_BOARD_NINJUTSU_CELL: (u32, u32) = (183, 210);
+pub const REFERENCE_BOARD_NINJUTSU_OFFSET: (u32, u32) = (14, 94);
+pub const REFERENCE_BOARD_ULTIMATE_COLS: u32 = 8;
+pub const REFERENCE_BOARD_ULTIMATE_ROWS: u32 = 3;
+pub const REFERENCE_BOARD_ULTIMATE_CELL: (u32, u32) = (183, 267);
+pub const REFERENCE_BOARD_ULTIMATE_OFFSET: (u32, u32) = (14, 92);
+pub const REFERENCE_BOARD_WEAPON_PROJ_COLS: u32 = 6;
+pub const REFERENCE_BOARD_WEAPON_PROJ_ROWS: u32 = 4;
+pub const REFERENCE_BOARD_WEAPON_PROJ_CELL: (u32, u32) = (244, 197);
+pub const REFERENCE_BOARD_WEAPON_PROJ_OFFSET: (u32, u32) = (15, 118);
 pub const REFERENCE_BOARD_OVERVIEW_COLS: u32 = 8;
 pub const REFERENCE_BOARD_OVERVIEW_ROWS: u32 = 5;
 pub const REFERENCE_BOARD_OVERVIEW_CELL: (u32, u32) = (192, 204);

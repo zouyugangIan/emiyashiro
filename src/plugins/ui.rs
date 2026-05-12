@@ -44,7 +44,12 @@ impl Plugin for UiPlugin {
         .add_systems(OnEnter(GameState::Playing), systems::ui::setup_game_hud)
         .add_systems(
             Update,
-            systems::ui::update_game_hud
+            (
+                systems::ui::handle_volume_control_interactions,
+                systems::ui::update_volume_control_display,
+                systems::ui::update_game_hud,
+            )
+                .chain()
                 .in_set(GameSystemSet::UI)
                 .run_if(in_state(GameState::Playing)),
         )

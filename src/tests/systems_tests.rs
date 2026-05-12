@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::systems::ui::{GameHUD, setup_game_hud};
+    use crate::systems::ui::{
+        GameHUD, VolumeBarFill, VolumePercentText, VolumeUpButton,
+        handle_volume_control_interactions, setup_game_hud, update_volume_control_display,
+    };
     use crate::{components::*, resources::*, states::*, systems::*};
     use bevy::prelude::*;
     use std::fs;
@@ -46,6 +49,60 @@ mod tests {
         assert_eq!(settings.sfx_volume, 0.7);
         assert_eq!(settings.music_volume, 0.5);
         assert!(settings.music_enabled);
+    }
+
+    #[test]
+    fn test_volume_up_button_adjusts_master_volume() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(AudioSettings {
+                master_volume: 0.5,
+                ..Default::default()
+            })
+            .init_resource::<AudioStateManager>()
+            .add_systems(Update, handle_volume_control_interactions);
+
+        app.world_mut().spawn((
+            Button,
+            Interaction::Pressed,
+            BackgroundColor(Color::NONE),
+            VolumeUpButton,
+        ));
+
+        app.update();
+
+        let audio_settings = app.world().resource::<AudioSettings>();
+        assert_eq!(audio_settings.master_volume, 0.6);
+        let audio_state = app.world().resource::<AudioStateManager>();
+        assert_eq!(audio_state.music_volume, 0.6);
+    }
+
+    #[test]
+    fn test_volume_display_reflects_master_volume() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(AudioSettings {
+                master_volume: 0.3,
+                ..Default::default()
+            })
+            .add_systems(Update, update_volume_control_display);
+
+        let bar = app.world_mut().spawn((Node::default(), VolumeBarFill)).id();
+        let label = app
+            .world_mut()
+            .spawn((Text::new(""), VolumePercentText))
+            .id();
+
+        app.update();
+
+        let node = app.world().entity(bar).get::<Node>().expect("bar node");
+        assert!(matches!(node.width, Val::Percent(value) if (value - 30.0).abs() < 0.001));
+        let text = app
+            .world()
+            .entity(label)
+            .get::<Text>()
+            .expect("volume text");
+        assert_eq!(text.as_str(), "30%");
     }
 
     #[test]
@@ -1352,9 +1409,11 @@ mod tests {
             .press(KeyCode::KeyL);
         app.update();
 
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .release(KeyCode::KeyL);
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyL);
+            keyboard.clear();
+        }
         for _ in 0..7 {
             app.update();
         }
@@ -1374,9 +1433,11 @@ mod tests {
             "buffer input should not spawn slash until cooldown reaches zero"
         );
 
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .release(KeyCode::KeyL);
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyL);
+            keyboard.clear();
+        }
         for _ in 0..50 {
             app.update();
         }
@@ -1610,6 +1671,60 @@ mod tests {
                     * crate::asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS
                     - 0.001,
             "K should keep the 2+3 overedge animation active long enough to play"
+        );
+    }
+
+    #[test]
+    fn test_reference_attack_row_shortcuts_select_expected_styles() {
+        fn trigger_style(key: KeyCode, shift: bool) -> AttackAnimationStyle {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                    Duration::from_secs_f32(1.0 / 60.0),
+                ))
+                .insert_resource(ButtonInput::<KeyCode>::default())
+                .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+            let player = app
+                .world_mut()
+                .spawn((
+                    Player,
+                    Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                    Velocity::default(),
+                    PlayerState::default(),
+                    FacingDirection::Right,
+                    AttackAnimationState::default(),
+                    ShroudState::default(),
+                ))
+                .id();
+
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                if shift {
+                    keyboard.press(KeyCode::ShiftLeft);
+                }
+                keyboard.press(key);
+            }
+            app.update();
+
+            app.world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style
+        }
+
+        assert_eq!(
+            trigger_style(KeyCode::KeyY, false),
+            AttackAnimationStyle::GroundLightRow(1)
+        );
+        assert_eq!(
+            trigger_style(KeyCode::KeyP, false),
+            AttackAnimationStyle::GroundLightRow(5)
+        );
+        assert_eq!(
+            trigger_style(KeyCode::KeyI, true),
+            AttackAnimationStyle::HeavyRefRow(3)
         );
     }
 

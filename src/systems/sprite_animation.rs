@@ -149,6 +149,9 @@ fn resolved_attack_style(
         } else if attack_style != AttackAnimationStyle::Normal {
             // Reference Board 模组：根据玩家状态映射
             match attack_style {
+                AttackAnimationStyle::GroundLightRow(_) | AttackAnimationStyle::HeavyRefRow(_) => {
+                    attack_style
+                }
                 AttackAnimationStyle::GroundLight | AttackAnimationStyle::AirCombo => {
                     if is_airborne {
                         AttackAnimationStyle::AirCombo
@@ -191,6 +194,21 @@ fn bounded_frame_range(
     (count > 0 && end <= available_frame_count).then(|| (start..end).collect())
 }
 
+fn reference_board_row_frames(
+    row: u8,
+    columns: u32,
+    rows: u32,
+    available_frame_count: usize,
+) -> Option<Vec<usize>> {
+    if row == 0 || row > rows as u8 {
+        return None;
+    }
+
+    let columns = columns as usize;
+    let start = (row as usize - 1).checked_mul(columns)?;
+    bounded_frame_range(start, columns, available_frame_count)
+}
+
 fn overedge_attack_frames(
     attack_style: AttackAnimationStyle,
     available_frame_count: usize,
@@ -219,6 +237,18 @@ fn overedge_attack_frames(
         AttackAnimationStyle::OveredgeHeavy => {
             (available_frame_count > 0).then(|| (0..available_frame_count).collect())
         }
+        AttackAnimationStyle::GroundLightRow(row) => reference_board_row_frames(
+            row,
+            asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS,
+            asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::HeavyRefRow(row) => reference_board_row_frames(
+            row,
+            asset_paths::REFERENCE_BOARD_HEAVY_COLS,
+            asset_paths::REFERENCE_BOARD_HEAVY_ROWS,
+            available_frame_count,
+        ),
         // Reference Board 模组播放全部帧
         AttackAnimationStyle::GroundLight
         | AttackAnimationStyle::AirCombo
@@ -482,7 +512,8 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
         }
 
         if current_key == AnimationType::Attacking {
-            let attack_style = resolved_attack_style(&current_key, attack_style, shroud, player_state);
+            let attack_style =
+                resolved_attack_style(&current_key, attack_style, shroud, player_state);
             apply_animation_sheet(&mut sprite, sprite_sheets, &current_key, attack_style);
         }
 
@@ -576,7 +607,12 @@ pub fn update_character_animation_state(
 
         if animation.current_animation != new_animation || attack_retriggered {
             apply_animation_change(&mut animation, new_animation.clone(), velocity.x.abs());
-            let attack_style = resolved_attack_style(&new_animation, attack_state.style, shroud, Some(player_state));
+            let attack_style = resolved_attack_style(
+                &new_animation,
+                attack_state.style,
+                shroud,
+                Some(player_state),
+            );
             apply_animation_sheet(&mut sprite, sprite_sheets, &new_animation, attack_style);
             if new_animation == AnimationType::Attacking {
                 animation.last_attack_trigger_serial = attack_state.trigger_serial;
@@ -708,6 +744,36 @@ mod tests {
         assert_eq!(
             overedge_attack_frames(AttackAnimationStyle::OveredgeHeavy, 0),
             None
+        );
+    }
+
+    #[test]
+    fn test_reference_attack_row_frames_match_yuiop_rows() {
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::GroundLightRow(1),
+                (crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
+                    as usize
+            ),
+            Some(vec![0, 1, 2, 3, 4, 5, 6, 7])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::GroundLightRow(5),
+                (crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
+                    as usize
+            ),
+            Some(vec![32, 33, 34, 35, 36, 37, 38, 39])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::HeavyRefRow(3),
+                (crate::asset_paths::REFERENCE_BOARD_HEAVY_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_HEAVY_ROWS) as usize
+            ),
+            Some(vec![16, 17, 18, 19, 20, 21, 22, 23])
         );
     }
 
