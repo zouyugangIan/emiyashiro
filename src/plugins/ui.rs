@@ -17,6 +17,7 @@ impl Plugin for UiPlugin {
                 systems::ui::cleanup_game_hud,
                 systems::scene_decoration::cleanup_scene_decorations,
                 systems::audio::stop_game_music,
+                systems::settings_ui::cleanup_settings_overlay,
                 systems::menu::setup_menu,
             )
                 .chain(),
@@ -30,6 +31,7 @@ impl Plugin for UiPlugin {
                 )
                     .chain(),
                 systems::menu::handle_load_button,
+                systems::menu::handle_menu_settings_button,
                 systems::save::handle_save_button_click,
                 systems::menu::cover_fade_animation,
                 systems::visual_effects::button_hover_effect,
@@ -39,19 +41,31 @@ impl Plugin for UiPlugin {
         )
         .add_systems(
             OnExit(GameState::Menu),
-            (systems::menu::cleanup_menu, systems::audio::stop_menu_music),
+            (
+                systems::menu::cleanup_menu,
+                systems::settings_ui::cleanup_settings_overlay,
+                systems::audio::stop_menu_music,
+            ),
         )
         .add_systems(OnEnter(GameState::Playing), systems::ui::setup_game_hud)
         .add_systems(
             Update,
+            systems::ui::update_game_hud
+                .in_set(GameSystemSet::UI)
+                .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            Update,
             (
-                systems::ui::handle_volume_control_interactions,
-                systems::ui::update_volume_control_display,
-                systems::ui::update_game_hud,
+                systems::settings_ui::handle_volume_control_interactions,
+                systems::settings_ui::update_volume_control_display,
+                systems::settings_ui::handle_settings_back_button,
+                systems::settings_ui::close_settings_overlay_on_escape,
             )
                 .chain()
                 .in_set(GameSystemSet::UI)
-                .run_if(in_state(GameState::Playing)),
+                .run_if(any_with_component::<crate::systems::settings_ui::SettingsOverlayRoot>)
+                .run_if(in_state(GameState::Menu).or(in_state(GameState::Paused))),
         )
         .add_systems(
             OnEnter(GameState::Paused),
@@ -70,7 +84,13 @@ impl Plugin for UiPlugin {
                 .in_set(GameSystemSet::UI)
                 .run_if(in_state(GameState::Paused)),
         )
-        .add_systems(OnExit(GameState::Paused), systems::ui::cleanup_pause_menu)
+        .add_systems(
+            OnExit(GameState::Paused),
+            (
+                systems::ui::cleanup_pause_menu,
+                systems::settings_ui::cleanup_settings_overlay,
+            ),
+        )
         .add_systems(
             OnEnter(GameState::SaveDialog),
             systems::ui::setup_save_dialog,

@@ -31,6 +31,7 @@ impl Plugin for CorePlugin {
             .init_resource::<CharacterSelection>()
             .init_resource::<GameStats>()
             .init_resource::<AudioSettings>()
+            .init_resource::<systems::settings_ui::VolumeControlState>()
             .init_resource::<systems::audio::AudioManager>()
             .init_resource::<SaveManager>()
             .init_resource::<SaveFileManager>()
@@ -97,6 +98,7 @@ fn setup_game_resources(
         current_sakura_frame: 0,
         font: asset_server.load(asset_paths::FONT_FIRA_SANS),
         volume_icon: asset_server.load(asset_paths::IMAGE_UI_VOLUME_ICON),
+        volume_muted_icon: asset_server.load(asset_paths::IMAGE_UI_VOLUME_MUTED_ICON),
         shirou_spritesheet: None,
         shirou_spritesheet_run: None,
         shirou_spritesheet_attack: None,

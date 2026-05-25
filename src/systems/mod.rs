@@ -28,6 +28,7 @@ pub mod collision;
 
 // UI系统
 pub mod menu;
+pub mod settings_ui;
 pub mod ui;
 
 // 音频系统

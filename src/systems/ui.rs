@@ -1,5 +1,6 @@
 use crate::{StartLoadGame, StartSaveGame};
-use crate::{components::*, resources::*, states::*};
+use crate::{components::*, resources::*, states::*, systems::settings_ui::PauseSettingsButton};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 /// Gameplay HUD root marker.
@@ -17,21 +18,6 @@ pub struct DistanceDisplay;
 /// HUD health text marker.
 #[derive(Component)]
 pub struct HealthDisplay;
-
-#[derive(Component)]
-pub struct VolumeIconButton;
-
-#[derive(Component)]
-pub struct VolumeDownButton;
-
-#[derive(Component)]
-pub struct VolumeUpButton;
-
-#[derive(Component)]
-pub struct VolumeBarFill;
-
-#[derive(Component)]
-pub struct VolumePercentText;
 
 // Enhanced Pause System UI Components
 #[derive(Component)]
@@ -180,26 +166,12 @@ type RenameDialogInteractionQuery<'w, 's> = Query<
     (Changed<Interaction>, With<Button>),
 >;
 
-type VolumeControlInteractionQuery<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static Interaction,
-        &'static mut BackgroundColor,
-        Option<&'static VolumeIconButton>,
-        Option<&'static VolumeDownButton>,
-        Option<&'static VolumeUpButton>,
-    ),
-    (
-        Changed<Interaction>,
-        With<Button>,
-        Or<(
-            With<VolumeIconButton>,
-            With<VolumeDownButton>,
-            With<VolumeUpButton>,
-        )>,
-    ),
->;
+#[derive(SystemParam)]
+pub struct SettingsOverlayResourceParams<'w, 's> {
+    game_assets: Option<Res<'w, GameAssets>>,
+    audio_settings: Option<Res<'w, AudioSettings>>,
+    existing_settings: Query<'w, 's, (), With<crate::systems::settings_ui::SettingsOverlayRoot>>,
+}
 
 type PauseMenuInteractionQuery<'w, 's> = Query<
     'w,
@@ -210,11 +182,24 @@ type PauseMenuInteractionQuery<'w, 's> = Query<
         Option<&'static ResumeButton>,
         Option<&'static SaveGameButton>,
         Option<&'static LoadGameButton>,
+        Option<&'static PauseSettingsButton>,
         Option<&'static MainMenuButton>,
         Option<&'static EscKeyButton>,
         Option<&'static QKeyButton>,
     ),
-    (Changed<Interaction>, With<Button>),
+    (
+        Changed<Interaction>,
+        With<Button>,
+        Or<(
+            With<ResumeButton>,
+            With<SaveGameButton>,
+            With<LoadGameButton>,
+            With<PauseSettingsButton>,
+            With<MainMenuButton>,
+            With<EscKeyButton>,
+            With<QKeyButton>,
+        )>,
+    ),
 >;
 
 type ScoreTextQuery<'w, 's> = Query<
@@ -261,25 +246,11 @@ fn save_player_label(character: &CharacterType) -> &'static str {
 pub fn setup_game_hud(
     mut commands: Commands,
     game_assets: Option<Res<GameAssets>>,
-    audio_settings: Option<Res<AudioSettings>>,
     existing_hud: Query<Entity, With<GameHUD>>,
 ) {
     if !existing_hud.is_empty() {
         return;
     }
-
-    let font_handle = game_assets
-        .as_ref()
-        .map(|a| a.font.clone())
-        .unwrap_or_default();
-    let volume_icon = game_assets
-        .as_ref()
-        .map(|a| a.volume_icon.clone())
-        .unwrap_or_default();
-    let initial_volume = audio_settings
-        .as_ref()
-        .map(|settings| settings.master_volume.clamp(0.0, 1.0))
-        .unwrap_or(1.0);
 
     // 閸掓稑锟?HUD 閺岖濡悙?
     commands
@@ -370,147 +341,6 @@ pub fn setup_game_hud(
                 HealthDisplay,
             ));
 
-            parent
-                .spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(16.0),
-                        right: Val::Px(16.0),
-                        width: Val::Px(228.0),
-                        height: Val::Px(52.0),
-                        border: UiRect::all(Val::Px(1.0)),
-                        padding: UiRect::axes(Val::Px(7.0), Val::Px(6.0)),
-                        flex_direction: FlexDirection::Row,
-                        align_items: AlignItems::Center,
-                        column_gap: Val::Px(8.0),
-                        ..default()
-                    },
-                    BackgroundColor(Color::srgba(0.04, 0.05, 0.055, 0.78)),
-                    BorderColor::all(Color::srgba(0.92, 0.28, 0.24, 0.62)),
-                    ZIndex(4),
-                ))
-                .with_children(|parent| {
-                    parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(38.0),
-                                height: Val::Px(38.0),
-                                border: UiRect::all(Val::Px(1.0)),
-                                justify_content: JustifyContent::Center,
-                                align_items: AlignItems::Center,
-                                ..default()
-                            },
-                            BackgroundColor(Color::srgba(0.12, 0.13, 0.14, 0.86)),
-                            BorderColor::all(Color::srgba(1.0, 0.48, 0.36, 0.72)),
-                            VolumeIconButton,
-                        ))
-                        .with_children(|parent| {
-                            parent.spawn((
-                                ImageNode::new(volume_icon),
-                                Node {
-                                    width: Val::Px(26.0),
-                                    height: Val::Px(26.0),
-                                    ..default()
-                                },
-                            ));
-                        });
-
-                    parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(28.0),
-                                height: Val::Px(28.0),
-                                border: UiRect::all(Val::Px(1.0)),
-                                justify_content: JustifyContent::Center,
-                                align_items: AlignItems::Center,
-                                ..default()
-                            },
-                            BackgroundColor(Color::srgba(0.10, 0.10, 0.11, 0.82)),
-                            BorderColor::all(Color::srgba(0.75, 0.77, 0.80, 0.45)),
-                            VolumeDownButton,
-                        ))
-                        .with_children(|parent| {
-                            parent.spawn((
-                                Text::new("-"),
-                                TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 22.0,
-                                    ..default()
-                                },
-                                TextColor(Color::srgba(0.93, 0.94, 0.96, 0.96)),
-                            ));
-                        });
-
-                    parent
-                        .spawn((
-                            Node {
-                                width: Val::Px(76.0),
-                                height: Val::Px(8.0),
-                                border: UiRect::all(Val::Px(1.0)),
-                                align_items: AlignItems::Stretch,
-                                ..default()
-                            },
-                            BackgroundColor(Color::srgba(0.18, 0.19, 0.20, 0.90)),
-                            BorderColor::all(Color::srgba(0.86, 0.88, 0.90, 0.26)),
-                        ))
-                        .with_children(|parent| {
-                            parent.spawn((
-                                Node {
-                                    width: Val::Percent(initial_volume * 100.0),
-                                    height: Val::Percent(100.0),
-                                    ..default()
-                                },
-                                BackgroundColor(Color::srgba(0.98, 0.28, 0.22, 0.94)),
-                                VolumeBarFill,
-                            ));
-                        });
-
-                    parent.spawn((
-                        Text::new(format!("{:.0}%", initial_volume * 100.0)),
-                        TextFont {
-                            font: font_handle.clone(),
-                            font_size: 15.0,
-                            ..default()
-                        },
-                        TextColor(Color::srgba(0.92, 0.93, 0.95, 0.95)),
-                        Node {
-                            width: Val::Px(42.0),
-                            ..default()
-                        },
-                        VolumePercentText,
-                    ));
-
-                    parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(28.0),
-                                height: Val::Px(28.0),
-                                border: UiRect::all(Val::Px(1.0)),
-                                justify_content: JustifyContent::Center,
-                                align_items: AlignItems::Center,
-                                ..default()
-                            },
-                            BackgroundColor(Color::srgba(0.10, 0.10, 0.11, 0.82)),
-                            BorderColor::all(Color::srgba(0.75, 0.77, 0.80, 0.45)),
-                            VolumeUpButton,
-                        ))
-                        .with_children(|parent| {
-                            parent.spawn((
-                                Text::new("+"),
-                                TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 20.0,
-                                    ..default()
-                                },
-                                TextColor(Color::srgba(0.93, 0.94, 0.96, 0.96)),
-                            ));
-                        });
-                });
-
-            // 阉垮秳缍旈幓镒仛
             parent.spawn((
                 Text::new(crate::systems::text_constants::PauseMenuText::CONTROLS_HINT),
                 TextFont {
@@ -563,70 +393,6 @@ pub fn update_game_hud(
     }
 }
 
-pub fn handle_volume_control_interactions(
-    mut interaction_query: VolumeControlInteractionQuery,
-    mut audio_settings: ResMut<AudioSettings>,
-    mut audio_state_manager: ResMut<AudioStateManager>,
-) {
-    const VOLUME_STEP: f32 = 0.1;
-    const RESTORE_VOLUME: f32 = 0.5;
-
-    for (interaction, mut color, icon_button, down_button, up_button) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                if icon_button.is_some() {
-                    audio_settings.master_volume = if audio_settings.master_volume > 0.0 {
-                        0.0
-                    } else {
-                        RESTORE_VOLUME
-                    };
-                } else if down_button.is_some() {
-                    audio_settings.master_volume =
-                        (audio_settings.master_volume - VOLUME_STEP).clamp(0.0, 1.0);
-                } else if up_button.is_some() {
-                    audio_settings.master_volume =
-                        (audio_settings.master_volume + VOLUME_STEP).clamp(0.0, 1.0);
-                }
-
-                audio_settings.master_volume = (audio_settings.master_volume * 10.0).round() / 10.0;
-                audio_state_manager.music_volume = audio_settings.master_volume;
-                *color = BackgroundColor(Color::srgba(0.30, 0.08, 0.07, 0.96));
-            }
-            Interaction::Hovered => {
-                *color = if icon_button.is_some() {
-                    BackgroundColor(Color::srgba(0.22, 0.08, 0.07, 0.92))
-                } else {
-                    BackgroundColor(Color::srgba(0.18, 0.18, 0.19, 0.90))
-                };
-            }
-            Interaction::None => {
-                *color = if icon_button.is_some() {
-                    BackgroundColor(Color::srgba(0.12, 0.13, 0.14, 0.86))
-                } else {
-                    BackgroundColor(Color::srgba(0.10, 0.10, 0.11, 0.82))
-                };
-            }
-        }
-    }
-}
-
-pub fn update_volume_control_display(
-    audio_settings: Res<AudioSettings>,
-    mut fill_query: Query<&mut Node, With<VolumeBarFill>>,
-    mut text_query: Query<&mut Text, With<VolumePercentText>>,
-) {
-    let volume = audio_settings.master_volume.clamp(0.0, 1.0);
-    let percent = volume * 100.0;
-
-    for mut node in fill_query.iter_mut() {
-        node.width = Val::Percent(percent);
-    }
-
-    for mut text in text_query.iter_mut() {
-        **text = format!("{percent:.0}%");
-    }
-}
-
 /// 濞揿懐镇婂〒锻婂灆 HUD
 pub fn cleanup_game_hud(mut commands: Commands, hud_query: Query<Entity, With<GameHUD>>) {
     for entity in hud_query.iter() {
@@ -667,7 +433,7 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                 .spawn((
                     Node {
                         width: Val::Px(400.0),
-                        height: Val::Px(350.0),
+                        height: Val::Px(410.0),
                         border: UiRect::all(Val::Px(2.0)),
                         flex_direction: FlexDirection::Column,
                         align_items: AlignItems::Center,
@@ -778,6 +544,34 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                                     ..default()
                                 },
                                 TextColor(Color::WHITE),
+                            ));
+                        });
+
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(200.0),
+                                height: Val::Px(50.0),
+                                border: UiRect::all(Val::Px(2.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                margin: UiRect::all(Val::Px(5.0)),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgba(0.18, 0.15, 0.12, 0.85)),
+                            BorderColor::all(Color::srgba(0.75, 0.62, 0.38, 0.9)),
+                            PauseSettingsButton,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Text::new(PauseMenuText::SETTINGS),
+                                TextFont {
+                                    font: font_handle.clone(),
+                                    font_size: 20.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgba(0.92, 0.88, 0.82, 1.0)),
                             ));
                         });
 
@@ -2244,14 +2038,25 @@ pub fn handle_rename_dialog_interactions(
 
 /// 婢跺嫮镇婇弪鍌氢粻阏挎粌宕熼幐澶愭尦娴溿倓锟?
 pub fn handle_pause_menu_interactions(
+    mut commands: Commands,
     mut interaction_query: PauseMenuInteractionQuery,
     mut next_state: ResMut<NextState<GameState>>,
     mut pause_manager: ResMut<PauseManager>,
     mut loaded_game_state: ResMut<LoadedGameState>,
     mut save_load_ui_state: ResMut<SaveLoadUiState>,
+    settings_overlay: SettingsOverlayResourceParams,
 ) {
-    for (interaction, mut color, resume_btn, save_btn, load_btn, menu_btn, esc_btn, q_btn) in
-        &mut interaction_query
+    for (
+        interaction,
+        mut color,
+        resume_btn,
+        save_btn,
+        load_btn,
+        settings_btn,
+        menu_btn,
+        esc_btn,
+        q_btn,
+    ) in &mut interaction_query
     {
         match *interaction {
             Interaction::Pressed => {
@@ -2273,6 +2078,14 @@ pub fn handle_pause_menu_interactions(
                     }
                     next_state.set(GameState::LoadTable);
                     crate::debug_log!("Open load table from pause menu");
+                } else if settings_btn.is_some() {
+                    crate::systems::settings_ui::open_settings_overlay_from_resources(
+                        &mut commands,
+                        settings_overlay.game_assets.as_deref(),
+                        settings_overlay.audio_settings.as_deref(),
+                        &settings_overlay.existing_settings,
+                    );
+                    crate::debug_log!("Open settings from pause menu");
                 } else if menu_btn.is_some() || q_btn.is_some() {
                     // 鏉╂柨娲栨稉鏄忓綅锟?
                     pause_manager.resume_game(); // Clear paused snapshot state
@@ -2290,6 +2103,8 @@ pub fn handle_pause_menu_interactions(
                     *color = BackgroundColor(Color::srgba(0.25, 0.25, 0.5, 0.9));
                 } else if load_btn.is_some() {
                     *color = BackgroundColor(Color::srgba(0.25, 0.5, 0.25, 0.9));
+                } else if settings_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.28, 0.22, 0.16, 0.95));
                 } else if menu_btn.is_some() {
                     *color = BackgroundColor(Color::srgba(0.5, 0.25, 0.25, 0.9));
                 } else if esc_btn.is_some() {
@@ -2305,6 +2120,8 @@ pub fn handle_pause_menu_interactions(
                     *color = BackgroundColor(Color::srgba(0.15, 0.15, 0.3, 0.8));
                 } else if load_btn.is_some() {
                     *color = BackgroundColor(Color::srgba(0.15, 0.3, 0.15, 0.8));
+                } else if settings_btn.is_some() {
+                    *color = BackgroundColor(Color::srgba(0.18, 0.15, 0.12, 0.85));
                 } else if menu_btn.is_some() {
                     *color = BackgroundColor(Color::srgba(0.3, 0.15, 0.15, 0.8));
                 } else if esc_btn.is_some() {

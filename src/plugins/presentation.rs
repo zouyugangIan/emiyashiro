@@ -18,7 +18,9 @@ impl Plugin for PresentationPlugin {
         )
         .add_systems(
             Update,
-            systems::audio::apply_audio_settings.in_set(GameSystemSet::Audio),
+            systems::audio::apply_audio_settings
+                .in_set(GameSystemSet::Audio)
+                .run_if(resource_changed::<crate::resources::AudioSettings>),
         )
         .add_systems(
             OnEnter(GameState::Playing),

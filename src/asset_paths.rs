@@ -21,6 +21,7 @@ pub const IMAGE_UI_COVER16: &str = "images/ui/cover16.png";
 pub const IMAGE_UI_COVER17: &str = "images/ui/cover17.png";
 pub const IMAGE_UI_COVER18: &str = "images/ui/cover18.png";
 pub const IMAGE_UI_VOLUME_ICON: &str = "images/ui/volume_icon.png";
+pub const IMAGE_UI_VOLUME_MUTED_ICON: &str = "images/ui/volume_muted_icon.png";
 
 // 所有封面图片的数组，用于轮流显示
 pub const UI_COVER_IMAGES: &[&str] = &[

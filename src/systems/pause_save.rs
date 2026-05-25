@@ -181,6 +181,7 @@ pub fn handle_pause_input(
     current_state: Res<State<GameState>>,
     mut pause_manager: ResMut<PauseManager>,
     snapshot: PauseSnapshotParams,
+    settings_overlay_query: Query<(), With<crate::systems::settings_ui::SettingsOverlayRoot>>,
     mut last_esc_state: Local<bool>,
 ) {
     let esc_pressed = keyboard_input.pressed(KeyCode::Escape);
@@ -189,33 +190,31 @@ pub fn handle_pause_input(
 
     *last_esc_state = esc_pressed;
 
+    if !settings_overlay_query.is_empty() {
+        return;
+    }
+
     match current_state.get() {
-        GameState::Playing => {
-            if esc_just_pressed {
-                // 捕获当前游戏状态并暂停
-                let state = capture_game_state(
-                    snapshot.player_query,
-                    snapshot.camera_query,
-                    snapshot.game_stats,
-                    snapshot.character_selection,
-                    snapshot.audio_state_manager,
-                );
-                pause_manager.pause_game(state);
-                next_state.set(GameState::Paused);
-                crate::debug_log!("Game paused with state snapshot");
-            }
+        GameState::Playing if esc_just_pressed => {
+            let state = capture_game_state(
+                snapshot.player_query,
+                snapshot.camera_query,
+                snapshot.game_stats,
+                snapshot.character_selection,
+                snapshot.audio_state_manager,
+            );
+            pause_manager.pause_game(state);
+            next_state.set(GameState::Paused);
+            crate::debug_log!("Game paused with state snapshot");
         }
-        GameState::Paused => {
-            if esc_just_pressed {
-                // ESC键恢复游戏
-                next_state.set(GameState::Playing);
-                crate::debug_log!("Game resumed");
-            } else if q_just_pressed {
-                // Q键返回主菜单
-                pause_manager.resume_game(); // 清理暂停状态
-                next_state.set(GameState::Menu);
-                crate::debug_log!("Back to main menu");
-            }
+        GameState::Paused if esc_just_pressed => {
+            next_state.set(GameState::Playing);
+            crate::debug_log!("Game resumed");
+        }
+        GameState::Paused if q_just_pressed => {
+            pause_manager.resume_game();
+            next_state.set(GameState::Menu);
+            crate::debug_log!("Back to main menu");
         }
         _ => {}
     }
@@ -285,7 +284,7 @@ pub fn scan_save_files(mut save_file_manager: ResMut<SaveFileManager>) {
     // 按时间排序，最新的在前
     save_file_manager
         .save_files
-        .sort_by(|a, b| b.save_timestamp.cmp(&a.save_timestamp));
+        .sort_by_key(|save| std::cmp::Reverse(save.save_timestamp));
 
     crate::debug_log!("Save file scan complete:");
     crate::debug_log!("   Valid save files: {}", valid_files);

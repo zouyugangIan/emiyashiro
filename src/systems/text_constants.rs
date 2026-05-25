@@ -15,6 +15,19 @@ impl MainMenuText {
     pub const SHIROU2: &'static str = "Shirou (Alternative)";
 }
 
+/// 设置菜单文本常量
+pub struct SettingsMenuText;
+
+impl SettingsMenuText {
+    pub const TITLE: &'static str = "Settings";
+    pub const AUDIO_SECTION: &'static str = "AUDIO";
+    pub const MASTER_VOLUME: &'static str = "Master Volume";
+    pub const VOLUME_HINT: &'static str = "Tap speaker to mute · ± adjusts in 10% steps";
+    pub const VOLUME_DOWN: &'static str = "-";
+    pub const VOLUME_UP: &'static str = "+";
+    pub const BACK: &'static str = "Back";
+}
+
 /// 暂停菜单文本常量
 pub struct PauseMenuText;
 
@@ -24,6 +37,7 @@ impl PauseMenuText {
     pub const SAVE_GAME: &'static str = "Save Game";
     pub const LOAD_GAME: &'static str = "Load Game";
     pub const MAIN_MENU: &'static str = "Main Menu";
+    pub const SETTINGS: &'static str = "Settings";
     pub const ESC_RESUME: &'static str = "ESC: Resume";
     pub const Q_MAIN_MENU: &'static str = "Q: Main Menu";
     pub const CONTROLS_HINT: &'static str = "WASD/Arrow Keys: Move | ESC: Pause";

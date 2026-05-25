@@ -6,6 +6,10 @@ use crate::components::*;
 use crate::resources::*;
 use crate::states::*;
 use crate::systems::menu::*;
+use crate::systems::settings_ui::{
+    MenuSettingsButton, SettingsBackButton, SettingsOverlayRoot, SettingsPanelTitle, VolumeBarFill,
+    VolumeDownButton, VolumeIconButton, VolumePercentText, VolumeUpButton,
+};
 use bevy::prelude::*;
 
 /// Helper function to create mock GameAssets for testing
@@ -19,6 +23,7 @@ fn create_mock_game_assets() -> GameAssets {
         current_sakura_frame: 0,
         font: Handle::default(),
         volume_icon: Handle::default(),
+        volume_muted_icon: Handle::default(),
         shirou_spritesheet: None,
         shirou_spritesheet_run: None,
         shirou_spritesheet_attack: None,
@@ -112,6 +117,143 @@ mod property_tests {
                 entity
             );
         }
+    }
+
+    #[test]
+    fn test_menu_settings_button_opens_settings_overlay() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.init_state::<GameState>();
+        app.insert_resource(create_mock_game_assets());
+        app.insert_resource(AudioSettings::default());
+        app.add_systems(Startup, setup_menu);
+        app.add_systems(Update, handle_menu_settings_button);
+
+        app.update();
+        let button = app
+            .world_mut()
+            .query_filtered::<Entity, With<MenuSettingsButton>>()
+            .single(app.world())
+            .expect("settings button");
+        app.world_mut()
+            .entity_mut(button)
+            .insert(Interaction::Pressed);
+
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<SettingsOverlayRoot>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_menu_settings_button_does_not_spawn_duplicate_overlay() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.init_state::<GameState>();
+        app.insert_resource(create_mock_game_assets());
+        app.insert_resource(AudioSettings::default());
+        app.add_systems(Startup, setup_menu);
+        app.add_systems(Update, handle_menu_settings_button);
+
+        app.update();
+        let button = app
+            .world_mut()
+            .query_filtered::<Entity, With<MenuSettingsButton>>()
+            .single(app.world())
+            .expect("settings button");
+        app.world_mut()
+            .entity_mut(button)
+            .insert(Interaction::Pressed);
+        app.update();
+        app.world_mut().entity_mut(button).insert(Interaction::None);
+        app.update();
+        app.world_mut()
+            .entity_mut(button)
+            .insert(Interaction::Pressed);
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<SettingsOverlayRoot>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_settings_overlay_contains_volume_controls() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.init_state::<GameState>();
+        app.insert_resource(create_mock_game_assets());
+        app.insert_resource(AudioSettings::default());
+        app.add_systems(Startup, setup_menu);
+        app.add_systems(Update, handle_menu_settings_button);
+
+        app.update();
+        let button = app
+            .world_mut()
+            .query_filtered::<Entity, With<MenuSettingsButton>>()
+            .single(app.world())
+            .expect("settings button");
+        app.world_mut()
+            .entity_mut(button)
+            .insert(Interaction::Pressed);
+        app.update();
+
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<SettingsPanelTitle>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<SettingsBackButton>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<VolumeIconButton>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<VolumeDownButton>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<VolumeUpButton>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<VolumeBarFill>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<VolumePercentText>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
     }
 
     /// Feature: menu-ui-refactor, Property 2: Cover images use UI Node components (with assets)

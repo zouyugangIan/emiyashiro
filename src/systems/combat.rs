@@ -501,12 +501,7 @@ fn perform_knife_attack(
     request: KnifeAttackRequest,
 ) {
     let max_combo_steps = request.knife_tuning.max_combo_steps.max(1);
-    // 只有 overedge 激活时使用 overedge 样式，否则使用 reference board 样式或 Normal
-    let base_style = if request.overedge_enabled {
-        request.requested_style
-    } else {
-        request.requested_style
-    };
+    let base_style = request.requested_style;
     let combo_step = if base_style == AttackAnimationStyle::OveredgeHeavy {
         max_combo_steps
     } else if runtime.combo_reset_timer <= 0.0 || runtime.combo_step >= max_combo_steps {

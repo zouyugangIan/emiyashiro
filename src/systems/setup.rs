@@ -45,6 +45,7 @@ pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         current_sakura_frame: 0,
         font: asset_server.load(asset_paths::FONT_FIRA_SANS),
         volume_icon: asset_server.load(asset_paths::IMAGE_UI_VOLUME_ICON),
+        volume_muted_icon: asset_server.load(asset_paths::IMAGE_UI_VOLUME_MUTED_ICON),
 
         // 精灵表资源（可选）
         shirou_spritesheet: None,

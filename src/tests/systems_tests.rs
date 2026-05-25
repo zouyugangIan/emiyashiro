@@ -1,12 +1,16 @@
 #[cfg(test)]
 mod tests {
-    use crate::systems::ui::{
-        GameHUD, VolumeBarFill, VolumePercentText, VolumeUpButton,
-        handle_volume_control_interactions, setup_game_hud, update_volume_control_display,
+    use crate::systems::settings_ui::{
+        SettingsBackButton, SettingsOverlayRoot, VolumeBarFill, VolumeControlState,
+        VolumeDownButton, VolumeIconButton, VolumeIconImage, VolumePercentText, VolumeUpButton,
+        close_settings_overlay_on_escape, handle_settings_back_button,
+        handle_volume_control_interactions, update_volume_control_display,
     };
+    use crate::systems::ui::{GameHUD, setup_game_hud};
     use crate::{components::*, resources::*, states::*, systems::*};
     use bevy::prelude::*;
     use std::fs;
+    use std::marker::PhantomData;
     use std::time::Duration;
 
     fn create_test_app() -> App {
@@ -27,6 +31,62 @@ mod tests {
         app.world_mut()
             .resource_mut::<Time<Fixed>>()
             .advance_by(Duration::from_secs_f32(secs));
+    }
+
+    fn test_image_handle(id: u128) -> Handle<Image> {
+        Handle::Uuid(uuid::Uuid::from_u128(id), PhantomData)
+    }
+
+    fn create_test_game_assets(
+        volume_icon: Handle<Image>,
+        volume_muted_icon: Handle<Image>,
+    ) -> GameAssets {
+        GameAssets {
+            cover_textures: vec![Handle::default()],
+            current_cover_index: 0,
+            shirou_animation_frames: vec![Handle::default()],
+            sakura_animation_frames: vec![Handle::default()],
+            current_shirou_frame: 0,
+            current_sakura_frame: 0,
+            font: Handle::default(),
+            volume_icon,
+            volume_muted_icon,
+            shirou_spritesheet: None,
+            shirou_spritesheet_run: None,
+            shirou_spritesheet_attack: None,
+            shirou_spritesheet_overedge_light_attack: None,
+            shirou_spritesheet_overedge_heavy_attack: None,
+            sakura_spritesheet: None,
+            shirou_atlas: None,
+            shirou_atlas_run: None,
+            shirou_atlas_attack: None,
+            shirou_atlas_overedge_light_attack: None,
+            shirou_atlas_overedge_heavy_attack: None,
+            sakura_atlas: None,
+            shirou_ref_ground_light: None,
+            shirou_ref_air_combo: None,
+            shirou_ref_heavy: None,
+            shirou_ref_ultimate: None,
+            shirou_ref_mobility: None,
+            shirou_ref_ninjutsu: None,
+            shirou_ref_weapon_proj: None,
+            shirou_ref_advance: None,
+            shirou_atlas_ref_ground_light: None,
+            shirou_atlas_ref_air_combo: None,
+            shirou_atlas_ref_heavy: None,
+            shirou_atlas_ref_ultimate: None,
+            shirou_atlas_ref_mobility: None,
+            shirou_atlas_ref_ninjutsu: None,
+            shirou_atlas_ref_weapon_proj: None,
+            shirou_atlas_ref_advance: None,
+            jump_sound: Handle::default(),
+            land_sound: Handle::default(),
+            footstep_sound: Handle::default(),
+            menu_music: Handle::default(),
+            game_music: Handle::default(),
+            game_whyifight_music: Handle::default(),
+            background_music: Handle::default(),
+        }
     }
 
     #[test]
@@ -59,7 +119,11 @@ mod tests {
                 master_volume: 0.5,
                 ..Default::default()
             })
-            .init_resource::<AudioStateManager>()
+            .insert_resource(AudioStateManager {
+                music_volume: 0.5,
+                ..Default::default()
+            })
+            .init_resource::<VolumeControlState>()
             .add_systems(Update, handle_volume_control_interactions);
 
         app.world_mut().spawn((
@@ -74,7 +138,7 @@ mod tests {
         let audio_settings = app.world().resource::<AudioSettings>();
         assert_eq!(audio_settings.master_volume, 0.6);
         let audio_state = app.world().resource::<AudioStateManager>();
-        assert_eq!(audio_state.music_volume, 0.6);
+        assert_eq!(audio_state.music_volume, 0.5);
     }
 
     #[test]
@@ -103,6 +167,175 @@ mod tests {
             .get::<Text>()
             .expect("volume text");
         assert_eq!(text.as_str(), "30%");
+    }
+
+    #[test]
+    fn test_volume_down_button_adjusts_and_clamps_master_volume() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(AudioSettings {
+                master_volume: 0.05,
+                ..Default::default()
+            })
+            .init_resource::<VolumeControlState>()
+            .add_systems(Update, handle_volume_control_interactions);
+
+        app.world_mut().spawn((
+            Button,
+            Interaction::Pressed,
+            BackgroundColor(Color::NONE),
+            VolumeDownButton,
+        ));
+
+        app.update();
+
+        assert_eq!(app.world().resource::<AudioSettings>().master_volume, 0.0);
+    }
+
+    #[test]
+    fn test_volume_up_button_clamps_at_one() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(AudioSettings {
+                master_volume: 0.95,
+                ..Default::default()
+            })
+            .init_resource::<VolumeControlState>()
+            .add_systems(Update, handle_volume_control_interactions);
+
+        app.world_mut().spawn((
+            Button,
+            Interaction::Pressed,
+            BackgroundColor(Color::NONE),
+            VolumeUpButton,
+        ));
+
+        app.update();
+
+        assert_eq!(app.world().resource::<AudioSettings>().master_volume, 1.0);
+    }
+
+    #[test]
+    fn test_volume_icon_image_switches_for_muted_and_audible() {
+        let volume_icon = test_image_handle(1);
+        let muted_icon = test_image_handle(2);
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(AudioSettings {
+                master_volume: 0.0,
+                ..Default::default()
+            })
+            .insert_resource(create_test_game_assets(
+                volume_icon.clone(),
+                muted_icon.clone(),
+            ))
+            .add_systems(Update, update_volume_control_display);
+
+        let image = app
+            .world_mut()
+            .spawn((ImageNode::new(volume_icon.clone()), VolumeIconImage))
+            .id();
+
+        app.update();
+        assert_eq!(
+            app.world().entity(image).get::<ImageNode>().unwrap().image,
+            muted_icon
+        );
+
+        app.world_mut()
+            .resource_mut::<AudioSettings>()
+            .master_volume = 0.4;
+        app.update();
+        assert_eq!(
+            app.world().entity(image).get::<ImageNode>().unwrap().image,
+            volume_icon
+        );
+    }
+
+    #[test]
+    fn test_volume_icon_button_restores_last_audible_volume() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(AudioSettings {
+                master_volume: 0.7,
+                ..Default::default()
+            })
+            .init_resource::<VolumeControlState>()
+            .add_systems(Update, handle_volume_control_interactions);
+
+        let button = app
+            .world_mut()
+            .spawn((
+                Button,
+                Interaction::Pressed,
+                BackgroundColor(Color::NONE),
+                VolumeIconButton,
+            ))
+            .id();
+
+        app.update();
+        assert_eq!(app.world().resource::<AudioSettings>().master_volume, 0.0);
+
+        app.world_mut().entity_mut(button).insert(Interaction::None);
+        app.update();
+        app.world_mut()
+            .entity_mut(button)
+            .insert(Interaction::Pressed);
+        app.update();
+
+        assert_eq!(app.world().resource::<AudioSettings>().master_volume, 0.7);
+    }
+
+    #[test]
+    fn test_settings_overlay_cleanup_despawns_children() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, settings_ui::cleanup_settings_overlay);
+
+        let root = app.world_mut().spawn(settings_ui::SettingsOverlayRoot).id();
+        let child = app.world_mut().spawn(Node::default()).id();
+        app.world_mut().entity_mut(root).add_child(child);
+
+        app.update();
+
+        assert!(app.world().get_entity(root).is_err());
+        assert!(app.world().get_entity(child).is_err());
+    }
+
+    #[test]
+    fn test_settings_back_button_closes_overlay() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, handle_settings_back_button);
+
+        let root = app.world_mut().spawn(SettingsOverlayRoot).id();
+        app.world_mut().spawn((
+            Button,
+            Interaction::Pressed,
+            BackgroundColor(Color::NONE),
+            SettingsBackButton,
+        ));
+
+        app.update();
+
+        assert!(app.world().get_entity(root).is_err());
+    }
+
+    #[test]
+    fn test_escape_closes_settings_overlay() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, close_settings_overlay_on_escape);
+
+        let root = app.world_mut().spawn(SettingsOverlayRoot).id();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
+
+        app.update();
+
+        assert!(app.world().get_entity(root).is_err());
     }
 
     #[test]
@@ -719,6 +952,7 @@ mod tests {
             .init_resource::<CharacterSelection>()
             .init_resource::<AudioStateManager>()
             .init_resource::<PauseManager>()
+            .init_resource::<crate::systems::settings_ui::VolumeControlState>()
             .add_systems(
                 Update,
                 pause_save::handle_pause_input
@@ -769,6 +1003,49 @@ mod tests {
         assert_eq!(
             *app.world().resource::<State<GameState>>().get(),
             GameState::Playing
+        );
+    }
+
+    #[test]
+    fn test_settings_overlay_blocks_pause_escape_resume() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .init_resource::<CharacterSelection>()
+            .init_resource::<AudioStateManager>()
+            .init_resource::<PauseManager>()
+            .add_systems(
+                Update,
+                pause_save::handle_pause_input
+                    .run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_translation(GameConfig::PLAYER_START_POS),
+            Velocity::default(),
+            PlayerState::default(),
+        ));
+        app.world_mut().spawn((Camera2d,));
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Paused);
+        app.update();
+        app.update();
+
+        app.world_mut().spawn(SettingsOverlayRoot);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
+        app.update();
+        app.update();
+
+        assert_eq!(
+            *app.world().resource::<State<GameState>>().get(),
+            GameState::Paused
         );
     }
 

@@ -314,6 +314,7 @@ pub struct GameAssets {
 
     pub font: Handle<Font>,
     pub volume_icon: Handle<Image>,
+    pub volume_muted_icon: Handle<Image>,
     // 精灵表资源
     pub shirou_spritesheet: Option<Handle<Image>>,
     pub shirou_spritesheet_run: Option<Handle<Image>>,

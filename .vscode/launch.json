@@ -7,7 +7,15 @@
       "name": "Ubuntu Dev: client",
       "program": "${cargo:program}",
       "cargo": {
-        "args": ["build", "--bin", "client", "--package", "emiyashiro"],
+        "args": [
+          "build",
+          "--bin",
+          "client",
+          "--features",
+          "client",
+          "--package",
+          "emiyashiro"
+        ],
         "filter": {
           "name": "client",
           "kind": "bin"
@@ -17,6 +25,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "env": {
+        "EMIYASHIRO_ASSET_DIR": "${workspaceFolder}/assets",
         "RUST_BACKTRACE": "full",
         "RUST_LIB_BACKTRACE": "1"
       }
@@ -75,6 +84,13 @@
         "RUST_BACKTRACE": "full",
         "RUST_LIB_BACKTRACE": "1"
       }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Ubuntu Dev: server + client",
+      "configurations": ["Ubuntu Dev: server", "Ubuntu Dev: client"],
+      "stopAll": true
     }
   ]
 }

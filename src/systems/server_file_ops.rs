@@ -104,7 +104,7 @@ pub async fn scan_save_files_internal(
     }
 
     // 按保存时间排序（最新的在前）
-    save_files.sort_by(|a, b| b.save_timestamp.cmp(&a.save_timestamp));
+    save_files.sort_by_key(|save| std::cmp::Reverse(save.save_timestamp));
 
     Ok(save_files)
 }

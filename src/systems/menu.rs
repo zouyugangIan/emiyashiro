@@ -2,7 +2,10 @@
 //!
 //! 包含主菜单界面的创建、交互处理和动画效果。
 
-use crate::{components::*, resources::*, states::*, systems::ui::LoadButton};
+use crate::{
+    components::*, resources::*, states::*, systems::settings_ui::MenuSettingsButton,
+    systems::ui::LoadButton,
+};
 use bevy::prelude::*;
 
 type StartButtonInteractionQuery<'w, 's> = Query<
@@ -17,6 +20,13 @@ type LoadButtonInteractionQuery<'w, 's> = Query<
     's,
     (&'static Interaction, &'static mut BackgroundColor),
     (Changed<Interaction>, With<LoadButton>),
+>;
+
+type MenuSettingsButtonInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static mut BackgroundColor),
+    (Changed<Interaction>, With<MenuSettingsButton>),
 >;
 
 type CoverFadeQuery<'w, 's> = Query<
@@ -238,6 +248,49 @@ pub fn setup_menu(
                                 ));
                             }
                         });
+
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(200.0),
+                                height: Val::Px(50.0),
+                                border: UiRect::all(Val::Px(2.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                margin: UiRect::all(Val::Px(5.0)),
+                                ..default()
+                            },
+                            BorderColor::all(Color::srgba(0.75, 0.62, 0.38, 0.9)),
+                            BackgroundColor(Color::srgba(0.14, 0.12, 0.10, 0.85)),
+                            MenuSettingsButton,
+                        ))
+                        .with_children(|parent| {
+                            if let Some(assets) = &game_assets {
+                                parent.spawn((
+                                    Text::new(
+                                        crate::systems::text_constants::MainMenuText::SETTINGS,
+                                    ),
+                                    TextFont {
+                                        font: assets.font.clone(),
+                                        font_size: 18.0,
+                                        ..default()
+                                    },
+                                    TextColor(Color::srgba(0.92, 0.88, 0.82, 1.0)),
+                                ));
+                            } else {
+                                parent.spawn((
+                                    Text::new(
+                                        crate::systems::text_constants::MainMenuText::SETTINGS,
+                                    ),
+                                    TextFont {
+                                        font_size: 18.0,
+                                        ..default()
+                                    },
+                                    TextColor(Color::srgba(0.92, 0.88, 0.82, 1.0)),
+                                ));
+                            }
+                        });
                 });
 
             // 角色选择按钮
@@ -381,6 +434,35 @@ pub fn handle_start_button(
             }
             Interaction::None => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+            }
+        }
+    }
+}
+
+/// 打开设置浮层（主菜单）
+pub fn handle_menu_settings_button(
+    mut commands: Commands,
+    mut interaction_query: MenuSettingsButtonInteractionQuery,
+    game_assets: Option<Res<GameAssets>>,
+    audio_settings: Option<Res<AudioSettings>>,
+    existing_settings: Query<(), With<crate::systems::settings_ui::SettingsOverlayRoot>>,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                crate::systems::settings_ui::open_settings_overlay_from_resources(
+                    &mut commands,
+                    game_assets.as_deref(),
+                    audio_settings.as_deref(),
+                    &existing_settings,
+                );
+                *color = BackgroundColor(Color::srgba(0.22, 0.18, 0.14, 0.95));
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(Color::srgba(0.20, 0.17, 0.14, 0.92));
+            }
+            Interaction::None => {
+                *color = BackgroundColor(Color::srgba(0.14, 0.12, 0.10, 0.85));
             }
         }
     }

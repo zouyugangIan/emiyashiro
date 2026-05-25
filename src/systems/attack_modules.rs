@@ -213,29 +213,33 @@ fn resolve_reference_attack_module(
         .then_some(ReferenceAttackModuleKind::Mobility)
 }
 
+struct ReferenceAttackPreviewRequest<'a> {
+    player_transform: &'a Transform,
+    facing: Option<&'a FacingDirection>,
+    kind: ReferenceAttackModuleKind,
+    row: Option<u8>,
+}
+
 fn spawn_reference_attack_module_preview(
     commands: &mut Commands,
     asset_server: &AssetServer,
     texture_atlases: &mut Assets<TextureAtlasLayout>,
-    player_transform: &Transform,
-    facing: Option<&FacingDirection>,
-    kind: ReferenceAttackModuleKind,
-    row: Option<u8>,
+    request: ReferenceAttackPreviewRequest<'_>,
     preview_query: &Query<Entity, With<ReferenceAttackModulePreview>>,
 ) {
     for entity in preview_query.iter() {
         commands.entity(entity).despawn();
     }
 
-    let facing_sign = facing.copied().unwrap_or_default().sign();
+    let facing_sign = request.facing.copied().unwrap_or_default().sign();
     let position = Vec3::new(
-        player_transform.translation.x + PREVIEW_X_OFFSET * facing_sign,
-        player_transform.translation.y + PREVIEW_Y_OFFSET,
+        request.player_transform.translation.x + PREVIEW_X_OFFSET * facing_sign,
+        request.player_transform.translation.y + PREVIEW_Y_OFFSET,
         PREVIEW_Z,
     );
-    let grid = kind.grid();
+    let grid = request.kind.grid();
     let frame_start = grid
-        .zip(row)
+        .zip(request.row)
         .and_then(|(grid, row)| {
             (row > 0 && row <= grid.rows as u8)
                 .then_some((row as usize - 1) * grid.columns as usize)
@@ -243,7 +247,7 @@ fn spawn_reference_attack_module_preview(
         .unwrap_or(0);
     let frame_count = grid
         .map(|grid| {
-            if row.is_some() {
+            if request.row.is_some() {
                 grid.columns as usize
             } else {
                 (grid.columns * grid.rows) as usize
@@ -267,18 +271,18 @@ fn spawn_reference_attack_module_preview(
     });
     let custom_size = grid
         .map(|grid| grid.preview_size)
-        .unwrap_or_else(|| kind.board_preview_size());
+        .unwrap_or_else(|| request.kind.board_preview_size());
 
     commands.spawn((
         Sprite {
-            image: asset_server.load(kind.image_path()),
+            image: asset_server.load(request.kind.image_path()),
             color: Color::srgba(1.0, 1.0, 1.0, 0.92),
             custom_size: Some(custom_size),
             texture_atlas,
             ..default()
         },
         Transform::from_translation(position).with_scale(Vec3::splat(0.92)),
-        kind,
+        request.kind,
         ReferenceAttackModulePreview {
             timer: Timer::from_seconds(duration, TimerMode::Once),
             frame_timer: Timer::from_seconds(MODULE_FRAME_DURATION_SECS, TimerMode::Repeating),
@@ -354,10 +358,12 @@ pub fn handle_reference_attack_module_input(
             &mut commands,
             &asset_server,
             &mut texture_atlases,
-            player_transform,
-            facing,
-            kind,
-            selected_row,
+            ReferenceAttackPreviewRequest {
+                player_transform,
+                facing,
+                kind,
+                row: selected_row,
+            },
             &preview_query,
         );
     }
