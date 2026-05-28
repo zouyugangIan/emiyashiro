@@ -108,8 +108,7 @@ pub fn setup_menu(
     ));
 
     // 创建UI根节点 - 确保在封面图片之上
-    commands
-        .spawn((
+    commands.spawn((
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),

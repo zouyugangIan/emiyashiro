@@ -1,6 +1,7 @@
 //! 设置界面（主菜单 / 暂停菜单共用的音频等选项）
 
 use crate::resources::{AudioSettings, GameAssets};
+use crate::systems::text_constants::SettingsMenuText;
 use bevy::prelude::*;
 
 /// 设置浮层根节点（覆盖在当前界面上方）
@@ -383,7 +384,7 @@ fn spawn_master_volume_control(
         ))
         .with_children(|section| {
             section.spawn((
-                Text::new(crate::systems::text_constants::SettingsMenuText::MASTER_VOLUME),
+                Text::new(SettingsMenuText::MASTER_VOLUME),
                 TextFont {
                     font: font.clone(),
                     font_size: 17.0,
@@ -482,9 +483,7 @@ fn spawn_master_volume_control(
                     ))
                     .with_children(|btn| {
                         btn.spawn((
-                            Text::new(
-                                crate::systems::text_constants::SettingsMenuText::VOLUME_DOWN,
-                            ),
+                            Text::new(SettingsMenuText::VOLUME_DOWN),
                             TextFont {
                                 font: font.clone(),
                                 font_size: 24.0,
@@ -510,7 +509,7 @@ fn spawn_master_volume_control(
                     ))
                     .with_children(|btn| {
                         btn.spawn((
-                            Text::new(crate::systems::text_constants::SettingsMenuText::VOLUME_UP),
+                            Text::new(SettingsMenuText::VOLUME_UP),
                             TextFont {
                                 font: font.clone(),
                                 font_size: 24.0,
@@ -522,7 +521,7 @@ fn spawn_master_volume_control(
                 });
 
             section.spawn((
-                Text::new(crate::systems::text_constants::SettingsMenuText::VOLUME_HINT),
+                Text::new(SettingsMenuText::VOLUME_HINT),
                 TextFont {
                     font,
                     font_size: 12.0,
