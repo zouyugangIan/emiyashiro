@@ -19,13 +19,53 @@ const PLAYER_CROUCH_COLLISION_OFFSET_Y: f32 = -15.0;
 /// * `time` - 时间资源
 /// * `game_stats` - 游戏统计资源
 pub fn player_movement(
+    mut commands: Commands,
     game_input: Res<crate::systems::input::GameInput>,
-    mut player_query: Query<(&mut Transform, &mut Velocity, &PlayerState), With<Player>>,
+    mut player_query: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut Velocity,
+            &PlayerState,
+            Option<&mut AttackMomentum>,
+        ),
+        With<Player>,
+    >,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
-    if let Ok((mut transform, mut velocity, player_state)) = player_query.single_mut() {
+    if let Ok((entity, mut transform, mut velocity, player_state, attack_momentum)) =
+        player_query.single_mut()
+    {
         let delta_time = time.delta_secs();
+        let mut protected_by_attack = false;
+
+        if let Some(mut momentum) = attack_momentum {
+            momentum.tick(delta_time);
+
+            if momentum.is_active() {
+                let protected_speed = momentum.direction * momentum.min_horizontal_speed;
+                if momentum.min_horizontal_speed > 0.0
+                    && velocity.x * momentum.direction < momentum.min_horizontal_speed
+                {
+                    velocity.x = protected_speed;
+                }
+
+                if momentum.horizontal_drag > 0.0 {
+                    let drag = (1.0 - momentum.horizontal_drag * delta_time).clamp(0.0, 1.0);
+                    velocity.x *= drag;
+                    if momentum.min_horizontal_speed > 0.0
+                        && velocity.x * momentum.direction < momentum.min_horizontal_speed
+                    {
+                        velocity.x = protected_speed;
+                    }
+                }
+
+                protected_by_attack = true;
+            } else {
+                commands.entity(entity).remove::<AttackMomentum>();
+            }
+        }
 
         // 获取水平输入方向
         let input_direction = if !player_state.is_crouching {
@@ -44,18 +84,20 @@ pub fn player_movement(
             GameConfig::MOVE_SPEED * 12.0 // 减速度（更快停下）
         };
 
-        // 平滑地改变水平速度
-        if (target_speed - velocity.x).abs() > 0.1 {
-            let speed_diff = target_speed - velocity.x;
-            let max_change = acceleration * delta_time;
+        if !protected_by_attack {
+            // 平滑地改变水平速度
+            if (target_speed - velocity.x).abs() > 0.1 {
+                let speed_diff = target_speed - velocity.x;
+                let max_change = acceleration * delta_time;
 
-            if speed_diff.abs() <= max_change {
-                velocity.x = target_speed;
+                if speed_diff.abs() <= max_change {
+                    velocity.x = target_speed;
+                } else {
+                    velocity.x += speed_diff.signum() * max_change;
+                }
             } else {
-                velocity.x += speed_diff.signum() * max_change;
+                velocity.x = target_speed;
             }
-        } else {
-            velocity.x = target_speed;
         }
 
         // 记录移动前的位置
@@ -124,13 +166,14 @@ pub fn player_jump(
             &mut Velocity,
             &mut PlayerState,
             Option<&mut crate::systems::collision::CollisionBox>,
+            Option<&AttackMomentum>,
         ),
         With<Player>,
     >,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
-    if let Ok((mut transform, mut velocity, mut player_state, mut collision_box)) =
+    if let Ok((mut transform, mut velocity, mut player_state, mut collision_box, attack_momentum)) =
         player_query.single_mut()
     {
         let was_grounded = player_state.is_grounded;
@@ -184,6 +227,11 @@ pub fn player_jump(
 
         // 应用重力（改进的重力系统）
         apply_gravity(&mut velocity, &player_state, delta_time);
+        if let Some(momentum) = attack_momentum
+            && momentum.has_vertical_lock()
+        {
+            velocity.y = velocity.y.max(momentum.min_vertical_speed);
+        }
 
         // 更新垂直位置（使用改进的物理积分）
         let old_y = transform.translation.y;

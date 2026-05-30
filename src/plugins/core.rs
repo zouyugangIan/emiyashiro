@@ -207,7 +207,13 @@ fn setup_game_resources(
         None,
         Some(UVec2::from(asset_paths::REFERENCE_BOARD_WEAPON_PROJ_OFFSET)),
     );
-    let ref_advance_layout = TextureAtlasLayout::from_grid(UVec2::new(175, 187), 8, 6, None, None);
+    let ref_advance_layout = TextureAtlasLayout::from_grid(
+        UVec2::from(asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_CELL),
+        asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_COLS,
+        asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_ROWS,
+        None,
+        None,
+    );
 
     // Reference Board 精灵表图片加载
     let ref_ground_light_handle =

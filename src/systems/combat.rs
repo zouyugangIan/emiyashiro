@@ -4,7 +4,7 @@ use crate::{
     asset_paths,
     components::*,
     events::{CameraImpulseEvent, DamageEvent, DamageSource},
-    resources::GameplayTuning,
+    resources::{GameConfig, GameplayTuning},
     states::GameState,
 };
 use bevy::prelude::*;
@@ -12,6 +12,15 @@ use bevy::prelude::*;
 const PLAYER_CONTACT_DAMAGE_COOLDOWN: f32 = 1.0;
 const PROJECTILE_MUZZLE_X_OFFSET: f32 = 54.0;
 const PROJECTILE_MUZZLE_Y_OFFSET: f32 = 18.0;
+const REFERENCE_ATTACK_FRAME_SECS: f32 = asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS;
+const GROUND_LIGHT_RUNTIME_ROWS: &[u8] = &[1, 2, 3, 4, 5];
+const AIR_COMBO_RUNTIME_ROWS: &[u8] = &[1, 2, 3, 4, 5];
+const HEAVY_RUNTIME_ROWS: &[u8] = &[1, 2, 3, 4, 5];
+const ULTIMATE_RUNTIME_ROWS: &[u8] = &[1, 2, 3];
+const MOBILITY_RUNTIME_ROWS: &[u8] = &[1, 2];
+const NINJUTSU_RUNTIME_ROWS: &[u8] = &[1, 2, 3];
+const WEAPON_PROJ_RUNTIME_ROWS: &[u8] = &[1, 2, 3, 4];
+const REFERENCE_ACTION_VFX_FRAME_SECS: f32 = 0.045;
 
 const ENEMY_PROJECTILE_RENDER_SIZE: Vec2 = Vec2::new(16.0, 16.0);
 const ENEMY_PROJECTILE_COLLISION_SIZE: Vec2 = Vec2::new(16.0, 16.0);
@@ -63,6 +72,13 @@ pub struct KnifeComboRuntime {
     combo_step: u8,
     combo_reset_timer: f32,
     queued_attack: Option<AttackAnimationStyle>,
+    ground_light_visual_step: u8,
+    heavy_visual_step: u8,
+    air_combo_visual_step: u8,
+    mobility_visual_step: u8,
+    ninjutsu_visual_step: u8,
+    ultimate_visual_step: u8,
+    weapon_proj_visual_step: u8,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
@@ -83,6 +99,32 @@ pub struct KnifeSlash {
     pub hit_stop_secs: f32,
 }
 
+#[derive(Component, Debug, Clone, Copy)]
+pub struct KnifeSlashFeedback {
+    pub camera_intensity: f32,
+    pub camera_duration: f32,
+    pub hit_stop_freeze_speed: f32,
+    pub base_alpha: f32,
+    pub visual_expand: f32,
+    pub visual_spin: f32,
+}
+
+#[derive(Component, Debug)]
+pub struct AttackAfterimage {
+    timer: Timer,
+    base_alpha: f32,
+    drift: Vec2,
+}
+
+#[derive(Component, Debug)]
+pub struct AttackReferenceActionVfx {
+    timer: Timer,
+    frame_start: usize,
+    frame_count: usize,
+    base_alpha: f32,
+    drift: Vec2,
+}
+
 #[derive(Component, Debug)]
 pub struct PendingKnifeAttack {
     owner: Entity,
@@ -91,11 +133,15 @@ pub struct PendingKnifeAttack {
     facing: f32,
     is_crouching: bool,
     overedge_enabled: bool,
+    attack_style: AttackAnimationStyle,
 }
 
 type PlayerKnifeAttackItem<'a> = (
     Entity,
-    &'a Velocity,
+    Option<&'a Transform>,
+    Option<&'a Sprite>,
+    Option<&'a SpriteAnimationSheets>,
+    &'a mut Velocity,
     &'a PlayerState,
     Option<&'a FacingDirection>,
     &'a ShroudState,
@@ -104,7 +150,10 @@ type PlayerKnifeAttackItem<'a> = (
 
 struct KnifeAttackRequest<'a> {
     player_entity: Entity,
-    player_velocity: &'a Velocity,
+    player_transform: Option<&'a Transform>,
+    player_sprite: Option<&'a Sprite>,
+    sprite_sheets: Option<&'a SpriteAnimationSheets>,
+    player_velocity: &'a mut Velocity,
     player_state: &'a PlayerState,
     facing_sign: f32,
     knife_tuning: &'a crate::resources::KnifeCombatTuning,
@@ -214,6 +263,144 @@ fn projectile_config(is_overedge: bool) -> ProjectileConfig {
     }
 }
 
+fn projectile_config_for_attack_style(style: AttackAnimationStyle) -> ProjectileConfig {
+    let mut config = projectile_config(false);
+
+    match style {
+        AttackAnimationStyle::NinjutsuRefRow(1) => {
+            config.projectile_type = ProjectileType::Fireball;
+            config.damage = 7;
+            config.speed = 380.0;
+            config.lifetime = 1.35;
+            config.collision_size = Vec2::new(58.0, 42.0);
+            config.core_size = Vec2::new(46.0, 28.0);
+            config.core_color = Color::srgba(1.0, 0.32, 0.08, 0.96);
+            config.aura_size = Vec2::new(74.0, 44.0);
+            config.aura_color = Color::srgba(1.0, 0.10, 0.04, 0.36);
+            config.accent_size = Vec2::new(54.0, 5.0);
+            config.accent_color = Color::srgba(1.0, 0.84, 0.38, 0.82);
+            config.pulse_amount = 0.10;
+            config.spin_speed = 2.6;
+        }
+        AttackAnimationStyle::NinjutsuRefRow(2) => {
+            config.damage = 5;
+            config.speed = 500.0;
+            config.lifetime = 1.05;
+            config.collision_size = Vec2::new(76.0, 48.0);
+            config.core_size = Vec2::new(72.0, 26.0);
+            config.core_color = Color::srgba(0.62, 0.88, 1.0, 0.92);
+            config.aura_size = Vec2::new(116.0, 54.0);
+            config.aura_color = Color::srgba(0.24, 0.58, 1.0, 0.30);
+            config.accent_size = Vec2::new(70.0, 4.0);
+            config.accent_color = Color::srgba(0.92, 0.98, 1.0, 0.86);
+            config.pulse_speed = 20.0;
+        }
+        AttackAnimationStyle::NinjutsuRefRow(3) => {
+            config.damage = 8;
+            config.speed = 260.0;
+            config.lifetime = 0.8;
+            config.collision_size = Vec2::new(42.0, 108.0);
+            config.core_size = Vec2::new(18.0, 96.0);
+            config.core_color = Color::srgba(0.78, 0.42, 1.0, 0.92);
+            config.aura_size = Vec2::new(44.0, 128.0);
+            config.aura_color = Color::srgba(0.56, 0.16, 1.0, 0.28);
+            config.accent_size = Vec2::new(7.0, 96.0);
+            config.accent_color = Color::srgba(0.96, 0.88, 1.0, 0.82);
+            config.initial_rotation = 0.0;
+            config.accent_rotation = 0.0;
+            config.pulse_amount = 0.14;
+        }
+        AttackAnimationStyle::NinjutsuRefRow(4) => {
+            config.projectile_type = ProjectileType::Overedge;
+            config.damage = 9;
+            config.speed = 440.0;
+            config.lifetime = 1.0;
+            config.collision_size = Vec2::new(96.0, 52.0);
+            config.core_size = Vec2::new(90.0, 22.0);
+            config.core_color = Color::srgba(0.98, 0.16, 0.18, 0.96);
+            config.aura_size = Vec2::new(128.0, 44.0);
+            config.aura_color = Color::srgba(0.72, 0.0, 0.0, 0.34);
+            config.accent_size = Vec2::new(86.0, 5.0);
+            config.accent_color = Color::srgba(1.0, 0.88, 0.82, 0.86);
+            config.pulse_amount = 0.12;
+        }
+        _ => {}
+    }
+
+    config
+}
+
+fn reset_reference_visual_steps(runtime: &mut KnifeComboRuntime) {
+    runtime.ground_light_visual_step = 0;
+    runtime.heavy_visual_step = 0;
+    runtime.air_combo_visual_step = 0;
+    runtime.mobility_visual_step = 0;
+    runtime.ninjutsu_visual_step = 0;
+    runtime.ultimate_visual_step = 0;
+    runtime.weapon_proj_visual_step = 0;
+}
+
+fn next_reference_visual_row(current: &mut u8, sequence: &[u8]) -> u8 {
+    let Some((&first, rest)) = sequence.split_first() else {
+        *current = 1;
+        return *current;
+    };
+
+    let next_index = sequence
+        .iter()
+        .position(|row| *row == *current)
+        .map(|index| (index + 1) % sequence.len())
+        .unwrap_or(0);
+    *current = if rest.is_empty() {
+        first
+    } else {
+        sequence[next_index]
+    };
+    *current
+}
+
+fn direct_mobility_row(input_row: u8) -> u8 {
+    input_row
+        .max(1)
+        .min(asset_paths::REFERENCE_BOARD_MOBILITY_ROWS as u8)
+}
+
+fn resolve_reference_visual_style(
+    runtime: &mut KnifeComboRuntime,
+    style: AttackAnimationStyle,
+) -> AttackAnimationStyle {
+    match style {
+        AttackAnimationStyle::GroundLight => {
+            AttackAnimationStyle::GroundLightRow(next_reference_visual_row(
+                &mut runtime.ground_light_visual_step,
+                GROUND_LIGHT_RUNTIME_ROWS,
+            ))
+        }
+        AttackAnimationStyle::AirCombo => AttackAnimationStyle::AirComboRow(
+            next_reference_visual_row(&mut runtime.air_combo_visual_step, AIR_COMBO_RUNTIME_ROWS),
+        ),
+        AttackAnimationStyle::HeavyRef => AttackAnimationStyle::HeavyRefRow(
+            next_reference_visual_row(&mut runtime.heavy_visual_step, HEAVY_RUNTIME_ROWS),
+        ),
+        AttackAnimationStyle::UltimateRef => AttackAnimationStyle::UltimateRefRow(
+            next_reference_visual_row(&mut runtime.ultimate_visual_step, ULTIMATE_RUNTIME_ROWS),
+        ),
+        AttackAnimationStyle::MobilityRef => AttackAnimationStyle::MobilityRefRow(
+            next_reference_visual_row(&mut runtime.mobility_visual_step, MOBILITY_RUNTIME_ROWS),
+        ),
+        AttackAnimationStyle::NinjutsuRef => AttackAnimationStyle::NinjutsuRefRow(
+            next_reference_visual_row(&mut runtime.ninjutsu_visual_step, NINJUTSU_RUNTIME_ROWS),
+        ),
+        AttackAnimationStyle::WeaponProjRef => {
+            AttackAnimationStyle::WeaponProjRefRow(next_reference_visual_row(
+                &mut runtime.weapon_proj_visual_step,
+                WEAPON_PROJ_RUNTIME_ROWS,
+            ))
+        }
+        _ => style,
+    }
+}
+
 fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
     let base = match step {
         1 => KnifeAttackPreset {
@@ -227,7 +414,7 @@ fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
             y_offset: 12.0,
             crouch_y_offset: -8.0,
             slash_render_size: Vec2::new(66.0, 16.0),
-            slash_color: Color::srgba(0.96, 0.96, 1.0, 0.08),
+            slash_color: Color::srgba(0.96, 0.96, 1.0, 0.20),
             knockback_x: 90.0,
             knockback_y: 10.0,
             hit_stop_secs: 0.018,
@@ -243,7 +430,7 @@ fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
             y_offset: 14.0,
             crouch_y_offset: -6.0,
             slash_render_size: Vec2::new(74.0, 18.0),
-            slash_color: Color::srgba(0.98, 0.88, 0.84, 0.10),
+            slash_color: Color::srgba(0.98, 0.88, 0.84, 0.23),
             knockback_x: 130.0,
             knockback_y: 20.0,
             hit_stop_secs: 0.024,
@@ -259,7 +446,7 @@ fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
             y_offset: 16.0,
             crouch_y_offset: -4.0,
             slash_render_size: Vec2::new(88.0, 22.0),
-            slash_color: Color::srgba(1.0, 0.78, 0.65, 0.12),
+            slash_color: Color::srgba(1.0, 0.78, 0.65, 0.27),
             knockback_x: 220.0,
             knockback_y: 35.0,
             hit_stop_secs: 0.035,
@@ -278,13 +465,125 @@ fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
             y_offset: base.y_offset + 2.0,
             crouch_y_offset: base.crouch_y_offset,
             slash_render_size: base.slash_render_size * Vec2::new(1.1, 1.1),
-            slash_color: Color::srgba(1.0, 0.58, 0.48, 0.16),
+            slash_color: Color::srgba(1.0, 0.58, 0.48, 0.32),
             knockback_x: base.knockback_x * 1.25,
             knockback_y: base.knockback_y * 1.2,
             hit_stop_secs: base.hit_stop_secs + 0.008,
         }
     } else {
         base
+    }
+}
+
+fn knife_attack_preset_for_style(
+    step: u8,
+    overedge: bool,
+    style: AttackAnimationStyle,
+) -> KnifeAttackPreset {
+    let base = knife_attack_preset(step, overedge);
+
+    match style {
+        AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
+            KnifeAttackPreset {
+                cooldown: base.cooldown.max(0.24),
+                windup_secs: 0.07,
+                animation_duration_secs: base.animation_duration_secs.max(0.48),
+                lifetime: 0.11,
+                hitbox_size: base.hitbox_size * Vec2::new(1.08, 1.18),
+                y_offset: 28.0,
+                crouch_y_offset: 12.0,
+                knockback_y: base.knockback_y + 26.0,
+                slash_color: Color::srgba(0.84, 0.96, 1.0, 0.26),
+                ..base
+            }
+        }
+        AttackAnimationStyle::HeavyRef | AttackAnimationStyle::HeavyRefRow(_) => {
+            KnifeAttackPreset {
+                damage: base.damage * 1.45,
+                cooldown: base.cooldown.max(0.42),
+                windup_secs: 0.16,
+                animation_duration_secs: base.animation_duration_secs.max(0.58),
+                lifetime: 0.14,
+                hitbox_size: base.hitbox_size * Vec2::new(1.35, 1.25),
+                x_offset: base.x_offset + 18.0,
+                slash_render_size: base.slash_render_size * Vec2::new(1.4, 1.3),
+                slash_color: Color::srgba(1.0, 0.30, 0.24, 0.34),
+                knockback_x: base.knockback_x * 1.45,
+                knockback_y: base.knockback_y + 18.0,
+                hit_stop_secs: base.hit_stop_secs + 0.025,
+                ..base
+            }
+        }
+        AttackAnimationStyle::UltimateRef | AttackAnimationStyle::UltimateRefRow(_) => {
+            KnifeAttackPreset {
+                damage: base.damage * 2.6,
+                cooldown: base.cooldown.max(1.05),
+                windup_secs: 0.22,
+                animation_duration_secs: base.animation_duration_secs.max(0.72),
+                lifetime: 0.18,
+                hitbox_size: Vec2::new(190.0, 116.0),
+                x_offset: 96.0,
+                y_offset: 24.0,
+                crouch_y_offset: 10.0,
+                slash_render_size: Vec2::new(180.0, 42.0),
+                slash_color: Color::srgba(1.0, 0.18, 0.14, 0.40),
+                knockback_x: base.knockback_x * 2.2,
+                knockback_y: 90.0,
+                hit_stop_secs: base.hit_stop_secs + 0.06,
+                ..base
+            }
+        }
+        AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => {
+            KnifeAttackPreset {
+                damage: base.damage * 0.95,
+                cooldown: base.cooldown.min(0.24),
+                windup_secs: 0.045,
+                animation_duration_secs: base.animation_duration_secs.max(0.36),
+                lifetime: 0.10,
+                hitbox_size: base.hitbox_size * Vec2::new(1.18, 0.95),
+                x_offset: base.x_offset + 24.0,
+                y_offset: 4.0,
+                crouch_y_offset: -6.0,
+                slash_render_size: base.slash_render_size * Vec2::new(1.35, 0.9),
+                slash_color: Color::srgba(1.0, 0.22, 0.16, 0.28),
+                knockback_x: base.knockback_x * 1.25,
+                knockback_y: base.knockback_y * 0.7,
+                hit_stop_secs: base.hit_stop_secs + 0.006,
+                ..base
+            }
+        }
+        AttackAnimationStyle::NinjutsuRef | AttackAnimationStyle::NinjutsuRefRow(_) => {
+            KnifeAttackPreset {
+                damage: base.damage,
+                cooldown: base.cooldown.max(0.54),
+                windup_secs: 0.18,
+                animation_duration_secs: base.animation_duration_secs.max(0.56),
+                lifetime: 0.0,
+                hitbox_size: Vec2::ZERO,
+                slash_render_size: Vec2::ZERO,
+                slash_color: Color::srgba(0.0, 0.0, 0.0, 0.0),
+                hit_stop_secs: 0.0,
+                ..base
+            }
+        }
+        AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => {
+            KnifeAttackPreset {
+                damage: base.damage * 1.25,
+                cooldown: base.cooldown.max(0.46),
+                windup_secs: 0.13,
+                animation_duration_secs: base.animation_duration_secs.max(0.42),
+                lifetime: 0.13,
+                hitbox_size: base.hitbox_size * Vec2::new(1.25, 1.08),
+                x_offset: base.x_offset + 12.0,
+                slash_render_size: base.slash_render_size * Vec2::new(1.28, 1.05),
+                slash_color: Color::srgba(1.0, 0.24, 0.20, 0.32),
+                knockback_x: base.knockback_x * 1.28,
+                knockback_y: base.knockback_y + 8.0,
+                hit_stop_secs: base.hit_stop_secs + 0.014,
+                ..base
+            }
+        }
+        _ => base,
     }
 }
 
@@ -309,6 +608,9 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
         AttackAnimationStyle::GroundLightRow(_) => {
             asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS as usize
         }
+        AttackAnimationStyle::AirComboRow(_) => {
+            asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS as usize
+        }
         AttackAnimationStyle::AirCombo => {
             (asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
                 * asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS) as usize
@@ -318,17 +620,29 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
                 as usize
         }
         AttackAnimationStyle::HeavyRefRow(_) => asset_paths::REFERENCE_BOARD_HEAVY_COLS as usize,
+        AttackAnimationStyle::UltimateRefRow(_) => {
+            asset_paths::REFERENCE_BOARD_ULTIMATE_COLS as usize
+        }
         AttackAnimationStyle::UltimateRef => {
             (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
                 * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS) as usize
+        }
+        AttackAnimationStyle::MobilityRefRow(_) => {
+            asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize
         }
         AttackAnimationStyle::MobilityRef => {
             (asset_paths::REFERENCE_BOARD_MOBILITY_COLS
                 * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS) as usize
         }
+        AttackAnimationStyle::NinjutsuRefRow(_) => {
+            asset_paths::REFERENCE_BOARD_NINJUTSU_COLS as usize
+        }
         AttackAnimationStyle::NinjutsuRef => {
             (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
                 * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS) as usize
+        }
+        AttackAnimationStyle::WeaponProjRefRow(_) => {
+            asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS as usize
         }
         AttackAnimationStyle::WeaponProjRef => {
             (asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
@@ -341,18 +655,38 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
         AttackAnimationStyle::Normal => return None,
     };
 
-    Some((frame_count as f32 + 1.0) * asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS)
+    Some((frame_count as f32 + 1.0) * REFERENCE_ATTACK_FRAME_SECS)
+}
+
+fn reference_action_lock_floor(style: AttackAnimationStyle) -> Option<f32> {
+    match style {
+        AttackAnimationStyle::GroundLightRow(_) => Some(0.22),
+        AttackAnimationStyle::AirComboRow(_) => Some(0.24),
+        AttackAnimationStyle::HeavyRefRow(_) => Some(0.36),
+        AttackAnimationStyle::UltimateRefRow(_) => Some(0.74),
+        AttackAnimationStyle::MobilityRefRow(1) | AttackAnimationStyle::MobilityRefRow(2) => {
+            Some(0.18)
+        }
+        AttackAnimationStyle::MobilityRefRow(3) => Some(0.26),
+        AttackAnimationStyle::MobilityRefRow(4) => Some(0.32),
+        AttackAnimationStyle::NinjutsuRefRow(4) => Some(0.50),
+        AttackAnimationStyle::NinjutsuRefRow(_) => Some(0.44),
+        AttackAnimationStyle::WeaponProjRefRow(_) => Some(0.34),
+        _ => None,
+    }
 }
 
 fn attack_cooldown_floor(style: AttackAnimationStyle) -> f32 {
+    if let Some(lock_floor) = reference_action_lock_floor(style) {
+        return lock_floor;
+    }
+
     match style {
         AttackAnimationStyle::OveredgeRelease
         | AttackAnimationStyle::OveredgeLight1
         | AttackAnimationStyle::OveredgeLight2
         | AttackAnimationStyle::OveredgeLight3
-        | AttackAnimationStyle::OveredgeHeavy
-        | AttackAnimationStyle::GroundLightRow(_)
-        | AttackAnimationStyle::HeavyRefRow(_) => overedge_animation_duration(style).unwrap_or(0.0),
+        | AttackAnimationStyle::OveredgeHeavy => overedge_animation_duration(style).unwrap_or(0.0),
         _ => 0.0,
     }
 }
@@ -448,6 +782,45 @@ fn spawn_projectile_with_style(
         });
 }
 
+fn slash_feedback_for_style(
+    combo_step: u8,
+    style: AttackAnimationStyle,
+    base_alpha: f32,
+    facing: f32,
+) -> KnifeSlashFeedback {
+    let combo_weight = combo_step as f32;
+    let (camera_intensity, camera_duration, hit_stop_freeze_speed, visual_expand, visual_spin) =
+        match style {
+            AttackAnimationStyle::UltimateRef | AttackAnimationStyle::UltimateRefRow(_) => {
+                (9.0 + combo_weight * 0.7, 0.13, 0.06, 0.38, 0.46)
+            }
+            AttackAnimationStyle::HeavyRef
+            | AttackAnimationStyle::HeavyRefRow(_)
+            | AttackAnimationStyle::OveredgeHeavy => {
+                (5.4 + combo_weight * 0.9, 0.09, 0.09, 0.30, 0.34)
+            }
+            AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => {
+                (4.6 + combo_weight * 0.55, 0.075, 0.11, 0.26, 0.30)
+            }
+            AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => {
+                (3.4 + combo_weight * 0.45, 0.055, 0.14, 0.24, 0.24)
+            }
+            AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
+                (3.2 + combo_weight * 0.55, 0.06, 0.13, 0.22, 0.28)
+            }
+            _ => (2.2 + combo_weight * 0.8, 0.06, 0.14, 0.18, 0.18),
+        };
+
+    KnifeSlashFeedback {
+        camera_intensity,
+        camera_duration,
+        hit_stop_freeze_speed,
+        base_alpha,
+        visual_expand,
+        visual_spin: visual_spin * if facing < 0.0 { -1.0 } else { 1.0 },
+    }
+}
+
 fn spawn_knife_slash(
     commands: &mut Commands,
     player_transform: &Transform,
@@ -455,17 +828,30 @@ fn spawn_knife_slash(
     combo_step: u8,
     facing: f32,
     overedge_enabled: bool,
+    attack_style: AttackAnimationStyle,
 ) {
-    let preset = knife_attack_preset(combo_step, overedge_enabled);
+    let preset = knife_attack_preset_for_style(combo_step, overedge_enabled, attack_style);
+    let base_alpha = match attack_style {
+        AttackAnimationStyle::UltimateRef | AttackAnimationStyle::UltimateRefRow(_) => 0.40,
+        AttackAnimationStyle::HeavyRef
+        | AttackAnimationStyle::HeavyRefRow(_)
+        | AttackAnimationStyle::OveredgeHeavy => 0.34,
+        AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => 0.32,
+        AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => 0.28,
+        AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => 0.26,
+        _ => 0.22 + combo_step as f32 * 0.03,
+    };
     let y_offset = if player_state.is_crouching {
         preset.crouch_y_offset
     } else {
         preset.y_offset
-    };
+    }
+    .max(-8.0);
 
+    let slash_y = (player_transform.translation.y + y_offset).max(GameConfig::GROUND_LEVEL + 3.0);
     let slash_position = Vec3::new(
         player_transform.translation.x + preset.x_offset * facing,
-        player_transform.translation.y + y_offset,
+        slash_y,
         2.4,
     );
 
@@ -491,7 +877,293 @@ fn spawn_knife_slash(
             hit_stop_secs: preset.hit_stop_secs,
         },
         crate::systems::collision::CollisionBox::new(preset.hitbox_size),
+        slash_feedback_for_style(combo_step, attack_style, base_alpha, facing),
     ));
+}
+
+fn should_spawn_afterimage(style: AttackAnimationStyle) -> bool {
+    matches!(
+        style,
+        AttackAnimationStyle::MobilityRefRow(3)
+            | AttackAnimationStyle::MobilityRefRow(4)
+            | AttackAnimationStyle::NinjutsuRefRow(4)
+    )
+}
+
+fn reference_action_vfx_frame_range(style: AttackAnimationStyle) -> Option<(usize, usize)> {
+    match style {
+        AttackAnimationStyle::MobilityRefRow(row) if (3..=4).contains(&row) => Some((
+            (row as usize - 1) * asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize,
+            asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize,
+        )),
+        AttackAnimationStyle::NinjutsuRefRow(4) => Some((
+            3 * asset_paths::REFERENCE_BOARD_NINJUTSU_COLS as usize,
+            asset_paths::REFERENCE_BOARD_NINJUTSU_COLS as usize,
+        )),
+        _ => None,
+    }
+}
+
+fn reference_action_vfx_profile(
+    style: AttackAnimationStyle,
+    facing: f32,
+) -> (Vec3, Vec2, Vec2, f32) {
+    let direction = if facing < 0.0 { -1.0 } else { 1.0 };
+
+    match style {
+        AttackAnimationStyle::MobilityRefRow(3) => (
+            Vec3::new(-direction * 38.0, 14.0, 2.18),
+            Vec2::new(284.0, 284.0),
+            Vec2::new(-direction * 92.0, 28.0),
+            0.36,
+        ),
+        AttackAnimationStyle::MobilityRefRow(4) => (
+            Vec3::new(direction * 26.0, 36.0, 2.18),
+            Vec2::new(292.0, 292.0),
+            Vec2::new(direction * 72.0, 132.0),
+            0.34,
+        ),
+        AttackAnimationStyle::NinjutsuRefRow(4) => (
+            Vec3::new(-direction * 20.0, 12.0, 2.17),
+            Vec2::new(304.0, 304.0),
+            Vec2::new(-direction * 30.0, 8.0),
+            0.32,
+        ),
+        _ => (
+            Vec3::new(0.0, 0.0, 2.16),
+            Vec2::new(276.0, 276.0),
+            Vec2::ZERO,
+            0.28,
+        ),
+    }
+}
+
+fn spawn_reference_action_vfx(
+    commands: &mut Commands,
+    player_transform: &Transform,
+    sprite_sheets: Option<&SpriteAnimationSheets>,
+    facing: f32,
+    attack_style: AttackAnimationStyle,
+) {
+    let Some(sprite_sheets) = sprite_sheets else {
+        return;
+    };
+    let Some((frame_start, frame_count)) = reference_action_vfx_frame_range(attack_style) else {
+        return;
+    };
+    let Some((image, layout)) =
+        sprite_sheets.select_sheet_for_attack_style(&AnimationType::Attacking, attack_style)
+    else {
+        return;
+    };
+
+    let (offset, size, drift, alpha) = reference_action_vfx_profile(attack_style, facing);
+    let duration = frame_count as f32 * REFERENCE_ACTION_VFX_FRAME_SECS + 0.08;
+    let mut transform = Transform::from_translation(player_transform.translation + offset);
+    transform.scale.x = if facing < 0.0 { -1.0 } else { 1.0 };
+
+    commands.spawn((
+        Sprite {
+            image: image.clone(),
+            color: Color::srgba(1.0, 1.0, 1.0, alpha),
+            custom_size: Some(size),
+            texture_atlas: Some(TextureAtlas {
+                layout: layout.clone(),
+                index: frame_start,
+            }),
+            ..default()
+        },
+        transform,
+        AttackReferenceActionVfx {
+            timer: Timer::from_seconds(duration, TimerMode::Once),
+            frame_start,
+            frame_count,
+            base_alpha: alpha,
+            drift,
+        },
+    ));
+}
+
+fn stable_player_visual_style(style: AttackAnimationStyle) -> AttackAnimationStyle {
+    match style {
+        AttackAnimationStyle::MobilityRefRow(3) => AttackAnimationStyle::MobilityRefRow(1),
+        AttackAnimationStyle::MobilityRefRow(4) => AttackAnimationStyle::MobilityRefRow(2),
+        AttackAnimationStyle::NinjutsuRefRow(4) => AttackAnimationStyle::NinjutsuRefRow(1),
+        _ => style,
+    }
+}
+
+fn spawn_attack_afterimages(
+    commands: &mut Commands,
+    player_transform: Option<&Transform>,
+    _player_sprite: Option<&Sprite>,
+    sprite_sheets: Option<&SpriteAnimationSheets>,
+    facing: f32,
+    attack_style: AttackAnimationStyle,
+) {
+    if !should_spawn_afterimage(attack_style) {
+        return;
+    }
+
+    let Some(player_transform) = player_transform else {
+        return;
+    };
+    spawn_reference_action_vfx(
+        commands,
+        player_transform,
+        sprite_sheets,
+        facing,
+        attack_style,
+    );
+
+    let direction = if facing < 0.0 { -1.0 } else { 1.0 };
+    let (count, spacing, upward, tint, base_alpha, duration, drift, size, rotation) =
+        match attack_style {
+            AttackAnimationStyle::MobilityRefRow(3) => (
+                3,
+                22.0,
+                8.0,
+                Color::srgba(1.0, 0.18, 0.10, 0.24),
+                0.24,
+                0.22,
+                Vec2::new(-direction * 130.0, 26.0),
+                Vec2::new(58.0, 9.0),
+                -0.14,
+            ),
+            AttackAnimationStyle::MobilityRefRow(4) => (
+                3,
+                16.0,
+                18.0,
+                Color::srgba(0.58, 0.86, 1.0, 0.22),
+                0.22,
+                0.24,
+                Vec2::new(direction * 120.0, 140.0),
+                Vec2::new(42.0, 12.0),
+                0.46,
+            ),
+            AttackAnimationStyle::NinjutsuRefRow(4) => (
+                4,
+                18.0,
+                4.0,
+                Color::srgba(1.0, 0.06, 0.06, 0.20),
+                0.20,
+                0.28,
+                Vec2::new(-direction * 82.0, 10.0),
+                Vec2::new(50.0, 8.0),
+                -0.04,
+            ),
+            _ => return,
+        };
+
+    for index in 0..count {
+        let step = index as f32 + 1.0;
+        let offset = Vec3::new(
+            -direction * spacing * step,
+            upward * step,
+            -0.08 - index as f32 * 0.01,
+        );
+        let size_falloff = 1.0 - index as f32 * 0.12;
+        let transform = Transform::from_translation(player_transform.translation + offset)
+            .with_rotation(Quat::from_rotation_z(rotation * direction));
+
+        commands.spawn((
+            Sprite {
+                color: tint,
+                custom_size: Some(size * size_falloff),
+                ..default()
+            },
+            transform,
+            AttackAfterimage {
+                timer: Timer::from_seconds(duration, TimerMode::Once),
+                base_alpha,
+                drift,
+            },
+        ));
+    }
+}
+
+fn apply_attack_movement(
+    velocity: &mut Velocity,
+    player_state: &PlayerState,
+    combo_step: u8,
+    facing: f32,
+    attack_style: AttackAnimationStyle,
+) {
+    let direction = if facing < 0.0 { -1.0 } else { 1.0 };
+
+    match attack_style {
+        AttackAnimationStyle::GroundLightRow(_) | AttackAnimationStyle::GroundLight => {
+            let target = direction * (96.0 + combo_step as f32 * 18.0);
+            if velocity.x.signum() != direction || velocity.x.abs() < target.abs() {
+                velocity.x = target;
+            }
+        }
+        AttackAnimationStyle::HeavyRefRow(_) | AttackAnimationStyle::HeavyRef => {
+            velocity.x = velocity.x * 0.36 + direction * 54.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::UltimateRefRow(_) | AttackAnimationStyle::UltimateRef => {
+            velocity.x *= 0.18;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::MobilityRefRow(1) | AttackAnimationStyle::MobilityRef => {
+            velocity.x = direction * 420.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::MobilityRefRow(2) => {
+            velocity.x = direction * 330.0;
+            velocity.y = velocity.y.max(18.0);
+        }
+        AttackAnimationStyle::MobilityRefRow(3) => {
+            velocity.x = -direction * 300.0;
+            velocity.y = velocity.y.max(92.0);
+        }
+        AttackAnimationStyle::MobilityRefRow(4) => {
+            velocity.x = direction * 380.0;
+            velocity.y = velocity.y.max(220.0);
+        }
+        AttackAnimationStyle::AirComboRow(_) | AttackAnimationStyle::AirCombo => {
+            velocity.x += direction * 72.0;
+            if !player_state.is_grounded {
+                velocity.y = velocity.y.max(115.0);
+            }
+        }
+        AttackAnimationStyle::NinjutsuRefRow(4) => {
+            velocity.x *= 0.25;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::WeaponProjRefRow(_) | AttackAnimationStyle::WeaponProjRef => {
+            velocity.x = velocity.x * 0.55 + direction * 88.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        _ => {}
+    }
+}
+
+fn attack_momentum_for_style(style: AttackAnimationStyle, facing: f32) -> Option<AttackMomentum> {
+    let direction = if facing < 0.0 { -1.0 } else { 1.0 };
+
+    match style {
+        AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(1) => {
+            Some(AttackMomentum::new(direction, 340.0, 0.16, 1.8, 0.0, 0.0))
+        }
+        AttackAnimationStyle::MobilityRefRow(2) => {
+            Some(AttackMomentum::new(direction, 260.0, 0.14, 2.0, 18.0, 0.08))
+        }
+        AttackAnimationStyle::MobilityRefRow(3) => Some(AttackMomentum::new(
+            -direction, 240.0, 0.20, 2.4, 74.0, 0.10,
+        )),
+        AttackAnimationStyle::MobilityRefRow(4) => Some(AttackMomentum::new(
+            direction, 330.0, 0.24, 1.6, 178.0, 0.14,
+        )),
+        AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
+            Some(AttackMomentum::new(direction, 90.0, 0.08, 2.5, 84.0, 0.07))
+        }
+        AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => {
+            Some(AttackMomentum::new(direction, 78.0, 0.08, 3.0, 0.0, 0.0))
+        }
+        _ => None,
+    }
 }
 
 fn perform_knife_attack(
@@ -518,15 +1190,17 @@ fn perform_knife_attack(
     } else {
         base_style
     };
+    let attack_style = resolve_reference_visual_style(runtime, attack_style);
     runtime.combo_step = combo_step;
     runtime.combo_reset_timer = request.knife_tuning.combo_reset_window_secs.max(0.1);
     runtime.queued_attack = None;
 
-    let preset = knife_attack_preset(combo_step, request.overedge_enabled);
+    let preset = knife_attack_preset_for_style(combo_step, request.overedge_enabled, attack_style);
     runtime.cooldown = preset.cooldown.max(attack_cooldown_floor(attack_style));
+    let player_visual_style = stable_player_visual_style(attack_style);
     let animation_duration =
-        overedge_animation_duration(attack_style).unwrap_or(preset.animation_duration_secs);
-    attack_animation.trigger_with_style(animation_duration, attack_style);
+        overedge_animation_duration(player_visual_style).unwrap_or(preset.animation_duration_secs);
+    attack_animation.trigger_with_style(animation_duration, player_visual_style);
 
     let facing = if request.facing_sign < 0.0 {
         -1.0
@@ -538,6 +1212,25 @@ fn perform_knife_attack(
         1.0
     };
 
+    apply_attack_movement(
+        request.player_velocity,
+        request.player_state,
+        combo_step,
+        facing,
+        attack_style,
+    );
+    if let Some(momentum) = attack_momentum_for_style(attack_style, facing) {
+        commands.entity(request.player_entity).insert(momentum);
+    }
+    spawn_attack_afterimages(
+        commands,
+        request.player_transform,
+        request.player_sprite,
+        request.sprite_sheets,
+        facing,
+        attack_style,
+    );
+
     commands.spawn((PendingKnifeAttack {
         owner: request.player_entity,
         timer: Timer::from_seconds(preset.windup_secs, TimerMode::Once),
@@ -545,6 +1238,7 @@ fn perform_knife_attack(
         facing,
         is_crouching: request.player_state.is_crouching,
         overedge_enabled: request.overedge_enabled,
+        attack_style,
     },));
 }
 
@@ -553,7 +1247,14 @@ pub fn player_shoot_projectile(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     game_input: Option<Res<crate::systems::input::GameInput>>,
-    player_query: Query<(&Transform, Option<&FacingDirection>), With<Player>>,
+    player_query: Query<
+        (
+            &Transform,
+            Option<&FacingDirection>,
+            Option<&AttackAnimationState>,
+        ),
+        With<Player>,
+    >,
     mut cooldown: Local<f32>,
     time: Res<Time>,
     shroud_query: Query<&ShroudState, With<Player>>,
@@ -577,8 +1278,12 @@ pub fn player_shoot_projectile(
 
     if projectile_pressed
         && *cooldown <= 0.0
-        && let Some((player_transform, facing)) = player_query.iter().next()
+        && let Some((player_transform, facing, attack_state)) = player_query.iter().next()
     {
+        if attack_state.is_some() {
+            return;
+        }
+
         let facing_sign = facing.copied().unwrap_or_default().sign();
 
         let config = projectile_config(false);
@@ -615,10 +1320,20 @@ pub fn player_knife_attack(
     if runtime.combo_reset_timer <= 0.0 {
         runtime.combo_step = 0;
         runtime.queued_attack = None;
+        reset_reference_visual_steps(&mut runtime);
     }
 
-    let Some((player_entity, player_velocity, player_state, facing, shroud, mut attack_animation)) =
-        player_query.iter_mut().next()
+    let Some((
+        player_entity,
+        player_transform,
+        player_sprite,
+        sprite_sheets,
+        mut player_velocity,
+        player_state,
+        facing,
+        shroud,
+        mut attack_animation,
+    )) = player_query.iter_mut().next()
     else {
         return;
     };
@@ -627,9 +1342,14 @@ pub fn player_knife_attack(
     let is_airborne = !player_state.is_grounded;
     let is_crouching = player_state.is_crouching;
 
+    let shift_is_pressed = shift_pressed(&keyboard);
     let reference_row_attack = reference_attack_row_key(&keyboard).map(|row| {
-        if shift_pressed(&keyboard) {
+        if shift_is_pressed {
             AttackAnimationStyle::HeavyRefRow(row)
+        } else if is_airborne {
+            AttackAnimationStyle::AirComboRow(row)
+        } else if is_crouching {
+            AttackAnimationStyle::MobilityRefRow(direct_mobility_row(row))
         } else {
             AttackAnimationStyle::GroundLightRow(row)
         }
@@ -639,14 +1359,33 @@ pub fn player_knife_attack(
         .map(|input| input.action1_pressed_this_frame)
         .unwrap_or(false)
         || keyboard.just_pressed(KeyCode::KeyL);
-    let heavy_attack_pressed = overedge_enabled && keyboard.just_pressed(KeyCode::KeyK);
+    let heavy_attack_pressed = keyboard.just_pressed(KeyCode::KeyK);
+    let projectile_pressed = game_input
+        .as_deref()
+        .map(|input| input.action2_pressed_this_frame)
+        .unwrap_or(false)
+        || keyboard.just_pressed(KeyCode::KeyX);
 
     // 解析请求的攻击样式
     let requested_attack: Option<AttackAnimationStyle> =
         if let Some(attack_style) = reference_row_attack {
             Some(attack_style)
         } else if heavy_attack_pressed {
-            Some(AttackAnimationStyle::OveredgeHeavy)
+            if is_crouching {
+                Some(AttackAnimationStyle::UltimateRef)
+            } else if overedge_enabled {
+                Some(AttackAnimationStyle::OveredgeHeavy)
+            } else {
+                Some(AttackAnimationStyle::HeavyRef)
+            }
+        } else if projectile_pressed {
+            if shift_is_pressed {
+                Some(AttackAnimationStyle::NinjutsuRefRow(4))
+            } else if is_crouching {
+                Some(AttackAnimationStyle::WeaponProjRef)
+            } else {
+                Some(AttackAnimationStyle::NinjutsuRef)
+            }
         } else if light_attack_pressed {
             if overedge_enabled {
                 Some(AttackAnimationStyle::OveredgeLight1)
@@ -670,7 +1409,10 @@ pub fn player_knife_attack(
                 &mut attack_animation,
                 KnifeAttackRequest {
                     player_entity,
-                    player_velocity,
+                    player_transform,
+                    player_sprite,
+                    sprite_sheets,
+                    player_velocity: &mut player_velocity,
                     player_state,
                     facing_sign,
                     knife_tuning,
@@ -681,7 +1423,14 @@ pub fn player_knife_attack(
             return;
         }
 
-        if runtime.cooldown <= knife_tuning.combo_buffer_window_secs {
+        let combo_buffer_window = if attack_style.uses_reference_sheet() {
+            knife_tuning
+                .combo_buffer_window_secs
+                .max(REFERENCE_ATTACK_FRAME_SECS * 8.0)
+        } else {
+            knife_tuning.combo_buffer_window_secs
+        };
+        if runtime.cooldown <= combo_buffer_window {
             runtime.queued_attack = Some(attack_style);
         }
     }
@@ -696,7 +1445,10 @@ pub fn player_knife_attack(
             &mut attack_animation,
             KnifeAttackRequest {
                 player_entity,
-                player_velocity,
+                player_transform,
+                player_sprite,
+                sprite_sheets,
+                player_velocity: &mut player_velocity,
                 player_state,
                 facing_sign,
                 knife_tuning,
@@ -728,14 +1480,32 @@ pub fn resolve_pending_knife_attacks(
             is_grounded: true,
             is_crouching: pending.is_crouching,
         };
-        spawn_knife_slash(
-            &mut commands,
-            player_transform,
-            &player_state,
-            pending.combo_step,
-            pending.facing,
-            pending.overedge_enabled,
-        );
+        if matches!(
+            pending.attack_style,
+            AttackAnimationStyle::NinjutsuRef | AttackAnimationStyle::NinjutsuRefRow(_)
+        ) {
+            let spawn_position = Vec3::new(
+                player_transform.translation.x + PROJECTILE_MUZZLE_X_OFFSET * pending.facing,
+                player_transform.translation.y + PROJECTILE_MUZZLE_Y_OFFSET,
+                2.0,
+            );
+            spawn_projectile_with_style(
+                &mut commands,
+                spawn_position,
+                projectile_config_for_attack_style(pending.attack_style),
+                pending.facing,
+            );
+        } else {
+            spawn_knife_slash(
+                &mut commands,
+                player_transform,
+                &player_state,
+                pending.combo_step,
+                pending.facing,
+                pending.overedge_enabled,
+                pending.attack_style,
+            );
+        }
         commands.entity(pending_entity).despawn();
     }
 }
@@ -806,14 +1576,107 @@ pub fn cleanup_expired_enemy_projectiles(
 /// 清理超时刀攻击命中盒。
 pub fn cleanup_expired_knife_slashes(
     mut commands: Commands,
-    mut knife_query: Query<(Entity, &mut KnifeSlash)>,
+    mut knife_query: Query<(
+        Entity,
+        &mut KnifeSlash,
+        Option<&KnifeSlashFeedback>,
+        Option<&mut Sprite>,
+        Option<&mut Transform>,
+    )>,
     time: Res<Time>,
 ) {
-    for (entity, mut knife_slash) in knife_query.iter_mut() {
+    for (entity, mut knife_slash, feedback, sprite, transform) in knife_query.iter_mut() {
         knife_slash.lifetime.tick(time.delta());
         if knife_slash.lifetime.is_finished() {
             commands.entity(entity).despawn();
+            continue;
         }
+
+        if let Some(feedback) = feedback {
+            let duration = knife_slash
+                .lifetime
+                .duration()
+                .as_secs_f32()
+                .max(f32::EPSILON);
+            let progress = (knife_slash.lifetime.elapsed_secs() / duration).clamp(0.0, 1.0);
+            let fade = 1.0 - progress;
+
+            if let Some(mut sprite) = sprite {
+                sprite.color.set_alpha(feedback.base_alpha * fade);
+            }
+
+            if let Some(mut transform) = transform {
+                transform.scale = Vec3::new(
+                    1.0 + feedback.visual_expand * progress,
+                    1.0 + feedback.visual_expand * 0.35 * progress,
+                    1.0,
+                );
+                transform.rotate_z(feedback.visual_spin * time.delta_secs() * fade);
+            }
+        }
+    }
+}
+
+pub fn animate_attack_afterimages(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut AttackAfterimage, &mut Sprite, &mut Transform)>,
+) {
+    let delta = time.delta_secs();
+
+    for (entity, mut afterimage, mut sprite, mut transform) in query.iter_mut() {
+        afterimage.timer.tick(time.delta());
+        if afterimage.timer.is_finished() {
+            commands.entity(entity).despawn();
+            continue;
+        }
+
+        let duration = afterimage.timer.duration().as_secs_f32().max(f32::EPSILON);
+        let progress = (afterimage.timer.elapsed_secs() / duration).clamp(0.0, 1.0);
+        let fade = 1.0 - progress;
+        sprite.color.set_alpha(afterimage.base_alpha * fade);
+        transform.translation += Vec3::new(
+            afterimage.drift.x * delta * fade,
+            afterimage.drift.y * delta * fade,
+            0.0,
+        );
+    }
+}
+
+pub fn animate_attack_reference_action_vfx(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(
+        Entity,
+        &mut AttackReferenceActionVfx,
+        &mut Sprite,
+        &mut Transform,
+    )>,
+) {
+    let delta = time.delta_secs();
+
+    for (entity, mut vfx, mut sprite, mut transform) in query.iter_mut() {
+        vfx.timer.tick(time.delta());
+        if vfx.timer.is_finished() {
+            commands.entity(entity).despawn();
+            continue;
+        }
+
+        let elapsed = vfx.timer.elapsed_secs();
+        if let Some(atlas) = sprite.texture_atlas.as_mut() {
+            let frame_offset = (elapsed / REFERENCE_ACTION_VFX_FRAME_SECS).floor() as usize;
+            atlas.index = vfx.frame_start + frame_offset.min(vfx.frame_count.saturating_sub(1));
+        }
+
+        let duration = vfx.timer.duration().as_secs_f32().max(f32::EPSILON);
+        let progress = (elapsed / duration).clamp(0.0, 1.0);
+        let fade = 1.0 - progress;
+        sprite.color.set_alpha(vfx.base_alpha * fade);
+        transform.translation +=
+            Vec3::new(vfx.drift.x * delta * fade, vfx.drift.y * delta * fade, 0.0);
+        let grow = 1.0 + 0.08 * progress;
+        transform.scale.y = grow;
+        transform.scale.x = transform.scale.x.signum() * grow;
     }
 }
 
@@ -848,6 +1711,7 @@ pub fn knife_enemy_collision(
         Entity,
         &Transform,
         &KnifeSlash,
+        Option<&KnifeSlashFeedback>,
         &crate::systems::collision::CollisionBox,
     )>,
     mut enemy_query: Query<
@@ -862,7 +1726,7 @@ pub fn knife_enemy_collision(
     >,
     mut hit_stop: Option<ResMut<HitStopState>>,
 ) {
-    for (slash_entity, slash_transform, slash, slash_box) in knife_query.iter() {
+    for (slash_entity, slash_transform, slash, feedback, slash_box) in knife_query.iter() {
         let mut hit_target = None;
 
         for (enemy_entity, enemy_transform, mut enemy_state, mut enemy_velocity, enemy_box) in
@@ -893,14 +1757,22 @@ pub fn knife_enemy_collision(
                 source: DamageSource::Knife,
             });
 
-            let shake_intensity = 2.2 + slash.combo_step as f32 * 0.8;
+            let shake_intensity = feedback
+                .map(|feedback| feedback.camera_intensity)
+                .unwrap_or(2.2 + slash.combo_step as f32 * 0.8);
+            let shake_duration = feedback
+                .map(|feedback| feedback.camera_duration)
+                .unwrap_or(0.06);
             camera_impulse_writer.write(CameraImpulseEvent {
                 intensity: shake_intensity,
-                duration: 0.06,
+                duration: shake_duration,
             });
 
             if let Some(hit_stop) = hit_stop.as_deref_mut() {
-                hit_stop.trigger(slash.hit_stop_secs, 0.12);
+                let freeze_speed = feedback
+                    .map(|feedback| feedback.hit_stop_freeze_speed)
+                    .unwrap_or(0.12);
+                hit_stop.trigger(slash.hit_stop_secs, freeze_speed);
             }
 
             commands.entity(slash_entity).despawn();

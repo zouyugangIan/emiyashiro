@@ -150,6 +150,53 @@ impl DamageInvulnerability {
     }
 }
 
+/// 攻击动作短时动量保护。
+///
+/// 用于让 dash、替身、墙面上冲等动作的位移承诺保留几个关键帧，
+/// 避免下一次基础移动/重力更新立即吞掉攻击冲量。
+#[derive(Component, Debug, Clone, Copy)]
+pub struct AttackMomentum {
+    pub remaining_secs: f32,
+    pub direction: f32,
+    pub min_horizontal_speed: f32,
+    pub horizontal_drag: f32,
+    pub vertical_lock_secs: f32,
+    pub min_vertical_speed: f32,
+}
+
+impl AttackMomentum {
+    pub fn new(
+        direction: f32,
+        min_horizontal_speed: f32,
+        remaining_secs: f32,
+        horizontal_drag: f32,
+        min_vertical_speed: f32,
+        vertical_lock_secs: f32,
+    ) -> Self {
+        Self {
+            remaining_secs: remaining_secs.max(0.0),
+            direction: if direction < 0.0 { -1.0 } else { 1.0 },
+            min_horizontal_speed: min_horizontal_speed.max(0.0),
+            horizontal_drag: horizontal_drag.max(0.0),
+            vertical_lock_secs: vertical_lock_secs.max(0.0),
+            min_vertical_speed: min_vertical_speed.max(0.0),
+        }
+    }
+
+    pub fn tick(&mut self, delta_secs: f32) {
+        self.remaining_secs = (self.remaining_secs - delta_secs).max(0.0);
+        self.vertical_lock_secs = (self.vertical_lock_secs - delta_secs).max(0.0);
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.remaining_secs > 0.0
+    }
+
+    pub fn has_vertical_lock(&self) -> bool {
+        self.vertical_lock_secs > 0.0 && self.min_vertical_speed > 0.0
+    }
+}
+
 /// 玩家输入状态（服务端使用）
 #[derive(Component, Default, Debug, Clone)]
 pub struct PlayerInputState {

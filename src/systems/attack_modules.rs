@@ -78,53 +78,53 @@ impl ReferenceAttackModuleKind {
         match self {
             Self::Overview | Self::AdvancedOverview => None,
             Self::GroundLight => Some(ReferenceAttackModuleGrid {
-                tile_size: UVec2::new(183, 178),
-                columns: 8,
-                rows: 5,
-                offset: UVec2::new(14, 82),
-                preview_size: Vec2::new(238.0, 231.0),
+                tile_size: UVec2::from(asset_paths::REFERENCE_BOARD_GROUND_LIGHT_CELL),
+                columns: asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS,
+                rows: asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS,
+                offset: UVec2::from(asset_paths::REFERENCE_BOARD_GROUND_LIGHT_OFFSET),
+                preview_size: Vec2::new(302.0, 302.0),
             }),
             Self::Heavy => Some(ReferenceAttackModuleGrid {
-                tile_size: UVec2::new(206, 153),
-                columns: 8,
-                rows: 5,
-                offset: UVec2::new(15, 84),
-                preview_size: Vec2::new(270.0, 201.0),
+                tile_size: UVec2::from(asset_paths::REFERENCE_BOARD_HEAVY_CELL),
+                columns: asset_paths::REFERENCE_BOARD_HEAVY_COLS,
+                rows: asset_paths::REFERENCE_BOARD_HEAVY_ROWS,
+                offset: UVec2::from(asset_paths::REFERENCE_BOARD_HEAVY_OFFSET),
+                preview_size: Vec2::new(312.0, 312.0),
             }),
             Self::AirCombo => Some(ReferenceAttackModuleGrid {
-                tile_size: UVec2::new(183, 178),
-                columns: 8,
-                rows: 5,
-                offset: UVec2::new(14, 82),
-                preview_size: Vec2::new(238.0, 231.0),
+                tile_size: UVec2::from(asset_paths::REFERENCE_BOARD_AIR_COMBO_CELL),
+                columns: asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS,
+                rows: asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS,
+                offset: UVec2::from(asset_paths::REFERENCE_BOARD_AIR_COMBO_OFFSET),
+                preview_size: Vec2::new(302.0, 302.0),
             }),
             Self::Mobility => Some(ReferenceAttackModuleGrid {
-                tile_size: UVec2::new(244, 207),
-                columns: 6,
-                rows: 4,
-                offset: UVec2::new(15, 110),
-                preview_size: Vec2::new(256.0, 217.0),
+                tile_size: UVec2::from(asset_paths::REFERENCE_BOARD_MOBILITY_CELL),
+                columns: asset_paths::REFERENCE_BOARD_MOBILITY_COLS,
+                rows: asset_paths::REFERENCE_BOARD_MOBILITY_ROWS,
+                offset: UVec2::from(asset_paths::REFERENCE_BOARD_MOBILITY_OFFSET),
+                preview_size: Vec2::new(302.0, 302.0),
             }),
             Self::NinjutsuProjectiles => Some(ReferenceAttackModuleGrid {
-                tile_size: UVec2::new(183, 210),
-                columns: 8,
-                rows: 4,
-                offset: UVec2::new(14, 94),
-                preview_size: Vec2::new(230.0, 264.0),
+                tile_size: UVec2::from(asset_paths::REFERENCE_BOARD_NINJUTSU_CELL),
+                columns: asset_paths::REFERENCE_BOARD_NINJUTSU_COLS,
+                rows: asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS,
+                offset: UVec2::from(asset_paths::REFERENCE_BOARD_NINJUTSU_OFFSET),
+                preview_size: Vec2::new(320.0, 320.0),
             }),
             Self::Ultimate => Some(ReferenceAttackModuleGrid {
-                tile_size: UVec2::new(183, 267),
-                columns: 8,
-                rows: 3,
-                offset: UVec2::new(14, 92),
-                preview_size: Vec2::new(212.0, 309.0),
+                tile_size: UVec2::from(asset_paths::REFERENCE_BOARD_ULTIMATE_CELL),
+                columns: asset_paths::REFERENCE_BOARD_ULTIMATE_COLS,
+                rows: asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS,
+                offset: UVec2::from(asset_paths::REFERENCE_BOARD_ULTIMATE_OFFSET),
+                preview_size: Vec2::new(340.0, 340.0),
             }),
             Self::WeaponProjection => Some(ReferenceAttackModuleGrid {
-                tile_size: UVec2::new(244, 197),
-                columns: 6,
-                rows: 4,
-                offset: UVec2::new(15, 118),
-                preview_size: Vec2::new(260.0, 210.0),
+                tile_size: UVec2::from(asset_paths::REFERENCE_BOARD_WEAPON_PROJ_CELL),
+                columns: asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS,
+                rows: asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS,
+                offset: UVec2::from(asset_paths::REFERENCE_BOARD_WEAPON_PROJ_OFFSET),
+                preview_size: Vec2::new(310.0, 310.0),
             }),
         }
     }
@@ -312,6 +312,10 @@ pub fn handle_reference_attack_module_input(
             reference_row.map(|_| {
                 if shift_is_pressed {
                     ReferenceAttackModuleKind::Heavy
+                } else if !player_state.is_grounded {
+                    ReferenceAttackModuleKind::AirCombo
+                } else if player_state.is_crouching {
+                    ReferenceAttackModuleKind::Mobility
                 } else {
                     ReferenceAttackModuleKind::GroundLight
                 }
@@ -348,12 +352,9 @@ pub fn handle_reference_attack_module_input(
 
     if let Some(kind) = row_kind_override.or_else(|| resolve_reference_attack_module(module_input))
     {
-        let selected_row = row_kind_override.and(reference_row).filter(|_| {
-            matches!(
-                kind,
-                ReferenceAttackModuleKind::GroundLight | ReferenceAttackModuleKind::Heavy
-            )
-        });
+        let selected_row = row_kind_override
+            .and(reference_row)
+            .filter(|row| kind.grid().is_some_and(|grid| *row <= grid.rows as u8));
         spawn_reference_attack_module_preview(
             &mut commands,
             &asset_server,

@@ -115,10 +115,7 @@ fn resolve_target_animation(
 
     let just_landed = !was_grounded && player_state.is_grounded;
 
-    if has_active_attack
-        && player_state.is_grounded
-        && animation.animations.contains_key(&AnimationType::Attacking)
-    {
+    if has_active_attack && animation.animations.contains_key(&AnimationType::Attacking) {
         AnimationType::Attacking
     } else if !player_state.is_grounded {
         AnimationType::Jumping
@@ -152,6 +149,11 @@ fn resolved_attack_style(
                 AttackAnimationStyle::GroundLightRow(_) | AttackAnimationStyle::HeavyRefRow(_) => {
                     attack_style
                 }
+                AttackAnimationStyle::AirComboRow(_)
+                | AttackAnimationStyle::UltimateRefRow(_)
+                | AttackAnimationStyle::MobilityRefRow(_)
+                | AttackAnimationStyle::NinjutsuRefRow(_)
+                | AttackAnimationStyle::WeaponProjRefRow(_) => attack_style,
                 AttackAnimationStyle::GroundLight | AttackAnimationStyle::AirCombo => {
                     if is_airborne {
                         AttackAnimationStyle::AirCombo
@@ -243,10 +245,40 @@ fn overedge_attack_frames(
             asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS,
             available_frame_count,
         ),
+        AttackAnimationStyle::AirComboRow(row) => reference_board_row_frames(
+            row,
+            asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS,
+            asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS,
+            available_frame_count,
+        ),
         AttackAnimationStyle::HeavyRefRow(row) => reference_board_row_frames(
             row,
             asset_paths::REFERENCE_BOARD_HEAVY_COLS,
             asset_paths::REFERENCE_BOARD_HEAVY_ROWS,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::UltimateRefRow(row) => reference_board_row_frames(
+            row,
+            asset_paths::REFERENCE_BOARD_ULTIMATE_COLS,
+            asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::MobilityRefRow(row) => reference_board_row_frames(
+            row,
+            asset_paths::REFERENCE_BOARD_MOBILITY_COLS,
+            asset_paths::REFERENCE_BOARD_MOBILITY_ROWS,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::NinjutsuRefRow(row) => reference_board_row_frames(
+            row,
+            asset_paths::REFERENCE_BOARD_NINJUTSU_COLS,
+            asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS,
+            available_frame_count,
+        ),
+        AttackAnimationStyle::WeaponProjRefRow(row) => reference_board_row_frames(
+            row,
+            asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS,
+            asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS,
             available_frame_count,
         ),
         // Reference Board 模组播放全部帧
@@ -774,6 +806,47 @@ mod tests {
                     * crate::asset_paths::REFERENCE_BOARD_HEAVY_ROWS) as usize
             ),
             Some(vec![16, 17, 18, 19, 20, 21, 22, 23])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::AirComboRow(5),
+                (crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS) as usize
+            ),
+            Some(vec![32, 33, 34, 35, 36, 37, 38, 39])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::MobilityRefRow(4),
+                (crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_MOBILITY_ROWS) as usize
+            ),
+            Some(vec![18, 19, 20, 21, 22, 23])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::NinjutsuRefRow(4),
+                (crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS) as usize
+            ),
+            Some(vec![24, 25, 26, 27, 28, 29, 30, 31])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::UltimateRefRow(3),
+                (crate::asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS) as usize
+            ),
+            Some(vec![16, 17, 18, 19, 20, 21, 22, 23])
+        );
+        assert_eq!(
+            overedge_attack_frames(
+                AttackAnimationStyle::WeaponProjRefRow(4),
+                (crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS)
+                    as usize
+            ),
+            Some(vec![18, 19, 20, 21, 22, 23])
         );
     }
 

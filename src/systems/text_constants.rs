@@ -22,7 +22,7 @@ impl SettingsMenuText {
     pub const TITLE: &'static str = "Settings";
     pub const AUDIO_SECTION: &'static str = "AUDIO";
     pub const MASTER_VOLUME: &'static str = "Master Volume";
-    pub const VOLUME_HINT: &'static str = "Tap speaker to mute · ± adjusts in 10% steps";
+    pub const VOLUME_HINT: &'static str = "Tap ± buttion to adjusts volume by 10% every step";
     pub const VOLUME_DOWN: &'static str = "-";
     pub const VOLUME_UP: &'static str = "+";
     pub const BACK: &'static str = "Back";
@@ -40,7 +40,8 @@ impl PauseMenuText {
     pub const SETTINGS: &'static str = "Settings";
     pub const ESC_RESUME: &'static str = "ESC: Resume";
     pub const Q_MAIN_MENU: &'static str = "Q: Main Menu";
-    pub const CONTROLS_HINT: &'static str = "WASD/Arrow Keys: Move | ESC: Pause";
+    pub const CONTROLS_HINT: &'static str =
+        "WASD/Arrow Keys: Move | J/Z/L: Light | K: Heavy | X: Skill | Shift+V: Overedge";
 }
 
 /// 存档/读档系统文本常量

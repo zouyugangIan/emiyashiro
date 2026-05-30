@@ -89,6 +89,65 @@ mod tests {
         }
     }
 
+    fn create_test_sprite_animation_sheets() -> SpriteAnimationSheets {
+        let image = test_image_handle(0xA11CE);
+        let layout = Handle::<TextureAtlasLayout>::default();
+
+        SpriteAnimationSheets {
+            core_texture: image.clone(),
+            core_layout: layout.clone(),
+            running_texture: image.clone(),
+            running_layout: layout.clone(),
+            attacking_texture: image.clone(),
+            attacking_layout: layout.clone(),
+            overedge_light_attacking_texture: None,
+            overedge_light_attacking_layout: None,
+            overedge_light_attacking_frame_count: 0,
+            overedge_heavy_attacking_texture: None,
+            overedge_heavy_attacking_layout: None,
+            overedge_heavy_attacking_frame_count: 0,
+            reference_ground_light_texture: Some(image.clone()),
+            reference_ground_light_layout: Some(layout.clone()),
+            reference_ground_light_frame_count:
+                (crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
+                    * crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
+                    as usize,
+            reference_air_combo_texture: Some(image.clone()),
+            reference_air_combo_layout: Some(layout.clone()),
+            reference_air_combo_frame_count: (crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
+                * crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS)
+                as usize,
+            reference_heavy_texture: Some(image.clone()),
+            reference_heavy_layout: Some(layout.clone()),
+            reference_heavy_frame_count: (crate::asset_paths::REFERENCE_BOARD_HEAVY_COLS
+                * crate::asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
+                as usize,
+            reference_ultimate_texture: Some(image.clone()),
+            reference_ultimate_layout: Some(layout.clone()),
+            reference_ultimate_frame_count: (crate::asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
+                * crate::asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS)
+                as usize,
+            reference_mobility_texture: Some(image.clone()),
+            reference_mobility_layout: Some(layout.clone()),
+            reference_mobility_frame_count: (crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS
+                * crate::asset_paths::REFERENCE_BOARD_MOBILITY_ROWS)
+                as usize,
+            reference_ninjutsu_texture: Some(image.clone()),
+            reference_ninjutsu_layout: Some(layout.clone()),
+            reference_ninjutsu_frame_count: (crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
+                * crate::asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS)
+                as usize,
+            reference_weapon_proj_texture: Some(image.clone()),
+            reference_weapon_proj_layout: Some(layout.clone()),
+            reference_weapon_proj_frame_count: (crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
+                * crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS)
+                as usize,
+            reference_advance_texture: None,
+            reference_advance_layout: None,
+            reference_advance_frame_count: 0,
+        }
+    }
+
     #[test]
     fn test_game_config_constants() {
         // Test that game configuration constants are reasonable
@@ -2003,6 +2062,1301 @@ mod tests {
             trigger_style(KeyCode::KeyI, true),
             AttackAnimationStyle::HeavyRefRow(3)
         );
+    }
+
+    #[test]
+    fn test_context_attack_keys_select_new_reference_atlas_rows() {
+        fn trigger_style_with_shift(
+            key: KeyCode,
+            player_state: PlayerState,
+            shift: bool,
+        ) -> AttackAnimationStyle {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                    Duration::from_secs_f32(1.0 / 60.0),
+                ))
+                .insert_resource(ButtonInput::<KeyCode>::default())
+                .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+            let player = app
+                .world_mut()
+                .spawn((
+                    Player,
+                    Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                    Velocity::default(),
+                    player_state,
+                    FacingDirection::Right,
+                    AttackAnimationState::default(),
+                    ShroudState::default(),
+                ))
+                .id();
+
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                if shift {
+                    keyboard.press(KeyCode::ShiftLeft);
+                }
+                keyboard.press(key);
+            }
+            app.update();
+
+            app.world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style
+        }
+
+        fn trigger_style(key: KeyCode, player_state: PlayerState) -> AttackAnimationStyle {
+            trigger_style_with_shift(key, player_state, false)
+        }
+
+        assert_eq!(
+            trigger_style(KeyCode::KeyK, PlayerState::default()),
+            AttackAnimationStyle::HeavyRefRow(1)
+        );
+        assert_eq!(
+            trigger_style(
+                KeyCode::KeyK,
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                }
+            ),
+            AttackAnimationStyle::UltimateRefRow(1)
+        );
+        assert_eq!(
+            trigger_style(KeyCode::KeyX, PlayerState::default()),
+            AttackAnimationStyle::NinjutsuRefRow(1)
+        );
+        assert_eq!(
+            trigger_style(
+                KeyCode::KeyX,
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                }
+            ),
+            AttackAnimationStyle::WeaponProjRefRow(1)
+        );
+        assert_eq!(
+            trigger_style(
+                KeyCode::KeyL,
+                PlayerState {
+                    is_grounded: false,
+                    is_crouching: false,
+                }
+            ),
+            AttackAnimationStyle::AirComboRow(1)
+        );
+        assert_eq!(
+            trigger_style(
+                KeyCode::KeyL,
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                }
+            ),
+            AttackAnimationStyle::MobilityRefRow(1)
+        );
+        assert_eq!(
+            trigger_style(
+                KeyCode::KeyO,
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                }
+            ),
+            AttackAnimationStyle::MobilityRefRow(2)
+        );
+        assert_eq!(
+            trigger_style_with_shift(KeyCode::KeyX, PlayerState::default(), true),
+            AttackAnimationStyle::NinjutsuRefRow(1)
+        );
+    }
+
+    #[test]
+    fn test_repeated_ninjutsu_attacks_skip_clone_split_row() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        let mut styles = Vec::new();
+        for _ in 0..4 {
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyX);
+            app.update();
+            styles.push(
+                app.world()
+                    .entity(player)
+                    .get::<AttackAnimationState>()
+                    .expect("attack animation state")
+                    .style,
+            );
+
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                keyboard.release(KeyCode::KeyX);
+                keyboard.clear();
+            }
+            for _ in 0..40 {
+                app.update();
+            }
+        }
+
+        assert_eq!(
+            styles,
+            vec![
+                AttackAnimationStyle::NinjutsuRefRow(1),
+                AttackAnimationStyle::NinjutsuRefRow(2),
+                AttackAnimationStyle::NinjutsuRefRow(3),
+                AttackAnimationStyle::NinjutsuRefRow(1),
+            ],
+            "normal X mashing must not roll into the generated clone/split row"
+        );
+    }
+
+    #[test]
+    fn test_reference_light_can_chain_before_full_row_animation_ends() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+        assert_eq!(
+            app.world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style,
+            AttackAnimationStyle::GroundLightRow(1)
+        );
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyL);
+            keyboard.clear();
+        }
+        for _ in 0..20 {
+            app.update();
+        }
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+
+        assert_eq!(
+            app.world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style,
+            AttackAnimationStyle::GroundLightRow(2),
+            "reference attacks should be cancellable before the full atlas row finishes"
+        );
+    }
+
+    #[test]
+    fn test_crouch_mobility_attack_dashes_without_downward_pull() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity { x: 0.0, y: -80.0 },
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                },
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+
+        let velocity = app
+            .world()
+            .entity(player)
+            .get::<Velocity>()
+            .expect("velocity");
+        assert!(
+            velocity.x > 300.0,
+            "mobility attack should commit to a readable forward dash"
+        );
+        assert!(
+            velocity.y >= 0.0,
+            "mobility attack should never pull the player into the floor"
+        );
+    }
+
+    #[test]
+    fn test_crouch_attack_slash_visual_stays_above_ground() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+            Velocity::default(),
+            PlayerState {
+                is_grounded: true,
+                is_crouching: true,
+            },
+            FacingDirection::Right,
+            AttackAnimationState::default(),
+            ShroudState::default(),
+        ));
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyL);
+            keyboard.clear();
+        }
+
+        for _ in 0..8 {
+            app.update();
+        }
+
+        let slash_positions = {
+            let mut query = app
+                .world_mut()
+                .query_filtered::<&Transform, With<crate::systems::combat::KnifeSlash>>();
+            query
+                .iter(app.world())
+                .map(|transform| transform.translation.y)
+                .collect::<Vec<_>>()
+        };
+        assert!(
+            !slash_positions.is_empty(),
+            "crouch mobility attack should spawn a slash after windup"
+        );
+        assert!(
+            slash_positions
+                .iter()
+                .all(|y| *y >= GameConfig::GROUND_LEVEL + 3.0),
+            "crouch attack slash visuals and hitboxes should not sink into the floor"
+        );
+    }
+
+    #[test]
+    fn test_attack_momentum_preserves_dash_against_idle_movement() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(Time::<Fixed>::from_hz(60.0))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .init_resource::<input::GameInput>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::player::player_movement,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                },
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        advance_fixed_time(&mut app, 1.0 / 60.0);
+        app.update();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyL);
+            keyboard.clear();
+        }
+
+        for _ in 0..4 {
+            advance_fixed_time(&mut app, 1.0 / 60.0);
+            app.update();
+        }
+
+        let entity = app.world().entity(player);
+        let velocity = entity.get::<Velocity>().expect("velocity");
+        let transform = entity.get::<Transform>().expect("transform");
+        assert!(
+            velocity.x >= 330.0,
+            "attack momentum should keep dash speed from being swallowed by idle deceleration"
+        );
+        assert!(
+            transform.translation.x > 20.0,
+            "protected dash should produce visible movement commitment"
+        );
+    }
+
+    #[test]
+    fn test_wall_mobility_momentum_preserves_upward_launch() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(Time::<Fixed>::from_hz(60.0))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .init_resource::<input::GameInput>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::player::player_movement,
+                    crate::systems::player::player_jump,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                },
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyO);
+        advance_fixed_time(&mut app, 1.0 / 60.0);
+        app.update();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyO);
+            keyboard.clear();
+        }
+
+        for _ in 0..4 {
+            advance_fixed_time(&mut app, 1.0 / 60.0);
+            app.update();
+        }
+
+        let entity = app.world().entity(player);
+        let velocity = entity.get::<Velocity>().expect("velocity");
+        let transform = entity.get::<Transform>().expect("transform");
+        assert!(
+            velocity.y >= 175.0,
+            "wall mobility momentum should keep the upward launch through its active frames"
+        );
+        assert!(
+            transform.translation.y > GameConfig::GROUND_LEVEL + 10.0,
+            "wall mobility should visibly leave the ground instead of being flattened"
+        );
+    }
+
+    #[test]
+    fn test_direct_mobility_special_rows_have_safe_impulses() {
+        fn trigger_direct_mobility(key: KeyCode) -> (AttackAnimationStyle, Velocity) {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                    Duration::from_secs_f32(1.0 / 60.0),
+                ))
+                .insert_resource(ButtonInput::<KeyCode>::default())
+                .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+            let player = app
+                .world_mut()
+                .spawn((
+                    Player,
+                    Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                    Velocity::default(),
+                    PlayerState {
+                        is_grounded: true,
+                        is_crouching: true,
+                    },
+                    FacingDirection::Right,
+                    AttackAnimationState::default(),
+                    ShroudState::default(),
+                ))
+                .id();
+
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(key);
+            app.update();
+
+            let entity = app.world().entity(player);
+            (
+                entity
+                    .get::<AttackAnimationState>()
+                    .expect("attack animation state")
+                    .style,
+                entity.get::<Velocity>().expect("velocity").clone(),
+            )
+        }
+
+        let (substitution_style, substitution_velocity) = trigger_direct_mobility(KeyCode::KeyI);
+        assert_eq!(
+            substitution_style,
+            AttackAnimationStyle::MobilityRefRow(1),
+            "player body should use a stable single-body dash pose for substitution"
+        );
+        assert!(
+            substitution_velocity.x < -250.0 && substitution_velocity.y >= 90.0,
+            "substitution row should be a backward evasive burst, not a static sprite swap"
+        );
+
+        let (wall_style, wall_velocity) = trigger_direct_mobility(KeyCode::KeyO);
+        assert_eq!(
+            wall_style,
+            AttackAnimationStyle::MobilityRefRow(2),
+            "player body should use a stable single-body mobility pose for wall movement"
+        );
+        assert!(
+            wall_velocity.x > 340.0 && wall_velocity.y >= 200.0,
+            "wall movement row should launch safely upward and forward"
+        );
+    }
+
+    #[test]
+    fn test_heavy_slash_feedback_is_stronger_than_light() {
+        fn spawn_feedback_for_key(key: KeyCode) -> crate::systems::combat::KnifeSlashFeedback {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                    Duration::from_secs_f32(1.0 / 60.0),
+                ))
+                .insert_resource(ButtonInput::<KeyCode>::default())
+                .add_systems(
+                    Update,
+                    (
+                        crate::systems::combat::player_knife_attack,
+                        crate::systems::combat::resolve_pending_knife_attacks,
+                    )
+                        .chain(),
+                );
+
+            app.world_mut().spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ));
+
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(key);
+            app.update();
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                keyboard.release(key);
+                keyboard.clear();
+            }
+            for _ in 0..28 {
+                app.update();
+            }
+
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::KnifeSlashFeedback>();
+            *query
+                .iter(app.world())
+                .next()
+                .expect("knife slash feedback")
+        }
+
+        let light = spawn_feedback_for_key(KeyCode::KeyL);
+        let heavy = spawn_feedback_for_key(KeyCode::KeyK);
+
+        assert!(
+            heavy.camera_intensity > light.camera_intensity + 1.5,
+            "heavy attack should produce a stronger camera impulse than light attack"
+        );
+        assert!(
+            heavy.camera_duration > light.camera_duration,
+            "heavy attack should sustain camera impulse longer than light attack"
+        );
+        assert!(
+            heavy.hit_stop_freeze_speed < light.hit_stop_freeze_speed,
+            "heavy hitstop should freeze harder than light hitstop"
+        );
+        assert!(
+            heavy.visual_expand > light.visual_expand,
+            "heavy slash should read larger than light slash"
+        );
+    }
+
+    #[test]
+    fn test_knife_slash_visual_expands_and_expires() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(0.05),
+            ))
+            .add_systems(
+                Update,
+                crate::systems::combat::cleanup_expired_knife_slashes,
+            );
+
+        let slash = app
+            .world_mut()
+            .spawn((
+                crate::systems::combat::KnifeSlash {
+                    damage: 6.0,
+                    lifetime: Timer::from_seconds(0.20, TimerMode::Once),
+                    combo_step: 1,
+                    knockback_x: 60.0,
+                    knockback_y: 10.0,
+                    hit_stop_secs: 0.02,
+                },
+                crate::systems::combat::KnifeSlashFeedback {
+                    camera_intensity: 3.0,
+                    camera_duration: 0.06,
+                    hit_stop_freeze_speed: 0.14,
+                    base_alpha: 0.30,
+                    visual_expand: 0.30,
+                    visual_spin: 0.0,
+                },
+                Sprite {
+                    color: Color::srgba(1.0, 1.0, 1.0, 0.30),
+                    ..default()
+                },
+                Transform::default(),
+            ))
+            .id();
+
+        app.update();
+        app.update();
+        let scale_after_tick = app
+            .world()
+            .entity(slash)
+            .get::<Transform>()
+            .expect("slash transform")
+            .scale;
+        assert!(
+            scale_after_tick.x > 1.0,
+            "slash visual should expand during its active frames"
+        );
+
+        for _ in 0..5 {
+            app.update();
+        }
+        assert!(
+            app.world().get_entity(slash).is_err(),
+            "slash entity should despawn after its active feedback window"
+        );
+    }
+
+    #[test]
+    fn test_clone_and_substitution_rows_spawn_afterimages_not_extra_players() {
+        fn trigger_special_effect(
+            key: KeyCode,
+            shift: bool,
+            player_state: PlayerState,
+        ) -> (AttackAnimationStyle, usize, usize) {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                    Duration::from_secs_f32(1.0 / 60.0),
+                ))
+                .insert_resource(ButtonInput::<KeyCode>::default())
+                .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+            let player = app
+                .world_mut()
+                .spawn((
+                    Player,
+                    Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                    Sprite::default(),
+                    Velocity::default(),
+                    player_state,
+                    FacingDirection::Right,
+                    AttackAnimationState::default(),
+                    ShroudState::default(),
+                ))
+                .id();
+
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                if shift {
+                    keyboard.press(KeyCode::ShiftLeft);
+                }
+                keyboard.press(key);
+            }
+            app.update();
+
+            let style = app
+                .world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style;
+            let afterimage_count = {
+                let mut query = app
+                    .world_mut()
+                    .query::<&crate::systems::combat::AttackAfterimage>();
+                query.iter(app.world()).count()
+            };
+            let player_count = {
+                let mut query = app.world_mut().query::<&Player>();
+                query.iter(app.world()).count()
+            };
+
+            (style, afterimage_count, player_count)
+        }
+
+        let (clone_style, clone_afterimages, clone_players) =
+            trigger_special_effect(KeyCode::KeyX, true, PlayerState::default());
+        assert_eq!(
+            clone_style,
+            AttackAnimationStyle::NinjutsuRefRow(1),
+            "player body should not play the generated multi-body shadow-clone row"
+        );
+        assert_eq!(
+            clone_afterimages, 4,
+            "shadow clone action should be represented by short-lived VFX entities"
+        );
+        assert_eq!(
+            clone_players, 1,
+            "clone VFX must not duplicate the player entity"
+        );
+
+        let (sub_style, sub_afterimages, sub_players) = trigger_special_effect(
+            KeyCode::KeyI,
+            false,
+            PlayerState {
+                is_grounded: true,
+                is_crouching: true,
+            },
+        );
+        assert_eq!(
+            sub_style,
+            AttackAnimationStyle::MobilityRefRow(1),
+            "player body should not play the generated multi-body substitution row"
+        );
+        assert_eq!(sub_afterimages, 3);
+        assert_eq!(sub_players, 1);
+    }
+
+    #[test]
+    fn test_attack_afterimages_are_abstract_streaks_not_player_clones() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+        let player_image = test_image_handle(0xC10E);
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+            Sprite {
+                image: player_image.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: Handle::default(),
+                    index: 0,
+                }),
+                ..default()
+            },
+            Velocity::default(),
+            PlayerState::default(),
+            FacingDirection::Right,
+            AttackAnimationState::default(),
+            ShroudState::default(),
+        ));
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.press(KeyCode::ShiftLeft);
+            keyboard.press(KeyCode::KeyX);
+        }
+        app.update();
+
+        let afterimage_sprites = {
+            let mut query = app
+                .world_mut()
+                .query_filtered::<&Sprite, With<crate::systems::combat::AttackAfterimage>>();
+            query.iter(app.world()).cloned().collect::<Vec<_>>()
+        };
+        assert_eq!(afterimage_sprites.len(), 4);
+        assert!(
+            afterimage_sprites
+                .iter()
+                .all(|sprite| sprite.texture_atlas.is_none()),
+            "afterimages should be abstract streak sprites, not atlas-based player clones"
+        );
+        assert!(
+            afterimage_sprites
+                .iter()
+                .all(|sprite| sprite.custom_size.is_some()),
+            "afterimages should render as controlled streak shapes"
+        );
+        assert!(
+            afterimage_sprites
+                .iter()
+                .all(|sprite| sprite.image != player_image),
+            "afterimages should not reuse the player body texture"
+        );
+    }
+
+    #[test]
+    fn test_generated_split_rows_spawn_reference_vfx_not_extra_players() {
+        fn trigger_reference_vfx(
+            key: KeyCode,
+            shift: bool,
+            player_state: PlayerState,
+        ) -> (AttackAnimationStyle, usize, usize, Option<usize>) {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                    Duration::from_secs_f32(1.0 / 60.0),
+                ))
+                .insert_resource(ButtonInput::<KeyCode>::default())
+                .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+            let player = app
+                .world_mut()
+                .spawn((
+                    Player,
+                    Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                    Sprite::default(),
+                    Velocity::default(),
+                    player_state,
+                    FacingDirection::Right,
+                    AttackAnimationState::default(),
+                    ShroudState::default(),
+                    create_test_sprite_animation_sheets(),
+                ))
+                .id();
+
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                if shift {
+                    keyboard.press(KeyCode::ShiftLeft);
+                }
+                keyboard.press(key);
+            }
+            app.update();
+
+            let style = app
+                .world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style;
+            let vfx_sprites = {
+                let mut query = app
+                    .world_mut()
+                    .query_filtered::<&Sprite, With<crate::systems::combat::AttackReferenceActionVfx>>();
+                query.iter(app.world()).cloned().collect::<Vec<_>>()
+            };
+            let player_count = {
+                let mut query = app.world_mut().query::<&Player>();
+                query.iter(app.world()).count()
+            };
+            let atlas_index = vfx_sprites
+                .first()
+                .and_then(|sprite| sprite.texture_atlas.as_ref())
+                .map(|atlas| atlas.index);
+
+            (style, vfx_sprites.len(), player_count, atlas_index)
+        }
+
+        let (sub_style, sub_vfx, sub_players, sub_start) = trigger_reference_vfx(
+            KeyCode::KeyI,
+            false,
+            PlayerState {
+                is_grounded: true,
+                is_crouching: true,
+            },
+        );
+        assert_eq!(sub_style, AttackAnimationStyle::MobilityRefRow(1));
+        assert_eq!(sub_vfx, 1);
+        assert_eq!(sub_players, 1);
+        assert_eq!(
+            sub_start,
+            Some((3 - 1) * crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize),
+            "substitution should use the generated mobility row as a separate combat VFX"
+        );
+
+        let (wall_style, wall_vfx, wall_players, wall_start) = trigger_reference_vfx(
+            KeyCode::KeyO,
+            false,
+            PlayerState {
+                is_grounded: true,
+                is_crouching: true,
+            },
+        );
+        assert_eq!(wall_style, AttackAnimationStyle::MobilityRefRow(2));
+        assert_eq!(wall_vfx, 1);
+        assert_eq!(wall_players, 1);
+        assert_eq!(
+            wall_start,
+            Some((4 - 1) * crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize),
+            "wall movement should use the generated wall row as a separate combat VFX"
+        );
+
+        let (clone_style, clone_vfx, clone_players, clone_start) =
+            trigger_reference_vfx(KeyCode::KeyX, true, PlayerState::default());
+        assert_eq!(clone_style, AttackAnimationStyle::NinjutsuRefRow(1));
+        assert_eq!(clone_vfx, 1);
+        assert_eq!(clone_players, 1);
+        assert_eq!(
+            clone_start,
+            Some(3 * crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS as usize),
+            "shadow clone should use the generated clone row as a separate combat VFX"
+        );
+    }
+
+    #[test]
+    fn test_rapid_mixed_reference_attacks_keep_single_player_above_ground() {
+        fn set_player_pose(app: &mut App, player: Entity, grounded: bool, crouching: bool, y: f32) {
+            let mut entity = app.world_mut().entity_mut(player);
+            entity
+                .get_mut::<PlayerState>()
+                .expect("player state")
+                .set_grounded(grounded);
+            entity
+                .get_mut::<PlayerState>()
+                .expect("player state")
+                .set_crouching(crouching);
+            entity
+                .get_mut::<Transform>()
+                .expect("player transform")
+                .translation
+                .y = y;
+        }
+
+        fn tap_keys(app: &mut App, keys: &[KeyCode]) {
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                for key in keys {
+                    keyboard.press(*key);
+                }
+            }
+            advance_fixed_time(app, 1.0 / 60.0);
+            app.update();
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                for key in keys {
+                    keyboard.release(*key);
+                }
+                keyboard.clear();
+            }
+        }
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(Time::<Fixed>::from_hz(60.0))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .init_resource::<GameStats>()
+            .init_resource::<input::GameInput>()
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                    crate::systems::player::player_movement,
+                    crate::systems::player::player_jump,
+                    crate::systems::combat::animate_attack_afterimages,
+                    crate::systems::combat::animate_attack_reference_action_vfx,
+                    crate::systems::combat::cleanup_expired_knife_slashes,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Sprite::default(),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+                create_test_sprite_animation_sheets(),
+            ))
+            .id();
+
+        let script = [
+            (true, false, GameConfig::GROUND_LEVEL, vec![KeyCode::KeyL]),
+            (true, true, GameConfig::GROUND_LEVEL, vec![KeyCode::KeyL]),
+            (true, true, GameConfig::GROUND_LEVEL, vec![KeyCode::KeyI]),
+            (true, true, GameConfig::GROUND_LEVEL, vec![KeyCode::KeyO]),
+            (
+                false,
+                false,
+                GameConfig::GROUND_LEVEL + 72.0,
+                vec![KeyCode::KeyL],
+            ),
+            (
+                true,
+                false,
+                GameConfig::GROUND_LEVEL,
+                vec![KeyCode::ShiftLeft, KeyCode::KeyX],
+            ),
+        ];
+
+        let mut min_y = f32::MAX;
+        for _ in 0..4 {
+            for (grounded, crouching, y, keys) in &script {
+                set_player_pose(&mut app, player, *grounded, *crouching, *y);
+                tap_keys(&mut app, keys);
+                for _ in 0..2 {
+                    advance_fixed_time(&mut app, 1.0 / 60.0);
+                    app.update();
+                }
+
+                let transform = app
+                    .world()
+                    .entity(player)
+                    .get::<Transform>()
+                    .expect("player transform");
+                min_y = min_y.min(transform.translation.y);
+                assert!(
+                    transform.translation.y >= GameConfig::GROUND_LEVEL,
+                    "rapid mixed attacks must not push the player below ground"
+                );
+            }
+        }
+
+        for _ in 0..72 {
+            advance_fixed_time(&mut app, 1.0 / 60.0);
+            app.update();
+        }
+
+        let player_count = {
+            let mut query = app.world_mut().query::<&Player>();
+            query.iter(app.world()).count()
+        };
+        let afterimages = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::AttackAfterimage>();
+            query.iter(app.world()).count()
+        };
+        let reference_vfx = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::AttackReferenceActionVfx>();
+            query.iter(app.world()).count()
+        };
+        let pending_attacks = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::PendingKnifeAttack>();
+            query.iter(app.world()).count()
+        };
+
+        assert_eq!(
+            player_count, 1,
+            "rapid inputs must not duplicate the player"
+        );
+        assert_eq!(
+            afterimages, 0,
+            "short-lived afterimages should clean up after pressure"
+        );
+        assert_eq!(
+            reference_vfx, 0,
+            "reference action VFX should clean up after pressure"
+        );
+        assert_eq!(
+            pending_attacks, 0,
+            "attack windups should settle after pressure"
+        );
+        assert!(
+            min_y >= GameConfig::GROUND_LEVEL,
+            "minimum observed player y should never enter the ground"
+        );
+    }
+
+    #[test]
+    fn test_attack_afterimages_expire_quickly() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::animate_attack_afterimages,
+                )
+                    .chain(),
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+            Sprite::default(),
+            Velocity::default(),
+            PlayerState::default(),
+            FacingDirection::Right,
+            AttackAnimationState::default(),
+            ShroudState::default(),
+        ));
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.press(KeyCode::ShiftLeft);
+            keyboard.press(KeyCode::KeyX);
+        }
+        app.update();
+
+        let initial_afterimages = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::AttackAfterimage>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(initial_afterimages, 4);
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::ShiftLeft);
+            keyboard.release(KeyCode::KeyX);
+            keyboard.clear();
+        }
+        for _ in 0..24 {
+            app.update();
+        }
+
+        let remaining_afterimages = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::AttackAfterimage>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            remaining_afterimages, 0,
+            "afterimages should fade before they can be mistaken for extra player bodies"
+        );
+    }
+
+    #[test]
+    fn test_shadow_clone_semantic_still_fires_clone_projectile() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Sprite::default(),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.press(KeyCode::ShiftLeft);
+            keyboard.press(KeyCode::KeyX);
+        }
+        app.update();
+
+        assert_eq!(
+            app.world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style,
+            AttackAnimationStyle::NinjutsuRefRow(1),
+            "player body should use the stable cast row while semantic clone is pending"
+        );
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::ShiftLeft);
+            keyboard.release(KeyCode::KeyX);
+            keyboard.clear();
+        }
+        for _ in 0..36 {
+            app.update();
+        }
+
+        let projectile_types = {
+            let mut query = app.world_mut().query::<&ProjectileType>();
+            query.iter(app.world()).copied().collect::<Vec<_>>()
+        };
+        assert_eq!(
+            projectile_types,
+            vec![ProjectileType::Overedge],
+            "stable player-body animation must not downgrade the shadow-clone attack semantic"
+        );
+    }
+
+    #[test]
+    fn test_ninjutsu_x_uses_windup_animation_then_projectile() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyX);
+        app.update();
+
+        let attack_state = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("attack animation state");
+        assert_eq!(attack_state.style, AttackAnimationStyle::NinjutsuRefRow(1));
+        let projectiles_after_press = {
+            let mut query = app.world_mut().query::<&Projectile>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            projectiles_after_press, 0,
+            "ninjutsu should wait for its cast animation windup before spawning"
+        );
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyX);
+            keyboard.clear();
+        }
+        for _ in 0..12 {
+            app.update();
+        }
+
+        let projectile_types = {
+            let mut query = app.world_mut().query::<&ProjectileType>();
+            query.iter(app.world()).copied().collect::<Vec<_>>()
+        };
+        assert_eq!(projectile_types, vec![ProjectileType::Fireball]);
     }
 
     #[test]

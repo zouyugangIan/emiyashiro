@@ -6,11 +6,20 @@ use crate::resources::GameConfig;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
+const MAX_ACTIVE_CLOUDS: usize = 9;
+const CLOUD_SPAWN_INTERVAL_SECS: f32 = 3.4;
+const CLOUD_IMAGES: [&str; 2] = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
+
 /// 场景装饰组件标记
 #[derive(Component)]
 pub struct SceneDecoration {
     pub layer: DecorationLayer,
     pub speed_multiplier: f32,
+}
+
+#[derive(Component)]
+pub struct CloudStrata {
+    pub lane: u8,
 }
 
 #[derive(Component)]
@@ -59,6 +68,85 @@ impl DecorationLayer {
 
 fn pseudo01(seed: f32) -> f32 {
     ((seed.sin() * 43_758.547).abs()).fract()
+}
+
+#[derive(Clone, Copy)]
+struct CloudProfile {
+    lane: u8,
+    layer: DecorationLayer,
+    y: f32,
+    scale: f32,
+    alpha: f32,
+    speed_multiplier: f32,
+}
+
+#[cfg(test)]
+fn cloud_profile(seed: f32, window_height: f32) -> CloudProfile {
+    let lane = (pseudo01(seed + 0.13) * 3.0).floor() as u8;
+    cloud_profile_for_lane(lane, seed, window_height)
+}
+
+fn cloud_profile_for_lane(lane: u8, seed: f32, window_height: f32) -> CloudProfile {
+    let lane = lane.min(2);
+    let jitter = pseudo01(seed + 3.7) - 0.5;
+    let min_y = GameConfig::GROUND_LEVEL + 250.0;
+    let max_y = window_height * 0.42;
+
+    let (layer, base_y, scale, alpha, speed_multiplier) = match lane {
+        0 => (
+            DecorationLayer::MidBackground,
+            window_height * 0.34,
+            0.72 + pseudo01(seed + 5.1) * 0.18,
+            0.20 + pseudo01(seed + 7.9) * 0.08,
+            0.22,
+        ),
+        1 => (
+            DecorationLayer::MidBackground,
+            window_height * 0.23,
+            0.86 + pseudo01(seed + 5.1) * 0.20,
+            0.22 + pseudo01(seed + 7.9) * 0.08,
+            0.30,
+        ),
+        _ => (
+            DecorationLayer::NearBackground,
+            window_height * 0.12,
+            1.02 + pseudo01(seed + 5.1) * 0.22,
+            0.20 + pseudo01(seed + 7.9) * 0.07,
+            0.42,
+        ),
+    };
+
+    CloudProfile {
+        lane,
+        layer,
+        y: (base_y + jitter * window_height * 0.055).clamp(min_y, max_y),
+        scale,
+        alpha,
+        speed_multiplier,
+    }
+}
+
+fn spawn_stratified_cloud(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    image_path: &'static str,
+    x: f32,
+    profile: CloudProfile,
+) {
+    commands.spawn((
+        Sprite {
+            image: asset_server.load(image_path),
+            custom_size: Some(Vec2::new(190.0 * profile.scale, 112.0 * profile.scale)),
+            color: Color::srgba(1.0, 1.0, 1.0, profile.alpha),
+            ..default()
+        },
+        Transform::from_xyz(x, profile.y, profile.layer.z_index()),
+        SceneDecoration {
+            layer: profile.layer,
+            speed_multiplier: profile.speed_multiplier,
+        },
+        CloudStrata { lane: profile.lane },
+    ));
 }
 
 /// 设置多层视差背景
@@ -207,6 +295,16 @@ pub fn setup_parallax_background(
         ));
     }
 
+    // 5) 预铺分层云带，避免开局空白，同时不侵入玩家动作判读区。
+    for i in 0..6 {
+        let seed = 91.0 + i as f32 * 11.83;
+        let profile = cloud_profile_for_lane((i % 3) as u8, seed, height);
+        let image_path = CLOUD_IMAGES
+            [(pseudo01(seed + 1.4) * CLOUD_IMAGES.len() as f32) as usize % CLOUD_IMAGES.len()];
+        let x = -width * 0.28 + i as f32 * width * 0.46 + pseudo01(seed + 2.6) * width * 0.12;
+        spawn_stratified_cloud(&mut commands, &asset_server, image_path, x, profile);
+    }
+
     crate::debug_log!("🎨 设置视差背景完成（多层天空 + 轮廓 + 星点）");
 }
 
@@ -314,7 +412,9 @@ pub fn spawn_enhanced_clouds(
     window_query: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut spawn_timer: Local<f32>,
+    mut lane_cursor: Local<u8>,
     asset_server: Res<AssetServer>,
+    active_clouds: Query<&CloudStrata>,
 ) {
     let Some(window) = window_query.iter().next() else {
         return;
@@ -322,44 +422,32 @@ pub fn spawn_enhanced_clouds(
 
     *spawn_timer += time.delta_secs();
 
-    // 每 2.6 秒生成一朵云
-    if *spawn_timer > 2.6 {
+    // 分层云带：低密度、低透明、避开角色与攻击特效判读区。
+    let mut lane_counts = [0usize; 3];
+    let mut active_count = 0usize;
+    for strata in active_clouds.iter() {
+        lane_counts[strata.lane.min(2) as usize] += 1;
+        active_count += 1;
+    }
+
+    if *spawn_timer > CLOUD_SPAWN_INTERVAL_SECS && active_count < MAX_ACTIVE_CLOUDS {
         *spawn_timer = 0.0;
 
         let seed = time.elapsed_secs() * 9.17;
+        let lane = (0..3)
+            .map(|offset| ((*lane_cursor as usize + offset) % 3) as u8)
+            .min_by_key(|lane| lane_counts[*lane as usize])
+            .unwrap_or(0);
+        if lane_counts[lane as usize] >= MAX_ACTIVE_CLOUDS.div_ceil(3) {
+            return;
+        }
 
-        // 随机选择云彩图片
-        let cloud_images = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
-        let cloud_index = if pseudo01(seed + 0.4) > 0.5 { 1 } else { 0 };
-        let cloud_image = asset_server.load(cloud_images[cloud_index]);
-
-        // 随机高度（中上半部分屏幕）
-        let cloud_y = -window.height() * 0.08 + pseudo01(seed + 1.1) * window.height() * 0.56;
-
-        // 随机大小和透明度
-        let scale = 0.65 + pseudo01(seed + 2.2) * 0.75;
-        let alpha = 0.35 + pseudo01(seed + 3.3) * 0.50;
-
-        // 随机选择层级（近景或中景）
-        let layer = if pseudo01(seed + 4.4) > 0.5 {
-            DecorationLayer::NearBackground
-        } else {
-            DecorationLayer::MidBackground
-        };
-
-        commands.spawn((
-            Sprite {
-                image: cloud_image,
-                custom_size: Some(Vec2::new(170.0 * scale, 110.0 * scale)),
-                color: Color::srgba(1.0, 1.0, 1.0, alpha),
-                ..default()
-            },
-            Transform::from_xyz(window.width() + 120.0, cloud_y, layer.z_index()),
-            SceneDecoration {
-                layer,
-                speed_multiplier: layer.speed_multiplier(),
-            },
-        ));
+        *lane_cursor = (lane + 1) % 3;
+        let profile = cloud_profile_for_lane(lane, seed, window.height());
+        let image_path = CLOUD_IMAGES
+            [(pseudo01(seed + 1.4) * CLOUD_IMAGES.len() as f32) as usize % CLOUD_IMAGES.len()];
+        let x = window.width() + 150.0 + pseudo01(seed + 2.6) * 240.0;
+        spawn_stratified_cloud(&mut commands, &asset_server, image_path, x, profile);
     }
 }
 
@@ -379,6 +467,60 @@ pub fn loop_far_background(
                 transform.translation.x += window.width() * 3.0;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cloud_profile_keeps_clouds_in_readable_upper_bands() {
+        let window_height = 720.0;
+
+        for index in 0..128 {
+            let profile = cloud_profile(index as f32 * 4.31, window_height);
+            assert!(
+                profile.y >= GameConfig::GROUND_LEVEL + 250.0,
+                "cloud should stay above the action readability band"
+            );
+            assert!(
+                profile.y <= window_height * 0.42,
+                "cloud should stay out of the extreme top crop"
+            );
+            assert!(
+                profile.alpha <= 0.30,
+                "cloud opacity should stay muted behind combat"
+            );
+            assert!(
+                profile.speed_multiplier <= 0.42,
+                "cloud speed should remain slower than foreground action"
+            );
+        }
+    }
+
+    #[test]
+    fn cloud_profiles_cover_three_readable_lanes() {
+        let window_height = 720.0;
+        let low = cloud_profile_for_lane(0, 11.0, window_height);
+        let mid = cloud_profile_for_lane(1, 11.0, window_height);
+        let high = cloud_profile_for_lane(2, 11.0, window_height);
+
+        assert_eq!(low.lane, 0);
+        assert_eq!(mid.lane, 1);
+        assert_eq!(high.lane, 2);
+        assert!(
+            low.y > mid.y,
+            "lower cloud lane should sit below the mid lane"
+        );
+        assert!(
+            mid.y > high.y,
+            "mid cloud lane should sit below the high lane"
+        );
+        assert!(
+            [low.lane, mid.lane, high.lane].iter().all(|lane| *lane < 3),
+            "cloud lanes should stay in the controlled three-band layout"
+        );
     }
 }
 
