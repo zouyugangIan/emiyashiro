@@ -2,13 +2,13 @@
 //!
 //! 为游戏场景添加更丰富的视觉层次：多层天空、远景轮廓、云层与地面装饰。
 
-use crate::resources::GameConfig;
+use crate::{asset_paths, resources::GameConfig};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 const MAX_ACTIVE_CLOUDS: usize = 9;
 const CLOUD_SPAWN_INTERVAL_SECS: f32 = 3.4;
-const CLOUD_IMAGES: [&str; 2] = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
+const CLOUD_IMAGES: [&str; 2] = [asset_paths::IMAGE_CLOUD_01, asset_paths::IMAGE_CLOUD_02];
 
 /// 场景装饰组件标记
 #[derive(Component)]

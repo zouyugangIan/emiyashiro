@@ -161,6 +161,33 @@ mod tests {
     }
 
     #[test]
+    fn test_player_visual_anchor_keeps_feet_on_ground_band() {
+        let visual_ground_top =
+            GameConfig::GROUND_POS.y + GameConfig::GROUND_SIZE.y * 0.5 - GameConfig::GROUND_LEVEL;
+        let sprite_bottom = -(0.5 + crate::systems::game::PLAYER_VISUAL_BASELINE_ANCHOR_Y)
+            * crate::systems::game::PLAYER_RENDER_SIZE.y;
+
+        let scaled_gap =
+            |source_gap_px: f32| source_gap_px / 256.0 * crate::systems::game::PLAYER_RENDER_SIZE.y;
+        let core_feet_y = sprite_bottom + scaled_gap(8.0);
+        let overedge_feet_y = sprite_bottom + scaled_gap(4.0);
+        let reference_feet_y = sprite_bottom + scaled_gap(20.0);
+
+        assert!(
+            (core_feet_y - visual_ground_top).abs() <= 2.0,
+            "core atlas feet should align with the visual ground top"
+        );
+        assert!(
+            (overedge_feet_y - visual_ground_top).abs() <= 4.0,
+            "overedge atlas feet should not sink below the visual ground band"
+        );
+        assert!(
+            (reference_feet_y - visual_ground_top).abs() <= 7.0,
+            "reference atlas feet should not float far above the visual ground band"
+        );
+    }
+
+    #[test]
     fn test_audio_settings_default() {
         let settings = AudioSettings::default();
 
@@ -428,6 +455,28 @@ mod tests {
     }
 
     #[test]
+    fn test_cloud_assets_use_transparent_soft_variants() {
+        assert_eq!(
+            crate::asset_paths::CLOUD_IMAGES,
+            &[
+                "images/cloud/cloud_soft_01.png",
+                "images/cloud/cloud_soft_02.png"
+            ]
+        );
+
+        for path in crate::asset_paths::CLOUD_IMAGES {
+            assert!(
+                fs::metadata(format!("assets/{path}")).is_ok(),
+                "cloud asset should exist at assets/{path}"
+            );
+            assert!(
+                path.contains("soft"),
+                "cloud asset should not point back to the old opaque rectangle texture"
+            );
+        }
+    }
+
+    #[test]
     fn test_save_file_data_uses_v2_schema() {
         let metadata = SaveFileMetadata {
             name: "schema-check".to_string(),
@@ -602,7 +651,14 @@ mod tests {
         let health = entity.get::<Health>().expect("player health");
         let shroud = entity.get::<ShroudState>().expect("player shroud");
 
-        assert_eq!(transform.translation, GameConfig::PLAYER_START_POS);
+        assert_eq!(
+            transform.translation,
+            Vec3::new(
+                10.0,
+                GameConfig::GROUND_LEVEL,
+                GameConfig::PLAYER_START_POS.z
+            )
+        );
         assert_eq!(velocity.x, 0.0);
         assert_eq!(velocity.y, 0.0);
         assert!(player_state.is_grounded);
@@ -1799,6 +1855,293 @@ mod tests {
     }
 
     #[test]
+    fn test_switching_attack_families_resets_combo_step() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        let tap_attack = |app: &mut App, player: Entity, key: KeyCode, crouching: bool| {
+            {
+                let mut entity = app.world_mut().entity_mut(player);
+                let mut state = entity.get_mut::<PlayerState>().expect("player state");
+                state.is_grounded = true;
+                state.is_crouching = crouching;
+            }
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(key);
+            app.update();
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                keyboard.release(key);
+                keyboard.clear();
+            }
+            for _ in 0..18 {
+                app.update();
+            }
+        };
+
+        tap_attack(&mut app, player, KeyCode::KeyL, false);
+        tap_attack(&mut app, player, KeyCode::KeyL, false);
+        tap_attack(&mut app, player, KeyCode::KeyL, true);
+        tap_attack(&mut app, player, KeyCode::KeyK, false);
+
+        let slash_steps = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::KnifeSlash>();
+            query
+                .iter(app.world())
+                .map(|slash| slash.combo_step)
+                .collect::<Vec<_>>()
+        };
+
+        assert!(
+            slash_steps.len() >= 4,
+            "test should observe each attack family transition"
+        );
+        assert_eq!(
+            slash_steps[0], 1,
+            "first ground light should start at combo step 1"
+        );
+        assert_eq!(
+            slash_steps[1], 2,
+            "same-family ground light should continue the combo"
+        );
+        assert_eq!(
+            slash_steps[2], 1,
+            "switching to mobility should reset combo step instead of inheriting light combo"
+        );
+        assert_eq!(
+            slash_steps[3], 1,
+            "switching to heavy should reset combo step instead of inheriting mobility combo"
+        );
+    }
+
+    #[test]
+    fn test_queued_attack_family_switch_resets_combo_step() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+            Velocity::default(),
+            PlayerState::default(),
+            FacingDirection::Right,
+            AttackAnimationState::default(),
+            ShroudState::default(),
+        ));
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyL);
+            keyboard.clear();
+        }
+        for _ in 0..7 {
+            app.update();
+        }
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyK);
+        app.update();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyK);
+            keyboard.clear();
+        }
+        for _ in 0..30 {
+            app.update();
+        }
+
+        let slash_steps = {
+            let mut query = app
+                .world_mut()
+                .query::<&crate::systems::combat::KnifeSlash>();
+            query
+                .iter(app.world())
+                .map(|slash| slash.combo_step)
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            slash_steps.len(),
+            2,
+            "queued family switch should produce the original slash and one queued follow-up"
+        );
+        assert_eq!(
+            slash_steps,
+            vec![1, 1],
+            "queued heavy should start its own combo instead of inheriting light step 2"
+        );
+    }
+
+    #[test]
+    fn test_gameplay_x_uses_ninjutsu_windup_without_legacy_double_projectile() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::player_shoot_projectile,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyX);
+        app.update();
+
+        let attack_state = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("attack animation state");
+        assert_eq!(attack_state.style, AttackAnimationStyle::NinjutsuRefRow(1));
+        let immediate_projectiles = {
+            let mut query = app.world_mut().query::<&Projectile>();
+            query.iter(app.world()).count()
+        };
+        assert_eq!(
+            immediate_projectiles, 0,
+            "gameplay chain should not fire the legacy instant projectile before ninjutsu windup"
+        );
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.release(KeyCode::KeyX);
+            keyboard.clear();
+        }
+        for _ in 0..12 {
+            app.update();
+        }
+
+        let projectile_types = {
+            let mut query = app.world_mut().query::<&ProjectileType>();
+            query.iter(app.world()).copied().collect::<Vec<_>>()
+        };
+        assert_eq!(
+            projectile_types,
+            vec![ProjectileType::Fireball],
+            "X should resolve to exactly one generated ninjutsu projectile"
+        );
+    }
+
+    #[test]
+    fn test_overedge_activation_updates_player_body_without_reference_preview() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_message::<crate::events::DamageEvent>()
+            .add_systems(Update, crate::systems::shirou::handle_shroud_input);
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Health::new(100.0),
+                ShroudState::default(),
+                AttackAnimationState::default(),
+            ))
+            .id();
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.press(KeyCode::ControlLeft);
+            keyboard.press(KeyCode::KeyV);
+        }
+        app.update();
+
+        let (shroud_released, attack_style) = {
+            let entity = app.world().entity(player);
+            let shroud = entity.get::<ShroudState>().expect("shroud state");
+            let attack_state = entity
+                .get::<AttackAnimationState>()
+                .expect("attack animation state");
+            (shroud.is_released, attack_state.style)
+        };
+        let preview_count = {
+            let mut query =
+                app.world_mut()
+                    .query::<&crate::systems::attack_modules::ReferenceAttackModulePreview>();
+            query.iter(app.world()).count()
+        };
+
+        assert!(shroud_released, "Ctrl+V should enable the body upgrade");
+        assert_eq!(
+            attack_style,
+            AttackAnimationStyle::OveredgeRelease,
+            "activation should play on the player body instead of a separate preview sprite"
+        );
+        assert_eq!(
+            preview_count, 0,
+            "Overedge activation must not spawn the old center-screen reference preview"
+        );
+    }
+
+    #[test]
     fn test_default_attack_input_uses_melee_windup_before_hitbox() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -2008,6 +2351,59 @@ mod tests {
                     - 0.001,
             "K should keep the 2+3 overedge animation active long enough to play"
         );
+    }
+
+    #[test]
+    fn test_overedge_attack_inputs_stay_on_overedge_body_styles() {
+        fn trigger_overedge_style(keys: &[KeyCode]) -> AttackAnimationStyle {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                    Duration::from_secs_f32(1.0 / 60.0),
+                ))
+                .insert_resource(ButtonInput::<KeyCode>::default())
+                .add_systems(Update, crate::systems::combat::player_knife_attack);
+
+            let mut shroud = ShroudState::default();
+            shroud.enable_release();
+            let player = app
+                .world_mut()
+                .spawn((
+                    Player,
+                    Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                    Velocity::default(),
+                    PlayerState::default(),
+                    FacingDirection::Right,
+                    AttackAnimationState::default(),
+                    shroud,
+                ))
+                .id();
+
+            {
+                let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+                for key in keys {
+                    keyboard.press(*key);
+                }
+            }
+            app.update();
+
+            app.world()
+                .entity(player)
+                .get::<AttackAnimationState>()
+                .expect("attack animation state")
+                .style
+        }
+
+        let row_light = trigger_overedge_style(&[KeyCode::KeyY]);
+        let skill_light = trigger_overedge_style(&[KeyCode::KeyX]);
+        let row_heavy = trigger_overedge_style(&[KeyCode::ShiftLeft, KeyCode::KeyI]);
+
+        assert_eq!(row_light, AttackAnimationStyle::OveredgeLight1);
+        assert_eq!(skill_light, AttackAnimationStyle::OveredgeLight1);
+        assert_eq!(row_heavy, AttackAnimationStyle::OveredgeHeavy);
+        assert!(row_light.uses_overedge_sheet());
+        assert!(skill_light.uses_overedge_sheet());
+        assert!(row_heavy.uses_overedge_sheet());
     }
 
     #[test]
@@ -2884,12 +3280,12 @@ mod tests {
     }
 
     #[test]
-    fn test_generated_split_rows_spawn_reference_vfx_not_extra_players() {
+    fn test_generated_split_rows_spawn_abstract_vfx_not_extra_players() {
         fn trigger_reference_vfx(
             key: KeyCode,
             shift: bool,
             player_state: PlayerState,
-        ) -> (AttackAnimationStyle, usize, usize, Option<usize>) {
+        ) -> (AttackAnimationStyle, usize, usize, usize, Vec2) {
             let mut app = App::new();
             app.add_plugins(MinimalPlugins)
                 .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
@@ -2938,15 +3334,25 @@ mod tests {
                 let mut query = app.world_mut().query::<&Player>();
                 query.iter(app.world()).count()
             };
-            let atlas_index = vfx_sprites
-                .first()
-                .and_then(|sprite| sprite.texture_atlas.as_ref())
-                .map(|atlas| atlas.index);
+            let atlas_count = vfx_sprites
+                .iter()
+                .filter(|sprite| sprite.texture_atlas.is_some())
+                .count();
+            let largest_size = vfx_sprites
+                .iter()
+                .filter_map(|sprite| sprite.custom_size)
+                .fold(Vec2::ZERO, |largest, size| largest.max(size));
 
-            (style, vfx_sprites.len(), player_count, atlas_index)
+            (
+                style,
+                vfx_sprites.len(),
+                player_count,
+                atlas_count,
+                largest_size,
+            )
         }
 
-        let (sub_style, sub_vfx, sub_players, sub_start) = trigger_reference_vfx(
+        let (sub_style, sub_vfx, sub_players, sub_atlas_count, sub_size) = trigger_reference_vfx(
             KeyCode::KeyI,
             false,
             PlayerState {
@@ -2958,37 +3364,47 @@ mod tests {
         assert_eq!(sub_vfx, 1);
         assert_eq!(sub_players, 1);
         assert_eq!(
-            sub_start,
-            Some((3 - 1) * crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize),
-            "substitution should use the generated mobility row as a separate combat VFX"
+            sub_atlas_count, 0,
+            "substitution VFX should be abstract and must not replay a full character atlas row"
+        );
+        assert!(
+            sub_size.x <= 180.0 && sub_size.y <= 40.0,
+            "substitution VFX should stay in slash/streak scale, not full-body scale"
         );
 
-        let (wall_style, wall_vfx, wall_players, wall_start) = trigger_reference_vfx(
-            KeyCode::KeyO,
-            false,
-            PlayerState {
-                is_grounded: true,
-                is_crouching: true,
-            },
-        );
+        let (wall_style, wall_vfx, wall_players, wall_atlas_count, wall_size) =
+            trigger_reference_vfx(
+                KeyCode::KeyO,
+                false,
+                PlayerState {
+                    is_grounded: true,
+                    is_crouching: true,
+                },
+            );
         assert_eq!(wall_style, AttackAnimationStyle::MobilityRefRow(2));
         assert_eq!(wall_vfx, 1);
         assert_eq!(wall_players, 1);
         assert_eq!(
-            wall_start,
-            Some((4 - 1) * crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize),
-            "wall movement should use the generated wall row as a separate combat VFX"
+            wall_atlas_count, 0,
+            "wall movement VFX should be abstract and must not replay a full character atlas row"
+        );
+        assert!(
+            wall_size.x <= 180.0 && wall_size.y <= 40.0,
+            "wall movement VFX should stay in slash/streak scale, not full-body scale"
         );
 
-        let (clone_style, clone_vfx, clone_players, clone_start) =
+        let (clone_style, clone_vfx, clone_players, clone_atlas_count, clone_size) =
             trigger_reference_vfx(KeyCode::KeyX, true, PlayerState::default());
         assert_eq!(clone_style, AttackAnimationStyle::NinjutsuRefRow(1));
         assert_eq!(clone_vfx, 1);
         assert_eq!(clone_players, 1);
         assert_eq!(
-            clone_start,
-            Some(3 * crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS as usize),
-            "shadow clone should use the generated clone row as a separate combat VFX"
+            clone_atlas_count, 0,
+            "shadow clone VFX should be abstract and must not replay a full character atlas row"
+        );
+        assert!(
+            clone_size.x <= 180.0 && clone_size.y <= 40.0,
+            "shadow clone VFX should stay in slash/streak scale, not full-body scale"
         );
     }
 
@@ -3442,9 +3858,9 @@ mod tests {
                 Enemy,
                 EnemyType::EnemyHeroicSpirit,
                 EnemyState::new(14, 360.0)
-                    .with_spawn_origin(-380.0)
+                    .with_spawn_origin(380.0)
                     .with_movement(132.0, 19.0, 0.0),
-                Transform::from_xyz(-380.0, GameConfig::GROUND_LEVEL + 30.0, 0.0),
+                Transform::from_xyz(380.0, GameConfig::GROUND_LEVEL + 30.0, 0.0),
                 Velocity::default(),
             ))
             .id();
@@ -3473,8 +3889,107 @@ mod tests {
             "dash charge should transition into active dash"
         );
         assert!(
-            velocity.x > 0.0,
-            "dash should move toward player on positive X direction"
+            velocity.x < 0.0,
+            "dash should move toward player on negative X direction"
+        );
+    }
+
+    #[test]
+    fn test_passed_enemy_retires_without_turning_back_to_chase() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .add_systems(Update, crate::systems::enemy::enemy_patrol_ai);
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(220.0, GameConfig::GROUND_LEVEL, 0.0),
+        ));
+
+        let enemy = app
+            .world_mut()
+            .spawn((
+                Enemy,
+                EnemyType::EnemyHeroicSpirit,
+                EnemyState::new(14, 360.0)
+                    .with_spawn_origin(40.0)
+                    .with_movement(132.0, 19.0, 0.0),
+                Transform::from_xyz(40.0, GameConfig::GROUND_LEVEL + 30.0, 0.0),
+                Velocity::default(),
+            ))
+            .id();
+
+        app.update();
+        app.update();
+
+        let entity = app.world().entity(enemy);
+        let transform = entity.get::<Transform>().expect("enemy transform");
+        let state = entity.get::<EnemyState>().expect("enemy state");
+        let velocity = entity.get::<Velocity>().expect("enemy velocity");
+
+        assert!(
+            transform.translation.x < 40.0,
+            "passed enemy should continue offscreen instead of turning back"
+        );
+        assert!(
+            velocity.x < 0.0,
+            "passed enemy velocity should point away from the player"
+        );
+        assert_eq!(
+            state.dash_charge_timer, 0.0,
+            "passed heroic enemy should not reacquire a dash attack"
+        );
+    }
+
+    #[test]
+    fn test_passed_familiar_does_not_reacquire_ranged_attack() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .add_systems(
+                Update,
+                (
+                    crate::systems::enemy::enemy_patrol_ai,
+                    crate::systems::enemy::enemy_ranged_attack,
+                )
+                    .chain(),
+            );
+
+        app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(220.0, GameConfig::GROUND_LEVEL, 0.0),
+        ));
+
+        let enemy = app
+            .world_mut()
+            .spawn((
+                Enemy,
+                EnemyType::Familiar,
+                EnemyState::new(6, 300.0)
+                    .with_spawn_origin(40.0)
+                    .with_movement(92.0, 13.0, 0.0),
+                Transform::from_xyz(40.0, GameConfig::GROUND_LEVEL + 124.0, 0.0),
+                Velocity::default(),
+            ))
+            .id();
+
+        app.update();
+
+        let entity = app.world().entity(enemy);
+        let state = entity.get::<EnemyState>().expect("familiar state");
+        let velocity = entity.get::<Velocity>().expect("familiar velocity");
+
+        assert!(
+            velocity.x < 0.0,
+            "passed familiar should keep leaving instead of hovering back into range"
+        );
+        assert!(
+            !state.pending_ranged_shot,
+            "passed familiar should not start a ranged windup behind the player"
         );
     }
 
@@ -3505,9 +4020,9 @@ mod tests {
                 Enemy,
                 EnemyType::Familiar,
                 EnemyState::new(6, 300.0)
-                    .with_spawn_origin(-220.0)
+                    .with_spawn_origin(220.0)
                     .with_movement(92.0, 13.0, 0.0),
-                Transform::from_xyz(-220.0, GameConfig::GROUND_LEVEL + 124.0, 0.0),
+                Transform::from_xyz(220.0, GameConfig::GROUND_LEVEL + 124.0, 0.0),
                 Velocity::default(),
             ))
             .id();
@@ -3826,14 +4341,17 @@ mod tests {
                 crate::systems::death::revive_player,
             );
 
-        app.world_mut().spawn((
-            Player,
-            Transform::from_xyz(0.0, -450.0, 0.0),
-            Velocity::default(),
-            PlayerState::default(),
-            Health::new(100.0),
-            ShroudState::default(),
-        ));
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(180.0, -450.0, 0.0),
+                Velocity::default(),
+                PlayerState::default(),
+                Health::new(100.0),
+                ShroudState::default(),
+            ))
+            .id();
 
         app.world_mut()
             .resource_mut::<NextState<GameState>>()
@@ -3855,6 +4373,20 @@ mod tests {
         assert_eq!(
             *app.world().resource::<State<GameState>>().get(),
             GameState::Playing
+        );
+        let transform = app
+            .world()
+            .entity(player)
+            .get::<Transform>()
+            .expect("player transform");
+        assert_eq!(
+            transform.translation,
+            Vec3::new(
+                180.0,
+                GameConfig::GROUND_LEVEL,
+                GameConfig::PLAYER_START_POS.z
+            ),
+            "revive should keep the death X position instead of returning to the level start"
         );
     }
 

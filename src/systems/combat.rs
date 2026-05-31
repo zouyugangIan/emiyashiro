@@ -70,6 +70,7 @@ struct KnifeAttackPreset {
 pub struct KnifeComboRuntime {
     cooldown: f32,
     combo_step: u8,
+    combo_family: Option<AttackComboFamily>,
     combo_reset_timer: f32,
     queued_attack: Option<AttackAnimationStyle>,
     ground_light_visual_step: u8,
@@ -79,6 +80,20 @@ pub struct KnifeComboRuntime {
     ninjutsu_visual_step: u8,
     ultimate_visual_step: u8,
     weapon_proj_visual_step: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AttackComboFamily {
+    GroundLight,
+    AirCombo,
+    Heavy,
+    Ultimate,
+    Mobility,
+    Ninjutsu,
+    WeaponProjection,
+    OveredgeLight,
+    OveredgeHeavy,
+    Other,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
@@ -401,6 +416,28 @@ fn resolve_reference_visual_style(
     }
 }
 
+fn normalize_attack_style_for_overedge(
+    style: AttackAnimationStyle,
+    overedge_enabled: bool,
+) -> AttackAnimationStyle {
+    if !overedge_enabled {
+        return style;
+    }
+
+    match style {
+        AttackAnimationStyle::OveredgeRelease
+        | AttackAnimationStyle::OveredgeLight1
+        | AttackAnimationStyle::OveredgeLight2
+        | AttackAnimationStyle::OveredgeLight3
+        | AttackAnimationStyle::OveredgeHeavy => style,
+        AttackAnimationStyle::HeavyRef
+        | AttackAnimationStyle::HeavyRefRow(_)
+        | AttackAnimationStyle::UltimateRef
+        | AttackAnimationStyle::UltimateRefRow(_) => AttackAnimationStyle::OveredgeHeavy,
+        _ => AttackAnimationStyle::OveredgeLight1,
+    }
+}
+
 fn knife_attack_preset(step: u8, overedge: bool) -> KnifeAttackPreset {
     let base = match step {
         1 => KnifeAttackPreset {
@@ -691,6 +728,38 @@ fn attack_cooldown_floor(style: AttackAnimationStyle) -> f32 {
     }
 }
 
+fn attack_combo_family(style: AttackAnimationStyle) -> AttackComboFamily {
+    match style {
+        AttackAnimationStyle::GroundLight | AttackAnimationStyle::GroundLightRow(_) => {
+            AttackComboFamily::GroundLight
+        }
+        AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
+            AttackComboFamily::AirCombo
+        }
+        AttackAnimationStyle::HeavyRef | AttackAnimationStyle::HeavyRefRow(_) => {
+            AttackComboFamily::Heavy
+        }
+        AttackAnimationStyle::UltimateRef | AttackAnimationStyle::UltimateRefRow(_) => {
+            AttackComboFamily::Ultimate
+        }
+        AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => {
+            AttackComboFamily::Mobility
+        }
+        AttackAnimationStyle::NinjutsuRef | AttackAnimationStyle::NinjutsuRefRow(_) => {
+            AttackComboFamily::Ninjutsu
+        }
+        AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => {
+            AttackComboFamily::WeaponProjection
+        }
+        AttackAnimationStyle::OveredgeLight1
+        | AttackAnimationStyle::OveredgeLight2
+        | AttackAnimationStyle::OveredgeLight3
+        | AttackAnimationStyle::OveredgeRelease => AttackComboFamily::OveredgeLight,
+        AttackAnimationStyle::OveredgeHeavy => AttackComboFamily::OveredgeHeavy,
+        AttackAnimationStyle::AdvanceRef | AttackAnimationStyle::Normal => AttackComboFamily::Other,
+    }
+}
+
 fn reference_attack_row_key(keyboard: &ButtonInput<KeyCode>) -> Option<u8> {
     [
         KeyCode::KeyY,
@@ -907,33 +976,41 @@ fn reference_action_vfx_frame_range(style: AttackAnimationStyle) -> Option<(usiz
 fn reference_action_vfx_profile(
     style: AttackAnimationStyle,
     facing: f32,
-) -> (Vec3, Vec2, Vec2, f32) {
+) -> (Vec3, Vec2, Vec2, Color, f32, f32) {
     let direction = if facing < 0.0 { -1.0 } else { 1.0 };
 
     match style {
         AttackAnimationStyle::MobilityRefRow(3) => (
-            Vec3::new(-direction * 38.0, 14.0, 2.18),
-            Vec2::new(284.0, 284.0),
-            Vec2::new(-direction * 92.0, 28.0),
-            0.36,
+            Vec3::new(-direction * 46.0, 18.0, 2.18),
+            Vec2::new(138.0, 26.0),
+            Vec2::new(-direction * 120.0, 28.0),
+            Color::srgba(1.0, 0.16, 0.08, 0.24),
+            0.24,
+            -0.12 * direction,
         ),
         AttackAnimationStyle::MobilityRefRow(4) => (
-            Vec3::new(direction * 26.0, 36.0, 2.18),
-            Vec2::new(292.0, 292.0),
-            Vec2::new(direction * 72.0, 132.0),
-            0.34,
+            Vec3::new(direction * 24.0, 52.0, 2.18),
+            Vec2::new(82.0, 34.0),
+            Vec2::new(direction * 92.0, 118.0),
+            Color::srgba(0.54, 0.86, 1.0, 0.22),
+            0.22,
+            0.54 * direction,
         ),
         AttackAnimationStyle::NinjutsuRefRow(4) => (
-            Vec3::new(-direction * 20.0, 12.0, 2.17),
-            Vec2::new(304.0, 304.0),
-            Vec2::new(-direction * 30.0, 8.0),
-            0.32,
+            Vec3::new(-direction * 24.0, 18.0, 2.17),
+            Vec2::new(170.0, 22.0),
+            Vec2::new(-direction * 76.0, 8.0),
+            Color::srgba(1.0, 0.05, 0.05, 0.22),
+            0.22,
+            -0.04 * direction,
         ),
         _ => (
             Vec3::new(0.0, 0.0, 2.16),
-            Vec2::new(276.0, 276.0),
+            Vec2::new(120.0, 22.0),
             Vec2::ZERO,
-            0.28,
+            Color::srgba(1.0, 0.20, 0.12, 0.20),
+            0.20,
+            0.0,
         ),
     }
 }
@@ -941,36 +1018,24 @@ fn reference_action_vfx_profile(
 fn spawn_reference_action_vfx(
     commands: &mut Commands,
     player_transform: &Transform,
-    sprite_sheets: Option<&SpriteAnimationSheets>,
+    _sprite_sheets: Option<&SpriteAnimationSheets>,
     facing: f32,
     attack_style: AttackAnimationStyle,
 ) {
-    let Some(sprite_sheets) = sprite_sheets else {
-        return;
-    };
     let Some((frame_start, frame_count)) = reference_action_vfx_frame_range(attack_style) else {
         return;
     };
-    let Some((image, layout)) =
-        sprite_sheets.select_sheet_for_attack_style(&AnimationType::Attacking, attack_style)
-    else {
-        return;
-    };
 
-    let (offset, size, drift, alpha) = reference_action_vfx_profile(attack_style, facing);
+    let (offset, size, drift, color, alpha, rotation) =
+        reference_action_vfx_profile(attack_style, facing);
     let duration = frame_count as f32 * REFERENCE_ACTION_VFX_FRAME_SECS + 0.08;
-    let mut transform = Transform::from_translation(player_transform.translation + offset);
-    transform.scale.x = if facing < 0.0 { -1.0 } else { 1.0 };
+    let transform = Transform::from_translation(player_transform.translation + offset)
+        .with_rotation(Quat::from_rotation_z(rotation));
 
     commands.spawn((
         Sprite {
-            image: image.clone(),
-            color: Color::srgba(1.0, 1.0, 1.0, alpha),
+            color,
             custom_size: Some(size),
-            texture_atlas: Some(TextureAtlas {
-                layout: layout.clone(),
-                index: frame_start,
-            }),
             ..default()
         },
         transform,
@@ -1173,10 +1238,16 @@ fn perform_knife_attack(
     request: KnifeAttackRequest,
 ) {
     let max_combo_steps = request.knife_tuning.max_combo_steps.max(1);
-    let base_style = request.requested_style;
+    let base_style =
+        normalize_attack_style_for_overedge(request.requested_style, request.overedge_enabled);
+    let combo_family = attack_combo_family(base_style);
+    let same_combo_family = runtime.combo_family == Some(combo_family);
     let combo_step = if base_style == AttackAnimationStyle::OveredgeHeavy {
         max_combo_steps
-    } else if runtime.combo_reset_timer <= 0.0 || runtime.combo_step >= max_combo_steps {
+    } else if runtime.combo_reset_timer <= 0.0
+        || runtime.combo_step >= max_combo_steps
+        || !same_combo_family
+    {
         1
     } else {
         runtime.combo_step + 1
@@ -1192,6 +1263,7 @@ fn perform_knife_attack(
     };
     let attack_style = resolve_reference_visual_style(runtime, attack_style);
     runtime.combo_step = combo_step;
+    runtime.combo_family = Some(combo_family);
     runtime.combo_reset_timer = request.knife_tuning.combo_reset_window_secs.max(0.1);
     runtime.queued_attack = None;
 
@@ -1319,6 +1391,7 @@ pub fn player_knife_attack(
 
     if runtime.combo_reset_timer <= 0.0 {
         runtime.combo_step = 0;
+        runtime.combo_family = None;
         runtime.queued_attack = None;
         reset_reference_visual_steps(&mut runtime);
     }
@@ -1401,6 +1474,7 @@ pub fn player_knife_attack(
         };
 
     if let Some(attack_style) = requested_attack {
+        let attack_style = normalize_attack_style_for_overedge(attack_style, overedge_enabled);
         if runtime.cooldown <= 0.0 {
             let facing_sign = facing.copied().unwrap_or_default().sign();
             perform_knife_attack(

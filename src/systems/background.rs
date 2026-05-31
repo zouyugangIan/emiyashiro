@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::components::Cloud;
+use crate::{asset_paths, components::Cloud};
 
 const CLOUD_SPEED: f32 = 50.0;
 const CLOUD_SPAWN_TIME: f32 = 5.0;
@@ -35,9 +35,8 @@ pub fn spawn_clouds_system(
             (pseudo_random % (window.height() * 0.4) as u32) as f32 + window.height() * 0.5;
 
         // 随机选择云彩图片（使用伪随机）
-        let cloud_images = ["images/cloud/cloud01.png", "images/cloud/cloud02.png"];
-        let cloud_index = (pseudo_random % cloud_images.len() as u32) as usize;
-        let cloud_image = asset_server.load(cloud_images[cloud_index]);
+        let cloud_index = (pseudo_random % asset_paths::CLOUD_IMAGES.len() as u32) as usize;
+        let cloud_image = asset_server.load(asset_paths::CLOUD_IMAGES[cloud_index]);
 
         // 随机缩放（0.8 到 1.2 倍）
         let scale_factor = 0.8 + ((pseudo_random % 40) as f32 / 100.0);

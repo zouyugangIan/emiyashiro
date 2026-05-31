@@ -343,8 +343,12 @@ fn handle_player_death(
 ) {
     crate::debug_log!("💀 士郎掉入深渊！游戏结束！");
 
-    // 重置玩家位置和速度
-    transform.translation = GameConfig::PLAYER_START_POS;
+    // 保留当前进度，只把坠落复位到安全地面高度。
+    transform.translation = Vec3::new(
+        transform.translation.x,
+        GameConfig::GROUND_LEVEL,
+        GameConfig::PLAYER_START_POS.z,
+    );
     velocity.y = 0.0;
     velocity.x = 0.0;
 

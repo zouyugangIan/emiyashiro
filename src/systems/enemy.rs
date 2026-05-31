@@ -14,6 +14,7 @@ const FAMILIAR_RENDER_SIZE: Vec2 = Vec2::new(72.0, 40.0);
 const FAMILIAR_COLLISION_SIZE: Vec2 = Vec2::new(48.0, 28.0);
 const HEROIC_SPIRIT_RENDER_SIZE: Vec2 = Vec2::new(52.0, 110.0);
 const HEROIC_SPIRIT_COLLISION_SIZE: Vec2 = Vec2::new(40.0, 78.0);
+const ENEMY_RETIRE_BEHIND_DISTANCE: f32 = 96.0;
 
 #[derive(Clone, Copy)]
 struct EnemyArchetype {
@@ -66,6 +67,19 @@ fn enemy_archetype(enemy_type: EnemyType, tuning: &EnemyDirectorTuning) -> Enemy
         contact_damage: profile.contact_damage.max(1.0),
         spawn_y_offset: profile.spawn_y_offset,
     }
+}
+
+fn enemy_has_passed_player(enemy_x: f32, player_x: f32) -> bool {
+    enemy_x < player_x - ENEMY_RETIRE_BEHIND_DISTANCE
+}
+
+fn retire_passed_enemy_state(state: &mut EnemyState) {
+    state.move_direction = -1.0;
+    state.pending_ranged_shot = false;
+    state.ranged_windup_timer = 0.0;
+    state.ranged_shot_direction = Vec2::ZERO;
+    state.dash_charge_timer = 0.0;
+    state.dash_active_timer = 0.0;
 }
 
 fn lerp_color(base: Color, target: Color, t: f32, alpha: f32) -> Color {
@@ -364,6 +378,16 @@ pub fn enemy_patrol_ai(
 
         match enemy_type {
             EnemyType::Slime => {
+                if enemy_has_passed_player(transform.translation.x, player_x) {
+                    retire_passed_enemy_state(&mut state);
+                    velocity.x = -state.base_speed.max(20.0);
+                    velocity.y = 0.0;
+                    transform.translation.x += velocity.x * delta;
+                    transform.translation.y =
+                        GameConfig::GROUND_LEVEL + enemy_tuning.slime.spawn_y_offset;
+                    continue;
+                }
+
                 let (patrol_left, patrol_right) = state.patrol_world_bounds();
 
                 if state.move_direction > 0.0 && transform.translation.x > patrol_right {
@@ -390,6 +414,18 @@ pub fn enemy_patrol_ai(
                     GameConfig::GROUND_LEVEL + enemy_tuning.slime.spawn_y_offset;
             }
             EnemyType::Familiar => {
+                if enemy_has_passed_player(transform.translation.x, player_x) {
+                    retire_passed_enemy_state(&mut state);
+                    velocity.x = -state.base_speed.max(20.0);
+                    let target_y = GameConfig::GROUND_LEVEL
+                        + enemy_tuning.familiar.spawn_y_offset
+                        + (elapsed * 2.7 + state.hover_phase).sin() * 22.0;
+                    velocity.y = ((target_y - transform.translation.y) * 3.2).clamp(-110.0, 110.0);
+                    transform.translation.x += velocity.x * delta;
+                    transform.translation.y += velocity.y * delta;
+                    continue;
+                }
+
                 let (patrol_left, patrol_right) = state.patrol_world_bounds();
                 let desired_x = (player_x + 140.0).clamp(patrol_left, patrol_right);
                 let x_delta = desired_x - transform.translation.x;
@@ -420,6 +456,15 @@ pub fn enemy_patrol_ai(
                 let base_y = GameConfig::GROUND_LEVEL
                     + enemy_tuning.heroic_spirit.spawn_y_offset
                     + (elapsed * 8.0 + state.hover_phase).sin() * 3.0;
+
+                if enemy_has_passed_player(transform.translation.x, player_x) {
+                    retire_passed_enemy_state(&mut state);
+                    velocity.x = -state.base_speed.max(20.0);
+                    velocity.y = 0.0;
+                    transform.translation.x += velocity.x * delta;
+                    transform.translation.y = base_y;
+                    continue;
+                }
 
                 if state.dash_charge_timer > 0.0 {
                     velocity.x = 0.0;
@@ -479,6 +524,16 @@ pub fn enemy_ranged_attack(
 
     for (enemy_type, enemy_transform, mut enemy_state) in enemy_query.iter_mut() {
         if *enemy_type != EnemyType::Familiar || !enemy_state.is_alive {
+            continue;
+        }
+
+        if enemy_has_passed_player(
+            enemy_transform.translation.x,
+            player_transform.translation.x,
+        ) {
+            enemy_state.pending_ranged_shot = false;
+            enemy_state.ranged_windup_timer = 0.0;
+            enemy_state.ranged_shot_direction = Vec2::ZERO;
             continue;
         }
 

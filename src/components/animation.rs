@@ -246,54 +246,49 @@ impl SpriteAnimationSheets {
         if *animation_type == AnimationType::Attacking {
             // Reference board 模组优先
             if attack_style.uses_reference_sheet() {
-                return match attack_style {
+                let reference_sheet = match attack_style {
                     AttackAnimationStyle::GroundLight | AttackAnimationStyle::GroundLightRow(_) => {
-                        Some((
-                            self.reference_ground_light_texture.as_ref()?,
-                            self.reference_ground_light_layout.as_ref()?,
-                        ))
+                        self.reference_ground_light_texture
+                            .as_ref()
+                            .zip(self.reference_ground_light_layout.as_ref())
                     }
-                    AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
-                        Some((
-                            self.reference_air_combo_texture.as_ref()?,
-                            self.reference_air_combo_layout.as_ref()?,
-                        ))
-                    }
-                    AttackAnimationStyle::HeavyRef | AttackAnimationStyle::HeavyRefRow(_) => {
-                        Some((
-                            self.reference_heavy_texture.as_ref()?,
-                            self.reference_heavy_layout.as_ref()?,
-                        ))
-                    }
+                    AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => self
+                        .reference_air_combo_texture
+                        .as_ref()
+                        .zip(self.reference_air_combo_layout.as_ref()),
+                    AttackAnimationStyle::HeavyRef | AttackAnimationStyle::HeavyRefRow(_) => self
+                        .reference_heavy_texture
+                        .as_ref()
+                        .zip(self.reference_heavy_layout.as_ref()),
                     AttackAnimationStyle::UltimateRef | AttackAnimationStyle::UltimateRefRow(_) => {
-                        Some((
-                            self.reference_ultimate_texture.as_ref()?,
-                            self.reference_ultimate_layout.as_ref()?,
-                        ))
+                        self.reference_ultimate_texture
+                            .as_ref()
+                            .zip(self.reference_ultimate_layout.as_ref())
                     }
                     AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => {
-                        Some((
-                            self.reference_mobility_texture.as_ref()?,
-                            self.reference_mobility_layout.as_ref()?,
-                        ))
+                        self.reference_mobility_texture
+                            .as_ref()
+                            .zip(self.reference_mobility_layout.as_ref())
                     }
                     AttackAnimationStyle::NinjutsuRef | AttackAnimationStyle::NinjutsuRefRow(_) => {
-                        Some((
-                            self.reference_ninjutsu_texture.as_ref()?,
-                            self.reference_ninjutsu_layout.as_ref()?,
-                        ))
+                        self.reference_ninjutsu_texture
+                            .as_ref()
+                            .zip(self.reference_ninjutsu_layout.as_ref())
                     }
                     AttackAnimationStyle::WeaponProjRef
-                    | AttackAnimationStyle::WeaponProjRefRow(_) => Some((
-                        self.reference_weapon_proj_texture.as_ref()?,
-                        self.reference_weapon_proj_layout.as_ref()?,
-                    )),
-                    AttackAnimationStyle::AdvanceRef => Some((
-                        self.reference_advance_texture.as_ref()?,
-                        self.reference_advance_layout.as_ref()?,
-                    )),
+                    | AttackAnimationStyle::WeaponProjRefRow(_) => self
+                        .reference_weapon_proj_texture
+                        .as_ref()
+                        .zip(self.reference_weapon_proj_layout.as_ref()),
+                    AttackAnimationStyle::AdvanceRef => self
+                        .reference_advance_texture
+                        .as_ref()
+                        .zip(self.reference_advance_layout.as_ref()),
                     _ => None,
                 };
+                if let Some(sheet) = reference_sheet {
+                    return Some(sheet);
+                }
             }
             // Overedge 模组
             match attack_style {

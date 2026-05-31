@@ -244,8 +244,8 @@ pub const REFERENCE_BOARD_ADVANCED_OVERVIEW_ROWS: u32 = 4;
 pub const REFERENCE_BOARD_ADVANCED_OVERVIEW_CELL: (u32, u32) = (256, 256);
 
 // CLOUD ASSETS (背景云彩图片)
-pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud01.png";
-pub const IMAGE_CLOUD_02: &str = "images/cloud/cloud02.png";
+pub const IMAGE_CLOUD_01: &str = "images/cloud/cloud_soft_01.png";
+pub const IMAGE_CLOUD_02: &str = "images/cloud/cloud_soft_02.png";
 
 // 所有云彩图片的数组
 pub const CLOUD_IMAGES: &[&str] = &[IMAGE_CLOUD_01, IMAGE_CLOUD_02];

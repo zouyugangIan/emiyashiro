@@ -400,6 +400,11 @@ fn apply_animation_sheet(
 
     if let Some(ref mut atlas) = sprite.texture_atlas {
         atlas.layout = target_layout.clone();
+    } else {
+        sprite.texture_atlas = Some(TextureAtlas {
+            layout: target_layout.clone(),
+            index: 0,
+        });
     }
 }
 
@@ -681,6 +686,72 @@ pub fn update_character_animation_state(
 mod tests {
     use super::*;
     use crate::components::animation_data::AnimationClipData;
+    use std::marker::PhantomData;
+
+    fn test_image_handle(id: u128) -> Handle<Image> {
+        Handle::Uuid(uuid::Uuid::from_u128(id), PhantomData)
+    }
+
+    fn test_layout_handle(id: u128) -> Handle<TextureAtlasLayout> {
+        Handle::Uuid(uuid::Uuid::from_u128(id), PhantomData)
+    }
+
+    fn distinct_test_sheets() -> SpriteAnimationSheets {
+        SpriteAnimationSheets {
+            core_texture: test_image_handle(0xA001),
+            core_layout: test_layout_handle(0xB001),
+            running_texture: test_image_handle(0xA002),
+            running_layout: test_layout_handle(0xB002),
+            attacking_texture: test_image_handle(0xA003),
+            attacking_layout: test_layout_handle(0xB003),
+            overedge_light_attacking_texture: Some(test_image_handle(0xA004)),
+            overedge_light_attacking_layout: Some(test_layout_handle(0xB004)),
+            overedge_light_attacking_frame_count:
+                asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT,
+            overedge_heavy_attacking_texture: Some(test_image_handle(0xA005)),
+            overedge_heavy_attacking_layout: Some(test_layout_handle(0xB005)),
+            overedge_heavy_attacking_frame_count:
+                asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT,
+            reference_ground_light_texture: Some(test_image_handle(0xA006)),
+            reference_ground_light_layout: Some(test_layout_handle(0xB006)),
+            reference_ground_light_frame_count: (asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
+                * asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
+                as usize,
+            reference_air_combo_texture: Some(test_image_handle(0xA007)),
+            reference_air_combo_layout: Some(test_layout_handle(0xB007)),
+            reference_air_combo_frame_count: (asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
+                * asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS)
+                as usize,
+            reference_heavy_texture: Some(test_image_handle(0xA008)),
+            reference_heavy_layout: Some(test_layout_handle(0xB008)),
+            reference_heavy_frame_count: (asset_paths::REFERENCE_BOARD_HEAVY_COLS
+                * asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
+                as usize,
+            reference_ultimate_texture: Some(test_image_handle(0xA009)),
+            reference_ultimate_layout: Some(test_layout_handle(0xB009)),
+            reference_ultimate_frame_count: (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
+                * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS)
+                as usize,
+            reference_mobility_texture: Some(test_image_handle(0xA00A)),
+            reference_mobility_layout: Some(test_layout_handle(0xB00A)),
+            reference_mobility_frame_count: (asset_paths::REFERENCE_BOARD_MOBILITY_COLS
+                * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS)
+                as usize,
+            reference_ninjutsu_texture: Some(test_image_handle(0xA00B)),
+            reference_ninjutsu_layout: Some(test_layout_handle(0xB00B)),
+            reference_ninjutsu_frame_count: (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
+                * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS)
+                as usize,
+            reference_weapon_proj_texture: Some(test_image_handle(0xA00C)),
+            reference_weapon_proj_layout: Some(test_layout_handle(0xB00C)),
+            reference_weapon_proj_frame_count: (asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
+                * asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS)
+                as usize,
+            reference_advance_texture: None,
+            reference_advance_layout: None,
+            reference_advance_frame_count: 0,
+        }
+    }
 
     #[test]
     fn test_frame_guidelines_are_monotonic() {
@@ -717,6 +788,100 @@ mod tests {
         assert_eq!(frame, 1);
         frame = next_frame_index(frame, 4, PlaybackMode::PingPong, &mut direction);
         assert_eq!(frame, 0);
+    }
+
+    #[test]
+    fn test_apply_animation_sheet_recreates_missing_atlas() {
+        let sheets = distinct_test_sheets();
+        let mut sprite = Sprite {
+            image: sheets.core_texture.clone(),
+            texture_atlas: None,
+            ..default()
+        };
+
+        apply_animation_sheet(
+            &mut sprite,
+            Some(&sheets),
+            &AnimationType::Attacking,
+            AttackAnimationStyle::GroundLightRow(2),
+        );
+
+        assert_eq!(
+            sprite.image,
+            sheets
+                .reference_ground_light_texture
+                .clone()
+                .expect("reference texture")
+        );
+        let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
+        assert_eq!(
+            atlas.layout,
+            sheets
+                .reference_ground_light_layout
+                .clone()
+                .expect("reference layout")
+        );
+        assert_eq!(atlas.index, 0);
+    }
+
+    #[test]
+    fn test_missing_reference_sheet_falls_back_to_base_attack_sheet() {
+        let sheets = distinct_test_sheets();
+        let mut sprite = Sprite {
+            image: sheets
+                .reference_ground_light_texture
+                .clone()
+                .expect("old reference texture"),
+            texture_atlas: Some(TextureAtlas {
+                layout: sheets
+                    .reference_ground_light_layout
+                    .clone()
+                    .expect("old reference layout"),
+                index: 9,
+            }),
+            ..default()
+        };
+
+        apply_animation_sheet(
+            &mut sprite,
+            Some(&sheets),
+            &AnimationType::Attacking,
+            AttackAnimationStyle::AdvanceRef,
+        );
+
+        assert_eq!(sprite.image, sheets.attacking_texture);
+        let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
+        assert_eq!(atlas.layout, sheets.attacking_layout);
+    }
+
+    #[test]
+    fn test_non_attack_sheet_restores_core_after_reference_attack() {
+        let sheets = distinct_test_sheets();
+        let mut sprite = Sprite {
+            image: sheets
+                .reference_ground_light_texture
+                .clone()
+                .expect("old reference texture"),
+            texture_atlas: Some(TextureAtlas {
+                layout: sheets
+                    .reference_ground_light_layout
+                    .clone()
+                    .expect("old reference layout"),
+                index: 17,
+            }),
+            ..default()
+        };
+
+        apply_animation_sheet(
+            &mut sprite,
+            Some(&sheets),
+            &AnimationType::Idle,
+            AttackAnimationStyle::GroundLightRow(3),
+        );
+
+        assert_eq!(sprite.image, sheets.core_texture);
+        let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
+        assert_eq!(atlas.layout, sheets.core_layout);
     }
 
     #[test]

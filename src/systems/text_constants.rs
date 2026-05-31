@@ -41,7 +41,7 @@ impl PauseMenuText {
     pub const ESC_RESUME: &'static str = "ESC: Resume";
     pub const Q_MAIN_MENU: &'static str = "Q: Main Menu";
     pub const CONTROLS_HINT: &'static str =
-        "WASD/Arrow Keys: Move | J/Z/L: Light | K: Heavy | X: Skill | Shift+V: Overedge";
+        "WASD/Arrow Keys: Move | J/Z/L: Light | K: Heavy | X: Skill | Shift/Ctrl+V: Overedge";
 }
 
 /// 存档/读档系统文本常量

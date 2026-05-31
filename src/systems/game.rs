@@ -4,8 +4,10 @@
 use crate::{components::*, resources::*, states::*};
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use bevy::sprite::Anchor;
 
-const PLAYER_RENDER_SIZE: Vec2 = Vec2::new(96.0, 144.0);
+pub const PLAYER_RENDER_SIZE: Vec2 = Vec2::new(96.0, 144.0);
+pub const PLAYER_VISUAL_BASELINE_ANCHOR_Y: f32 = -0.22;
 
 #[derive(SystemParam)]
 pub struct SetupGameParams<'w, 's> {
@@ -106,6 +108,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
                 }),
                 ..default()
             },
+            Anchor(Vec2::new(0.0, PLAYER_VISUAL_BASELINE_ANCHOR_Y)),
             player_common,
             anim_component,
             sprite_sheets,
@@ -121,6 +124,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
             custom_size: Some(PLAYER_RENDER_SIZE),
             ..default()
         },
+        Anchor(Vec2::new(0.0, PLAYER_VISUAL_BASELINE_ANCHOR_Y)),
         player_common,
     ));
 

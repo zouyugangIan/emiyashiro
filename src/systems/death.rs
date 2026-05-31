@@ -127,7 +127,11 @@ pub fn revive_player(
         mut invulnerability,
     )) = player_query.iter_mut().next()
     {
-        transform.translation = GameConfig::PLAYER_START_POS;
+        transform.translation = Vec3::new(
+            transform.translation.x,
+            transform.translation.y.max(GameConfig::GROUND_LEVEL),
+            GameConfig::PLAYER_START_POS.z,
+        );
         velocity.x = 0.0;
         velocity.y = 0.0;
         player_state.is_grounded = true;
