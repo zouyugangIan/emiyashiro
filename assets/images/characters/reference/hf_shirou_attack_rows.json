@@ -1,0 +1,311 @@
+{
+  "character": "HF Shirou",
+  "cell_size": [256, 256],
+  "frame_timing_secs": 0.07,
+  "split_output_hint": "tmp/hf_shirou_attack_frames",
+  "sheets": [
+    {
+      "id": "ground_light",
+      "asset_path": "images/characters/reference/hf_shirou_attack_ground_light_reference.png",
+      "source": "assets/images/characters/reference/hf_shirou_attack_ground_light_reference.png",
+      "columns": 8,
+      "runtime_kind": "GroundLight",
+      "rows": [
+        {
+          "row": 1,
+          "name": "Forward guard jab",
+          "primary_input": "J/Z/L first ground light or Y",
+          "runtime_style": "GroundLightRow(1)",
+          "combo_role": "Fast opener with short forward commitment.",
+          "gameplay": "Small hitstop, low recovery, starts the light chain."
+        },
+        {
+          "row": 2,
+          "name": "Rising hook slash",
+          "primary_input": "J/Z/L second ground light or U",
+          "runtime_style": "GroundLightRow(2)",
+          "combo_role": "Mid-chain vertical cover and anti-hop check.",
+          "gameplay": "Slightly larger hitbox and stronger push than row 1."
+        },
+        {
+          "row": 3,
+          "name": "Piercing arm thrust",
+          "primary_input": "J/Z/L third ground light or I",
+          "runtime_style": "GroundLightRow(3)",
+          "combo_role": "Linear finisher that reaches past normal knife range.",
+          "gameplay": "Highest light-chain knockback and readable thrust timing."
+        },
+        {
+          "row": 4,
+          "name": "Low red sweep",
+          "primary_input": "O on grounded direct row select",
+          "runtime_style": "GroundLightRow(4)",
+          "combo_role": "Horizontal crowd-control sweep.",
+          "gameplay": "Keeps the body grounded while the slash VFX covers both sides."
+        },
+        {
+          "row": 5,
+          "name": "Overhead crescent launcher",
+          "primary_input": "P on grounded direct row select",
+          "runtime_style": "GroundLightRow(5)",
+          "combo_role": "Manual launcher/finisher row.",
+          "gameplay": "Longer visible arc, used when the player explicitly selects row 5."
+        }
+      ]
+    },
+    {
+      "id": "heavy",
+      "asset_path": "images/characters/reference/hf_shirou_attack_heavy_reference.png",
+      "source": "assets/images/characters/reference/hf_shirou_attack_heavy_reference.png",
+      "columns": 8,
+      "runtime_kind": "Heavy",
+      "rows": [
+        {
+          "row": 1,
+          "name": "Shoulder cleave",
+          "primary_input": "K first heavy or Shift+Y",
+          "runtime_style": "HeavyRefRow(1)",
+          "combo_role": "Heavy opener with deliberate windup.",
+          "gameplay": "More damage, larger camera impulse, harder hitstop than light."
+        },
+        {
+          "row": 2,
+          "name": "Vertical breaker",
+          "primary_input": "K second heavy or Shift+U",
+          "runtime_style": "HeavyRefRow(2)",
+          "combo_role": "Armor-break style rising chop.",
+          "gameplay": "Extends vertical coverage without pulling the player down."
+        },
+        {
+          "row": 3,
+          "name": "Crimson lance thrust",
+          "primary_input": "K third heavy or Shift+I",
+          "runtime_style": "HeavyRefRow(3)",
+          "combo_role": "Long straight heavy finisher.",
+          "gameplay": "Strong horizontal knockback and broad active slash."
+        },
+        {
+          "row": 4,
+          "name": "Low cyclone breaker",
+          "primary_input": "Shift+O direct heavy row",
+          "runtime_style": "HeavyRefRow(4)",
+          "combo_role": "Grounded circular crowd-control heavy.",
+          "gameplay": "Keeps low stance and favors width over launch."
+        },
+        {
+          "row": 5,
+          "name": "Crimson eruption",
+          "primary_input": "Shift+P direct heavy row",
+          "runtime_style": "HeavyRefRow(5)",
+          "combo_role": "Manual heavy spectacle finisher.",
+          "gameplay": "Largest heavy VFX read; current hitbox uses heavy preset bounds."
+        }
+      ]
+    },
+    {
+      "id": "air_combo",
+      "asset_path": "images/characters/reference/hf_shirou_attack_air_combo_reference.png",
+      "source": "assets/images/characters/reference/hf_shirou_attack_air_combo_reference.png",
+      "columns": 8,
+      "runtime_kind": "AirCombo",
+      "rows": [
+        {
+          "row": 1,
+          "name": "Air guard slash",
+          "primary_input": "J/Z/L while airborne or airborne Y",
+          "runtime_style": "AirComboRow(1)",
+          "combo_role": "Air opener that stabilizes the player in place.",
+          "gameplay": "Adds a small upward hold to keep the combo readable."
+        },
+        {
+          "row": 2,
+          "name": "Air thrust",
+          "primary_input": "Airborne U",
+          "runtime_style": "AirComboRow(2)",
+          "combo_role": "Forward aerial poke.",
+          "gameplay": "Horizontal drift with modest launch preservation."
+        },
+        {
+          "row": 3,
+          "name": "Dive slash",
+          "primary_input": "Airborne I",
+          "runtime_style": "AirComboRow(3)",
+          "combo_role": "Downward commitment row.",
+          "gameplay": "Uses the air preset, so it reads as attack commitment instead of falling."
+        },
+        {
+          "row": 4,
+          "name": "Aerial red ring",
+          "primary_input": "Airborne O",
+          "runtime_style": "AirComboRow(4)",
+          "combo_role": "Airborne crowd-control sweep.",
+          "gameplay": "Wide circular VFX with preserved vertical hang time."
+        },
+        {
+          "row": 5,
+          "name": "Meteor drop",
+          "primary_input": "Airborne P",
+          "runtime_style": "AirComboRow(5)",
+          "combo_role": "Manual aerial finisher.",
+          "gameplay": "Big landing read, still bounded by the air combo preset."
+        }
+      ]
+    },
+    {
+      "id": "mobility",
+      "asset_path": "images/characters/reference/hf_shirou_attack_mobility_reference.png",
+      "source": "assets/images/characters/reference/hf_shirou_attack_mobility_reference.png",
+      "columns": 6,
+      "runtime_kind": "Mobility",
+      "rows": [
+        {
+          "row": 1,
+          "name": "Forward burst slash",
+          "primary_input": "Crouch+J/Z/L first mobility or crouch+Y",
+          "runtime_style": "MobilityRefRow(1)",
+          "combo_role": "Primary grounded dash attack.",
+          "gameplay": "Protected forward momentum so idle movement cannot cancel the dash."
+        },
+        {
+          "row": 2,
+          "name": "Low slide slash",
+          "primary_input": "Crouch+J/Z/L second mobility or crouch+U",
+          "runtime_style": "MobilityRefRow(2)",
+          "combo_role": "Low advancing slide.",
+          "gameplay": "Forward momentum with slight upward safety to avoid floor sinking."
+        },
+        {
+          "row": 3,
+          "name": "Substitution burst",
+          "primary_input": "Crouch+I",
+          "runtime_style": "MobilityRefRow(3) semantic, player body uses MobilityRefRow(1)",
+          "combo_role": "Backward evasive burst with afterimage streaks.",
+          "gameplay": "No extra player entity; abstract VFX represents the split-image action."
+        },
+        {
+          "row": 4,
+          "name": "Wall kick launch",
+          "primary_input": "Crouch+O/P",
+          "runtime_style": "MobilityRefRow(4) semantic, player body uses MobilityRefRow(2)",
+          "combo_role": "Upward wall-style launcher.",
+          "gameplay": "Preserves upward launch and uses abstract VFX for the generated wall row."
+        }
+      ]
+    },
+    {
+      "id": "ninjutsu_projectiles",
+      "asset_path": "images/characters/reference/hf_shirou_attack_ninjutsu_projectiles_reference.png",
+      "source": "assets/images/characters/reference/hf_shirou_attack_ninjutsu_projectiles_reference.png",
+      "columns": 8,
+      "runtime_kind": "NinjutsuProjectiles",
+      "rows": [
+        {
+          "row": 1,
+          "name": "Fire shot",
+          "primary_input": "X first ninjutsu",
+          "runtime_style": "NinjutsuRefRow(1)",
+          "combo_role": "Fire projectile cast.",
+          "gameplay": "Warm colored projectile, medium speed, larger damage than default magic."
+        },
+        {
+          "row": 2,
+          "name": "Wind wave",
+          "primary_input": "X second ninjutsu",
+          "runtime_style": "NinjutsuRefRow(2)",
+          "combo_role": "Fast horizontal wave.",
+          "gameplay": "Fastest projectile row with wide horizontal collision."
+        },
+        {
+          "row": 3,
+          "name": "Lightning pillar",
+          "primary_input": "X third ninjutsu",
+          "runtime_style": "NinjutsuRefRow(3)",
+          "combo_role": "Vertical strike projectile.",
+          "gameplay": "Tall collision and slower travel for a column-hit read."
+        },
+        {
+          "row": 4,
+          "name": "Shadow clone slash",
+          "primary_input": "Shift+X",
+          "runtime_style": "NinjutsuRefRow(4) semantic, player body uses NinjutsuRefRow(1)",
+          "combo_role": "Clone/split special.",
+          "gameplay": "Spawns abstract afterimages and VFX, never duplicate player bodies."
+        }
+      ]
+    },
+    {
+      "id": "ultimate",
+      "asset_path": "images/characters/reference/hf_shirou_attack_ultimate_reference.png",
+      "source": "assets/images/characters/reference/hf_shirou_attack_ultimate_reference.png",
+      "columns": 8,
+      "runtime_kind": "Ultimate",
+      "rows": [
+        {
+          "row": 1,
+          "name": "Sword rain field",
+          "primary_input": "Crouch+K first ultimate",
+          "runtime_style": "UltimateRefRow(1)",
+          "combo_role": "Area denial ultimate opener.",
+          "gameplay": "Large hitbox, long lock floor, strong hitstop and camera impulse."
+        },
+        {
+          "row": 2,
+          "name": "Crimson cross beam",
+          "primary_input": "Crouch+K second ultimate",
+          "runtime_style": "UltimateRefRow(2)",
+          "combo_role": "Screen-forward burst ultimate.",
+          "gameplay": "Heavy knockback and high commitment."
+        },
+        {
+          "row": 3,
+          "name": "Golden projection field",
+          "primary_input": "Crouch+K third ultimate",
+          "runtime_style": "UltimateRefRow(3)",
+          "combo_role": "High spectacle field finisher.",
+          "gameplay": "Uses the ultimate preset bounds while the atlas carries the visual scale."
+        }
+      ]
+    },
+    {
+      "id": "weapon_projection",
+      "asset_path": "images/characters/reference/hf_shirou_attack_weapon_projection_reference.png",
+      "source": "assets/images/characters/reference/hf_shirou_attack_weapon_projection_reference.png",
+      "columns": 6,
+      "runtime_kind": "WeaponProjection",
+      "rows": [
+        {
+          "row": 1,
+          "name": "Short sword materialize",
+          "primary_input": "Crouch+X first weapon projection",
+          "runtime_style": "WeaponProjRefRow(1)",
+          "combo_role": "Weapon summon into close slash.",
+          "gameplay": "Moderate damage with short windup and forward nudge."
+        },
+        {
+          "row": 2,
+          "name": "Twin blade projection",
+          "primary_input": "Crouch+X second weapon projection",
+          "runtime_style": "WeaponProjRefRow(2)",
+          "combo_role": "Dual blade stance row.",
+          "gameplay": "Wider slash read than row 1."
+        },
+        {
+          "row": 3,
+          "name": "Long sword projection",
+          "primary_input": "Crouch+X third weapon projection",
+          "runtime_style": "WeaponProjRefRow(3)",
+          "combo_role": "Long reach weapon row.",
+          "gameplay": "Extends hitbox and knockback through the weapon projection preset."
+        },
+        {
+          "row": 4,
+          "name": "Bow projection",
+          "primary_input": "Crouch+X fourth weapon projection",
+          "runtime_style": "WeaponProjRefRow(4)",
+          "combo_role": "Bow-form finisher row.",
+          "gameplay": "Manual visual finisher with controlled melee collision for now."
+        }
+      ]
+    }
+  ]
+}

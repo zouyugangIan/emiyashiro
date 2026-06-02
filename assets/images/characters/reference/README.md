@@ -17,6 +17,21 @@ These images are production attack atlases for the HF Shirou action module. Each
 - `hf_shirou_attack_ultimate_reference.png`: 8x3 ultimate techniques.
 - `hf_shirou_attack_weapon_projection_reference.png`: 6x4 short sword, twin blade, long sword, bow projection.
 
+## Sprite Split And Row Plan
+
+- `hf_shirou_attack_rows.json`: authoritative row plan for every playable attack atlas. It records the image path, 256x256 grid, row count, input mapping, runtime `AttackAnimationStyle`, and gameplay role.
+- `scripts/split_hf_shirou_attack_atlases.py`: reproducibly splits every atlas into standalone frame PNGs under `tmp/hf_shirou_attack_frames` and writes a split manifest with frame bounding boxes and edge-contact diagnostics.
+- `scripts/audit_hf_shirou_attack_atlases.py`: writes checkerboard contact sheets under `tmp/hf_shirou_attack_audit` and reports edge contact, possible alpha holes, and green-key residue.
+- All runtime atlas cells are 256x256 with zero offset. The current repaired transparent PNGs are the assets loaded by Bevy; the green-key sources under `tmp/imagegen` are only generation scratch files.
+
+Run:
+
+```bash
+python3 scripts/split_hf_shirou_attack_atlases.py --dry-run --fail-on-edge-contact
+python3 scripts/split_hf_shirou_attack_atlases.py --out tmp/hf_shirou_attack_frames
+python3 scripts/audit_hf_shirou_attack_atlases.py --out tmp/hf_shirou_attack_audit --fail-on-issues
+```
+
 ## Overview Boards
 
 - `hf_shirou_attack_modules_overview.png`: full playable module overview.

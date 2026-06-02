@@ -519,7 +519,7 @@ fn knife_attack_preset_for_style(
 ) -> KnifeAttackPreset {
     let base = knife_attack_preset(step, overedge);
 
-    match style {
+    let family_preset = match style {
         AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
             KnifeAttackPreset {
                 cooldown: base.cooldown.max(0.24),
@@ -621,6 +621,291 @@ fn knife_attack_preset_for_style(
             }
         }
         _ => base,
+    };
+
+    tune_reference_row_attack_preset(family_preset, style)
+}
+
+fn tune_reference_row_attack_preset(
+    preset: KnifeAttackPreset,
+    style: AttackAnimationStyle,
+) -> KnifeAttackPreset {
+    match style {
+        AttackAnimationStyle::GroundLightRow(1) => KnifeAttackPreset {
+            damage: preset.damage * 0.92,
+            cooldown: preset.cooldown.min(0.22),
+            windup_secs: 0.055,
+            animation_duration_secs: preset.animation_duration_secs.min(0.26),
+            lifetime: 0.075,
+            hitbox_size: Vec2::new(66.0, 32.0),
+            x_offset: 54.0,
+            y_offset: 12.0,
+            slash_render_size: Vec2::new(58.0, 14.0),
+            knockback_x: 82.0,
+            hit_stop_secs: preset.hit_stop_secs.min(0.018),
+            ..preset
+        },
+        AttackAnimationStyle::GroundLightRow(2) => KnifeAttackPreset {
+            damage: preset.damage * 1.04,
+            hitbox_size: Vec2::new(78.0, 56.0),
+            y_offset: 24.0,
+            slash_render_size: Vec2::new(68.0, 30.0),
+            knockback_x: preset.knockback_x * 1.05,
+            knockback_y: 46.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.006,
+            ..preset
+        },
+        AttackAnimationStyle::GroundLightRow(3) => KnifeAttackPreset {
+            damage: preset.damage * 1.18,
+            cooldown: preset.cooldown.max(0.30),
+            windup_secs: 0.075,
+            lifetime: 0.11,
+            hitbox_size: Vec2::new(124.0, 34.0),
+            x_offset: 82.0,
+            slash_render_size: Vec2::new(112.0, 15.0),
+            knockback_x: preset.knockback_x * 1.42,
+            knockback_y: preset.knockback_y + 8.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.012,
+            ..preset
+        },
+        AttackAnimationStyle::GroundLightRow(4) => KnifeAttackPreset {
+            damage: preset.damage * 1.08,
+            cooldown: preset.cooldown.max(0.31),
+            lifetime: 0.13,
+            hitbox_size: Vec2::new(138.0, 30.0),
+            x_offset: 42.0,
+            y_offset: 5.0,
+            crouch_y_offset: -5.0,
+            slash_render_size: Vec2::new(132.0, 18.0),
+            knockback_x: preset.knockback_x * 1.18,
+            knockback_y: 8.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.01,
+            ..preset
+        },
+        AttackAnimationStyle::GroundLightRow(5) => KnifeAttackPreset {
+            damage: preset.damage * 1.30,
+            cooldown: preset.cooldown.max(0.36),
+            windup_secs: 0.09,
+            lifetime: 0.13,
+            hitbox_size: Vec2::new(98.0, 86.0),
+            x_offset: 68.0,
+            y_offset: 38.0,
+            slash_render_size: Vec2::new(96.0, 38.0),
+            knockback_x: preset.knockback_x * 1.20,
+            knockback_y: 94.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.02,
+            ..preset
+        },
+        AttackAnimationStyle::HeavyRefRow(1) => KnifeAttackPreset {
+            damage: preset.damage * 0.95,
+            hitbox_size: Vec2::new(116.0, 58.0),
+            x_offset: 78.0,
+            slash_render_size: Vec2::new(112.0, 28.0),
+            ..preset
+        },
+        AttackAnimationStyle::HeavyRefRow(2) => KnifeAttackPreset {
+            damage: preset.damage * 1.05,
+            hitbox_size: Vec2::new(104.0, 128.0),
+            x_offset: 68.0,
+            y_offset: 38.0,
+            slash_render_size: Vec2::new(96.0, 72.0),
+            knockback_y: 92.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.012,
+            ..preset
+        },
+        AttackAnimationStyle::HeavyRefRow(3) => KnifeAttackPreset {
+            damage: preset.damage * 1.18,
+            cooldown: preset.cooldown.max(0.48),
+            hitbox_size: Vec2::new(174.0, 44.0),
+            x_offset: 112.0,
+            y_offset: 18.0,
+            slash_render_size: Vec2::new(164.0, 18.0),
+            knockback_x: preset.knockback_x * 1.34,
+            knockback_y: preset.knockback_y + 8.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.018,
+            ..preset
+        },
+        AttackAnimationStyle::HeavyRefRow(4) => KnifeAttackPreset {
+            damage: preset.damage * 1.12,
+            cooldown: preset.cooldown.max(0.50),
+            lifetime: 0.16,
+            hitbox_size: Vec2::new(172.0, 48.0),
+            x_offset: 42.0,
+            y_offset: 8.0,
+            slash_render_size: Vec2::new(168.0, 24.0),
+            knockback_x: preset.knockback_x * 1.18,
+            knockback_y: 18.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.016,
+            ..preset
+        },
+        AttackAnimationStyle::HeavyRefRow(5) => KnifeAttackPreset {
+            damage: preset.damage * 1.42,
+            cooldown: preset.cooldown.max(0.64),
+            windup_secs: 0.19,
+            lifetime: 0.18,
+            hitbox_size: Vec2::new(206.0, 126.0),
+            x_offset: 86.0,
+            y_offset: 34.0,
+            slash_render_size: Vec2::new(198.0, 54.0),
+            knockback_x: preset.knockback_x * 1.50,
+            knockback_y: 76.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.04,
+            ..preset
+        },
+        AttackAnimationStyle::AirComboRow(1) => KnifeAttackPreset {
+            hitbox_size: Vec2::new(82.0, 58.0),
+            y_offset: 32.0,
+            knockback_y: 58.0,
+            ..preset
+        },
+        AttackAnimationStyle::AirComboRow(2) => KnifeAttackPreset {
+            damage: preset.damage * 1.08,
+            hitbox_size: Vec2::new(126.0, 36.0),
+            x_offset: 86.0,
+            y_offset: 24.0,
+            slash_render_size: Vec2::new(118.0, 15.0),
+            knockback_x: preset.knockback_x * 1.28,
+            ..preset
+        },
+        AttackAnimationStyle::AirComboRow(3) => KnifeAttackPreset {
+            damage: preset.damage * 1.16,
+            cooldown: preset.cooldown.max(0.30),
+            hitbox_size: Vec2::new(78.0, 118.0),
+            x_offset: 48.0,
+            y_offset: -18.0,
+            slash_render_size: Vec2::new(72.0, 68.0),
+            knockback_y: -16.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.014,
+            ..preset
+        },
+        AttackAnimationStyle::AirComboRow(4) => KnifeAttackPreset {
+            damage: preset.damage * 1.20,
+            cooldown: preset.cooldown.max(0.34),
+            lifetime: 0.14,
+            hitbox_size: Vec2::new(154.0, 74.0),
+            x_offset: 34.0,
+            y_offset: 8.0,
+            slash_render_size: Vec2::new(150.0, 34.0),
+            knockback_x: preset.knockback_x * 1.15,
+            knockback_y: 44.0,
+            ..preset
+        },
+        AttackAnimationStyle::AirComboRow(5) => KnifeAttackPreset {
+            damage: preset.damage * 1.36,
+            cooldown: preset.cooldown.max(0.40),
+            windup_secs: 0.10,
+            lifetime: 0.16,
+            hitbox_size: Vec2::new(118.0, 136.0),
+            x_offset: 58.0,
+            y_offset: -26.0,
+            slash_render_size: Vec2::new(106.0, 76.0),
+            knockback_x: preset.knockback_x * 1.22,
+            knockback_y: -34.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.026,
+            ..preset
+        },
+        AttackAnimationStyle::MobilityRefRow(2) => KnifeAttackPreset {
+            damage: preset.damage * 0.96,
+            hitbox_size: Vec2::new(128.0, 28.0),
+            x_offset: 88.0,
+            y_offset: 0.0,
+            crouch_y_offset: -5.0,
+            slash_render_size: Vec2::new(128.0, 15.0),
+            knockback_y: 6.0,
+            ..preset
+        },
+        AttackAnimationStyle::MobilityRefRow(3) => KnifeAttackPreset {
+            damage: preset.damage * 0.82,
+            cooldown: preset.cooldown.max(0.30),
+            hitbox_size: Vec2::new(88.0, 46.0),
+            x_offset: 34.0,
+            y_offset: 14.0,
+            slash_render_size: Vec2::new(80.0, 16.0),
+            knockback_x: -preset.knockback_x.abs() * 0.60,
+            knockback_y: 30.0,
+            ..preset
+        },
+        AttackAnimationStyle::MobilityRefRow(4) => KnifeAttackPreset {
+            damage: preset.damage * 1.08,
+            cooldown: preset.cooldown.max(0.34),
+            hitbox_size: Vec2::new(96.0, 88.0),
+            x_offset: 52.0,
+            y_offset: 42.0,
+            slash_render_size: Vec2::new(88.0, 46.0),
+            knockback_x: preset.knockback_x * 0.92,
+            knockback_y: 112.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.012,
+            ..preset
+        },
+        AttackAnimationStyle::UltimateRefRow(1) => KnifeAttackPreset {
+            damage: preset.damage * 0.95,
+            hitbox_size: Vec2::new(202.0, 136.0),
+            x_offset: 52.0,
+            y_offset: 34.0,
+            knockback_y: 76.0,
+            ..preset
+        },
+        AttackAnimationStyle::UltimateRefRow(2) => KnifeAttackPreset {
+            damage: preset.damage * 1.18,
+            hitbox_size: Vec2::new(260.0, 82.0),
+            x_offset: 142.0,
+            y_offset: 24.0,
+            slash_render_size: Vec2::new(248.0, 36.0),
+            knockback_x: preset.knockback_x * 1.35,
+            knockback_y: 54.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.026,
+            ..preset
+        },
+        AttackAnimationStyle::UltimateRefRow(3) => KnifeAttackPreset {
+            damage: preset.damage * 1.30,
+            cooldown: preset.cooldown.max(1.20),
+            windup_secs: 0.26,
+            hitbox_size: Vec2::new(248.0, 168.0),
+            x_offset: 76.0,
+            y_offset: 54.0,
+            slash_render_size: Vec2::new(232.0, 62.0),
+            knockback_x: preset.knockback_x * 1.20,
+            knockback_y: 124.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.04,
+            ..preset
+        },
+        AttackAnimationStyle::WeaponProjRefRow(1) => KnifeAttackPreset {
+            damage: preset.damage * 0.94,
+            hitbox_size: Vec2::new(92.0, 46.0),
+            x_offset: 68.0,
+            ..preset
+        },
+        AttackAnimationStyle::WeaponProjRefRow(2) => KnifeAttackPreset {
+            damage: preset.damage * 1.08,
+            hitbox_size: Vec2::new(116.0, 58.0),
+            x_offset: 64.0,
+            slash_render_size: Vec2::new(112.0, 24.0),
+            knockback_y: preset.knockback_y + 18.0,
+            ..preset
+        },
+        AttackAnimationStyle::WeaponProjRefRow(3) => KnifeAttackPreset {
+            damage: preset.damage * 1.22,
+            cooldown: preset.cooldown.max(0.50),
+            hitbox_size: Vec2::new(158.0, 50.0),
+            x_offset: 106.0,
+            slash_render_size: Vec2::new(150.0, 22.0),
+            knockback_x: preset.knockback_x * 1.34,
+            ..preset
+        },
+        AttackAnimationStyle::WeaponProjRefRow(4) => KnifeAttackPreset {
+            damage: preset.damage * 1.16,
+            cooldown: preset.cooldown.max(0.54),
+            windup_secs: 0.15,
+            hitbox_size: Vec2::new(136.0, 78.0),
+            x_offset: 86.0,
+            y_offset: 30.0,
+            slash_render_size: Vec2::new(132.0, 32.0),
+            knockback_x: preset.knockback_x * 1.16,
+            knockback_y: preset.knockback_y + 44.0,
+            hit_stop_secs: preset.hit_stop_secs + 0.018,
+            ..preset
+        },
+        _ => preset,
     }
 }
 
@@ -697,10 +982,28 @@ fn overedge_animation_duration(style: AttackAnimationStyle) -> Option<f32> {
 
 fn reference_action_lock_floor(style: AttackAnimationStyle) -> Option<f32> {
     match style {
-        AttackAnimationStyle::GroundLightRow(_) => Some(0.22),
-        AttackAnimationStyle::AirComboRow(_) => Some(0.24),
-        AttackAnimationStyle::HeavyRefRow(_) => Some(0.36),
-        AttackAnimationStyle::UltimateRefRow(_) => Some(0.74),
+        AttackAnimationStyle::GroundLightRow(1) => Some(0.18),
+        AttackAnimationStyle::GroundLightRow(2) => Some(0.22),
+        AttackAnimationStyle::GroundLightRow(3) => Some(0.28),
+        AttackAnimationStyle::GroundLightRow(4) => Some(0.30),
+        AttackAnimationStyle::GroundLightRow(5) => Some(0.34),
+        AttackAnimationStyle::GroundLightRow(_) => Some(0.24),
+        AttackAnimationStyle::AirComboRow(1) => Some(0.22),
+        AttackAnimationStyle::AirComboRow(2) => Some(0.24),
+        AttackAnimationStyle::AirComboRow(3) => Some(0.30),
+        AttackAnimationStyle::AirComboRow(4) => Some(0.32),
+        AttackAnimationStyle::AirComboRow(5) => Some(0.38),
+        AttackAnimationStyle::AirComboRow(_) => Some(0.26),
+        AttackAnimationStyle::HeavyRefRow(1) => Some(0.36),
+        AttackAnimationStyle::HeavyRefRow(2) => Some(0.42),
+        AttackAnimationStyle::HeavyRefRow(3) => Some(0.46),
+        AttackAnimationStyle::HeavyRefRow(4) => Some(0.48),
+        AttackAnimationStyle::HeavyRefRow(5) => Some(0.58),
+        AttackAnimationStyle::HeavyRefRow(_) => Some(0.40),
+        AttackAnimationStyle::UltimateRefRow(1) => Some(0.78),
+        AttackAnimationStyle::UltimateRefRow(2) => Some(0.86),
+        AttackAnimationStyle::UltimateRefRow(3) => Some(0.96),
+        AttackAnimationStyle::UltimateRefRow(_) => Some(0.80),
         AttackAnimationStyle::MobilityRefRow(1) | AttackAnimationStyle::MobilityRefRow(2) => {
             Some(0.18)
         }
@@ -708,6 +1011,10 @@ fn reference_action_lock_floor(style: AttackAnimationStyle) -> Option<f32> {
         AttackAnimationStyle::MobilityRefRow(4) => Some(0.32),
         AttackAnimationStyle::NinjutsuRefRow(4) => Some(0.50),
         AttackAnimationStyle::NinjutsuRefRow(_) => Some(0.44),
+        AttackAnimationStyle::WeaponProjRefRow(1) => Some(0.32),
+        AttackAnimationStyle::WeaponProjRefRow(2) => Some(0.36),
+        AttackAnimationStyle::WeaponProjRefRow(3) => Some(0.42),
+        AttackAnimationStyle::WeaponProjRefRow(4) => Some(0.46),
         AttackAnimationStyle::WeaponProjRefRow(_) => Some(0.34),
         _ => None,
     }
@@ -858,32 +1165,86 @@ fn slash_feedback_for_style(
     facing: f32,
 ) -> KnifeSlashFeedback {
     let combo_weight = combo_step as f32;
-    let (camera_intensity, camera_duration, hit_stop_freeze_speed, visual_expand, visual_spin) =
-        match style {
-            AttackAnimationStyle::UltimateRef | AttackAnimationStyle::UltimateRefRow(_) => {
-                (9.0 + combo_weight * 0.7, 0.13, 0.06, 0.38, 0.46)
-            }
-            AttackAnimationStyle::HeavyRef
-            | AttackAnimationStyle::HeavyRefRow(_)
-            | AttackAnimationStyle::OveredgeHeavy => {
-                (5.4 + combo_weight * 0.9, 0.09, 0.09, 0.30, 0.34)
-            }
-            AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => {
-                (4.6 + combo_weight * 0.55, 0.075, 0.11, 0.26, 0.30)
-            }
-            AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => {
-                (3.4 + combo_weight * 0.45, 0.055, 0.14, 0.24, 0.24)
-            }
-            AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
-                (3.2 + combo_weight * 0.55, 0.06, 0.13, 0.22, 0.28)
-            }
-            _ => (2.2 + combo_weight * 0.8, 0.06, 0.14, 0.18, 0.18),
-        };
+    let (
+        mut camera_intensity,
+        mut camera_duration,
+        mut hit_stop_freeze_speed,
+        mut visual_expand,
+        mut visual_spin,
+    ): (f32, f32, f32, f32, f32) = match style {
+        AttackAnimationStyle::UltimateRef | AttackAnimationStyle::UltimateRefRow(_) => {
+            (9.0 + combo_weight * 0.7, 0.13, 0.06, 0.38, 0.46)
+        }
+        AttackAnimationStyle::HeavyRef
+        | AttackAnimationStyle::HeavyRefRow(_)
+        | AttackAnimationStyle::OveredgeHeavy => (5.4 + combo_weight * 0.9, 0.09, 0.09, 0.30, 0.34),
+        AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => {
+            (4.6 + combo_weight * 0.55, 0.075, 0.11, 0.26, 0.30)
+        }
+        AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => {
+            (3.4 + combo_weight * 0.45, 0.055, 0.14, 0.24, 0.24)
+        }
+        AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
+            (3.2 + combo_weight * 0.55, 0.06, 0.13, 0.22, 0.28)
+        }
+        _ => (2.2 + combo_weight * 0.8, 0.06, 0.14, 0.18, 0.18),
+    };
+
+    match style {
+        AttackAnimationStyle::GroundLightRow(1) => {
+            camera_intensity *= 0.75;
+            camera_duration *= 0.80;
+            visual_expand *= 0.85;
+        }
+        AttackAnimationStyle::GroundLightRow(3) | AttackAnimationStyle::AirComboRow(2) => {
+            camera_intensity *= 1.12;
+            visual_expand *= 1.15;
+            visual_spin *= 0.60;
+        }
+        AttackAnimationStyle::GroundLightRow(5)
+        | AttackAnimationStyle::AirComboRow(5)
+        | AttackAnimationStyle::WeaponProjRefRow(4) => {
+            camera_intensity *= 1.22;
+            camera_duration *= 1.12;
+            hit_stop_freeze_speed *= 0.86;
+            visual_expand *= 1.24;
+        }
+        AttackAnimationStyle::HeavyRefRow(1) => {
+            camera_intensity *= 0.86;
+            camera_duration *= 0.88;
+            visual_expand *= 0.92;
+        }
+        AttackAnimationStyle::HeavyRefRow(3) => {
+            camera_intensity *= 1.18;
+            visual_spin *= 0.55;
+        }
+        AttackAnimationStyle::HeavyRefRow(5) => {
+            camera_intensity *= 1.58;
+            camera_duration *= 1.24;
+            hit_stop_freeze_speed *= 0.74;
+            visual_expand *= 1.42;
+        }
+        AttackAnimationStyle::UltimateRefRow(3) => {
+            camera_intensity *= 1.32;
+            camera_duration *= 1.22;
+            hit_stop_freeze_speed *= 0.78;
+            visual_expand *= 1.34;
+        }
+        AttackAnimationStyle::MobilityRefRow(3) => {
+            camera_intensity *= 0.78;
+            hit_stop_freeze_speed *= 1.20;
+        }
+        AttackAnimationStyle::MobilityRefRow(4) => {
+            camera_intensity *= 1.10;
+            visual_expand *= 1.18;
+        }
+        _ => {}
+    }
 
     KnifeSlashFeedback {
         camera_intensity,
         camera_duration,
-        hit_stop_freeze_speed,
+        hit_stop_freeze_speed: hit_stop_freeze_speed.clamp(0.04, 1.0),
         base_alpha,
         visual_expand,
         visual_spin: visual_spin * if facing < 0.0 { -1.0 } else { 1.0 },
@@ -1157,15 +1518,64 @@ fn apply_attack_movement(
     let direction = if facing < 0.0 { -1.0 } else { 1.0 };
 
     match attack_style {
+        AttackAnimationStyle::GroundLightRow(1) => {
+            let target = direction * 92.0;
+            if velocity.x.signum() != direction || velocity.x.abs() < target.abs() {
+                velocity.x = target;
+            }
+        }
+        AttackAnimationStyle::GroundLightRow(2) => {
+            let target = direction * 118.0;
+            if velocity.x.signum() != direction || velocity.x.abs() < target.abs() {
+                velocity.x = target;
+            }
+            velocity.y = velocity.y.max(24.0);
+        }
+        AttackAnimationStyle::GroundLightRow(3) => {
+            velocity.x = velocity.x * 0.28 + direction * 172.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::GroundLightRow(4) => {
+            velocity.x = velocity.x * 0.34 + direction * 88.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::GroundLightRow(5) => {
+            velocity.x = velocity.x * 0.42 + direction * 110.0;
+            velocity.y = velocity.y.max(82.0);
+        }
         AttackAnimationStyle::GroundLightRow(_) | AttackAnimationStyle::GroundLight => {
             let target = direction * (96.0 + combo_step as f32 * 18.0);
             if velocity.x.signum() != direction || velocity.x.abs() < target.abs() {
                 velocity.x = target;
             }
         }
+        AttackAnimationStyle::HeavyRefRow(2) => {
+            velocity.x = velocity.x * 0.30 + direction * 42.0;
+            velocity.y = velocity.y.max(48.0);
+        }
+        AttackAnimationStyle::HeavyRefRow(3) => {
+            velocity.x = velocity.x * 0.28 + direction * 122.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::HeavyRefRow(4) => {
+            velocity.x *= 0.18;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::HeavyRefRow(5) => {
+            velocity.x = velocity.x * 0.16 + direction * 36.0;
+            velocity.y = velocity.y.max(28.0);
+        }
         AttackAnimationStyle::HeavyRefRow(_) | AttackAnimationStyle::HeavyRef => {
             velocity.x = velocity.x * 0.36 + direction * 54.0;
             velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::UltimateRefRow(2) => {
+            velocity.x = direction * 86.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::UltimateRefRow(3) => {
+            velocity.x *= 0.10;
+            velocity.y = velocity.y.max(44.0);
         }
         AttackAnimationStyle::UltimateRefRow(_) | AttackAnimationStyle::UltimateRef => {
             velocity.x *= 0.18;
@@ -1187,6 +1597,30 @@ fn apply_attack_movement(
             velocity.x = direction * 380.0;
             velocity.y = velocity.y.max(220.0);
         }
+        AttackAnimationStyle::AirComboRow(2) => {
+            velocity.x += direction * 126.0;
+            if !player_state.is_grounded {
+                velocity.y = velocity.y.max(82.0);
+            }
+        }
+        AttackAnimationStyle::AirComboRow(3) => {
+            velocity.x += direction * 58.0;
+            if !player_state.is_grounded {
+                velocity.y = velocity.y.min(-80.0);
+            }
+        }
+        AttackAnimationStyle::AirComboRow(4) => {
+            velocity.x += direction * 42.0;
+            if !player_state.is_grounded {
+                velocity.y = velocity.y.max(58.0);
+            }
+        }
+        AttackAnimationStyle::AirComboRow(5) => {
+            velocity.x += direction * 76.0;
+            if !player_state.is_grounded {
+                velocity.y = velocity.y.min(-160.0);
+            }
+        }
         AttackAnimationStyle::AirComboRow(_) | AttackAnimationStyle::AirCombo => {
             velocity.x += direction * 72.0;
             if !player_state.is_grounded {
@@ -1196,6 +1630,18 @@ fn apply_attack_movement(
         AttackAnimationStyle::NinjutsuRefRow(4) => {
             velocity.x *= 0.25;
             velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::WeaponProjRefRow(2) => {
+            velocity.x = velocity.x * 0.45 + direction * 72.0;
+            velocity.y = velocity.y.max(20.0);
+        }
+        AttackAnimationStyle::WeaponProjRefRow(3) => {
+            velocity.x = velocity.x * 0.35 + direction * 128.0;
+            velocity.y = velocity.y.max(0.0);
+        }
+        AttackAnimationStyle::WeaponProjRefRow(4) => {
+            velocity.x = velocity.x * 0.42 + direction * 96.0;
+            velocity.y = velocity.y.max(64.0);
         }
         AttackAnimationStyle::WeaponProjRefRow(_) | AttackAnimationStyle::WeaponProjRef => {
             velocity.x = velocity.x * 0.55 + direction * 88.0;
@@ -1209,6 +1655,24 @@ fn attack_momentum_for_style(style: AttackAnimationStyle, facing: f32) -> Option
     let direction = if facing < 0.0 { -1.0 } else { 1.0 };
 
     match style {
+        AttackAnimationStyle::GroundLightRow(3) => {
+            Some(AttackMomentum::new(direction, 135.0, 0.08, 2.8, 0.0, 0.0))
+        }
+        AttackAnimationStyle::GroundLightRow(5) => {
+            Some(AttackMomentum::new(direction, 90.0, 0.10, 2.6, 62.0, 0.07))
+        }
+        AttackAnimationStyle::HeavyRefRow(3) => {
+            Some(AttackMomentum::new(direction, 104.0, 0.10, 2.4, 0.0, 0.0))
+        }
+        AttackAnimationStyle::HeavyRefRow(5) => {
+            Some(AttackMomentum::new(direction, 36.0, 0.12, 3.2, 18.0, 0.05))
+        }
+        AttackAnimationStyle::UltimateRefRow(2) => {
+            Some(AttackMomentum::new(direction, 72.0, 0.12, 2.6, 0.0, 0.0))
+        }
+        AttackAnimationStyle::UltimateRefRow(3) => {
+            Some(AttackMomentum::new(direction, 0.0, 0.14, 4.0, 36.0, 0.06))
+        }
         AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(1) => {
             Some(AttackMomentum::new(direction, 340.0, 0.16, 1.8, 0.0, 0.0))
         }
@@ -1221,8 +1685,23 @@ fn attack_momentum_for_style(style: AttackAnimationStyle, facing: f32) -> Option
         AttackAnimationStyle::MobilityRefRow(4) => Some(AttackMomentum::new(
             direction, 330.0, 0.24, 1.6, 178.0, 0.14,
         )),
+        AttackAnimationStyle::AirComboRow(2) => {
+            Some(AttackMomentum::new(direction, 122.0, 0.09, 2.4, 58.0, 0.05))
+        }
+        AttackAnimationStyle::AirComboRow(3) => {
+            Some(AttackMomentum::new(direction, 48.0, 0.10, 2.8, 0.0, 0.0))
+        }
+        AttackAnimationStyle::AirComboRow(5) => {
+            Some(AttackMomentum::new(direction, 68.0, 0.12, 2.8, 0.0, 0.0))
+        }
         AttackAnimationStyle::AirCombo | AttackAnimationStyle::AirComboRow(_) => {
             Some(AttackMomentum::new(direction, 90.0, 0.08, 2.5, 84.0, 0.07))
+        }
+        AttackAnimationStyle::WeaponProjRefRow(3) => {
+            Some(AttackMomentum::new(direction, 118.0, 0.10, 2.6, 0.0, 0.0))
+        }
+        AttackAnimationStyle::WeaponProjRefRow(4) => {
+            Some(AttackMomentum::new(direction, 84.0, 0.12, 2.8, 48.0, 0.06))
         }
         AttackAnimationStyle::WeaponProjRef | AttackAnimationStyle::WeaponProjRefRow(_) => {
             Some(AttackMomentum::new(direction, 78.0, 0.08, 3.0, 0.0, 0.0))

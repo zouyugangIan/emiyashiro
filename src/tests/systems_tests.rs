@@ -2993,6 +2993,201 @@ mod tests {
         );
     }
 
+    #[derive(Debug)]
+    struct ReferenceSlashSnapshot {
+        style: AttackAnimationStyle,
+        player_velocity: Velocity,
+        damage: f32,
+        hitbox_size: Vec2,
+        knockback_x: f32,
+        knockback_y: f32,
+        feedback: crate::systems::combat::KnifeSlashFeedback,
+    }
+
+    fn trigger_reference_slash(
+        keys: &[KeyCode],
+        player_state: PlayerState,
+    ) -> ReferenceSlashSnapshot {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .insert_resource(ButtonInput::<KeyCode>::default())
+            .add_systems(
+                Update,
+                (
+                    crate::systems::combat::player_knife_attack,
+                    crate::systems::combat::resolve_pending_knife_attacks,
+                )
+                    .chain(),
+            );
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
+                Velocity::default(),
+                player_state,
+                FacingDirection::Right,
+                AttackAnimationState::default(),
+                ShroudState::default(),
+            ))
+            .id();
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            for key in keys {
+                keyboard.press(*key);
+            }
+        }
+        app.update();
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            for key in keys {
+                keyboard.release(*key);
+            }
+            keyboard.clear();
+        }
+
+        for _ in 0..40 {
+            app.update();
+        }
+
+        let style = app
+            .world()
+            .entity(player)
+            .get::<AttackAnimationState>()
+            .expect("attack animation state")
+            .style;
+        let player_velocity = app
+            .world()
+            .entity(player)
+            .get::<Velocity>()
+            .expect("player velocity")
+            .clone();
+        let mut query = app.world_mut().query::<(
+            &crate::systems::combat::KnifeSlash,
+            &crate::systems::collision::CollisionBox,
+            &crate::systems::combat::KnifeSlashFeedback,
+        )>();
+        let (slash, collision, feedback) = query
+            .iter(app.world())
+            .next()
+            .expect("reference slash should spawn after windup");
+
+        ReferenceSlashSnapshot {
+            style,
+            player_velocity,
+            damage: slash.damage,
+            hitbox_size: collision.size,
+            knockback_x: slash.knockback_x,
+            knockback_y: slash.knockback_y,
+            feedback: *feedback,
+        }
+    }
+
+    #[test]
+    fn test_ground_light_rows_have_distinct_runtime_attack_shapes() {
+        let opener = trigger_reference_slash(&[KeyCode::KeyY], PlayerState::default());
+        let thrust = trigger_reference_slash(&[KeyCode::KeyI], PlayerState::default());
+        let launcher = trigger_reference_slash(&[KeyCode::KeyP], PlayerState::default());
+
+        assert_eq!(opener.style, AttackAnimationStyle::GroundLightRow(1));
+        assert_eq!(thrust.style, AttackAnimationStyle::GroundLightRow(3));
+        assert_eq!(launcher.style, AttackAnimationStyle::GroundLightRow(5));
+        assert!(
+            thrust.hitbox_size.x > opener.hitbox_size.x + 45.0,
+            "row 3 thrust should reach much farther than the jab opener"
+        );
+        assert!(
+            launcher.hitbox_size.y > opener.hitbox_size.y * 2.0,
+            "row 5 launcher should cover vertical space instead of reusing jab bounds"
+        );
+        assert!(
+            opener.damage < thrust.damage && thrust.damage < launcher.damage,
+            "ground rows should escalate damage across jab, thrust, and launcher"
+        );
+        assert!(
+            thrust.player_velocity.x > opener.player_velocity.x + 60.0,
+            "row 3 thrust should commit farther forward than row 1"
+        );
+        assert!(
+            launcher.knockback_y > thrust.knockback_y + 50.0,
+            "row 5 should be a real launcher in gameplay data"
+        );
+    }
+
+    #[test]
+    fn test_heavy_rows_scale_feedback_and_hitboxes_by_row() {
+        let shoulder =
+            trigger_reference_slash(&[KeyCode::ShiftLeft, KeyCode::KeyY], PlayerState::default());
+        let eruption =
+            trigger_reference_slash(&[KeyCode::ShiftLeft, KeyCode::KeyP], PlayerState::default());
+
+        assert_eq!(shoulder.style, AttackAnimationStyle::HeavyRefRow(1));
+        assert_eq!(eruption.style, AttackAnimationStyle::HeavyRefRow(5));
+        assert!(
+            eruption.damage > shoulder.damage * 1.35,
+            "heavy row 5 should hit materially harder than the shoulder cleave"
+        );
+        assert!(
+            eruption.hitbox_size.x > shoulder.hitbox_size.x + 70.0
+                && eruption.hitbox_size.y > shoulder.hitbox_size.y + 60.0,
+            "heavy row 5 should use eruption-scale bounds"
+        );
+        assert!(
+            eruption.knockback_x > shoulder.knockback_x * 1.35,
+            "heavy row 5 should carry eruption-scale horizontal force"
+        );
+        assert!(
+            eruption.feedback.camera_intensity > shoulder.feedback.camera_intensity + 3.0,
+            "heavy row 5 should produce stronger camera feedback than row 1"
+        );
+        assert!(
+            eruption.feedback.hit_stop_freeze_speed < shoulder.feedback.hit_stop_freeze_speed,
+            "heavy row 5 should freeze harder on impact than row 1"
+        );
+    }
+
+    #[test]
+    fn test_air_combo_rows_have_distinct_motion_roles() {
+        let thrust = trigger_reference_slash(
+            &[KeyCode::KeyU],
+            PlayerState {
+                is_grounded: false,
+                is_crouching: false,
+            },
+        );
+        let meteor = trigger_reference_slash(
+            &[KeyCode::KeyP],
+            PlayerState {
+                is_grounded: false,
+                is_crouching: false,
+            },
+        );
+
+        assert_eq!(thrust.style, AttackAnimationStyle::AirComboRow(2));
+        assert_eq!(meteor.style, AttackAnimationStyle::AirComboRow(5));
+        assert!(
+            thrust.hitbox_size.x > meteor.hitbox_size.x,
+            "air row 2 should be the forward poke"
+        );
+        assert!(
+            meteor.hitbox_size.y > thrust.hitbox_size.y * 2.0,
+            "air row 5 should become a vertical meteor hitbox"
+        );
+        assert!(
+            thrust.player_velocity.y > 0.0 && meteor.player_velocity.y < -120.0,
+            "air row 2 should preserve hang time while row 5 commits downward"
+        );
+        assert!(
+            meteor.knockback_y < thrust.knockback_y,
+            "meteor row should not reuse upward air knockback"
+        );
+    }
+
     #[test]
     fn test_heavy_slash_feedback_is_stronger_than_light() {
         fn spawn_feedback_for_key(key: KeyCode) -> crate::systems::combat::KnifeSlashFeedback {
