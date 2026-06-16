@@ -71,6 +71,18 @@ mod tests {
     }
 
     #[test]
+    fn test_hf_shirou_crouch_uses_settle_pose_frames() {
+        let profile = load_profile("hf_shirou.ron");
+        let crouch_clip = profile
+            .animations
+            .get(&AnimationType::Crouching)
+            .expect("Crouching clip should exist");
+
+        assert_eq!(crouch_clip.frames, vec![6, 7]);
+        assert_eq!(crouch_clip.playback_mode(), PlaybackMode::Once);
+    }
+
+    #[test]
     fn test_hf_shirou_has_attacking_clip() {
         let profile = load_profile("hf_shirou.ron");
         let attack_clip = profile

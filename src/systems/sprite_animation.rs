@@ -400,10 +400,19 @@ fn apply_animation_sheet(
     else {
         return;
     };
-    sprite.image = target_texture.clone();
+    let texture_changed = sprite.image != target_texture.clone();
+    if texture_changed {
+        sprite.image = target_texture.clone();
+    }
 
     if let Some(ref mut atlas) = sprite.texture_atlas {
-        atlas.layout = target_layout.clone();
+        let layout_changed = atlas.layout != target_layout.clone();
+        if layout_changed {
+            atlas.layout = target_layout.clone();
+        }
+        if texture_changed || layout_changed {
+            atlas.index = 0;
+        }
     } else {
         sprite.texture_atlas = Some(TextureAtlas {
             layout: target_layout.clone(),
@@ -919,6 +928,68 @@ mod tests {
         assert_eq!(sprite.image, sheets.core_texture);
         let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
         assert_eq!(atlas.layout, sheets.core_layout);
+    }
+
+    #[test]
+    fn test_sheet_switch_resets_stale_atlas_index() {
+        let sheets = distinct_test_sheets();
+        let mut sprite = Sprite {
+            image: sheets
+                .reference_ground_light_texture
+                .clone()
+                .expect("old reference texture"),
+            texture_atlas: Some(TextureAtlas {
+                layout: sheets
+                    .reference_ground_light_layout
+                    .clone()
+                    .expect("old reference layout"),
+                index: 33,
+            }),
+            ..default()
+        };
+
+        apply_animation_sheet(
+            &mut sprite,
+            Some(&sheets),
+            &AnimationType::Running,
+            AttackAnimationStyle::GroundLightRow(5),
+        );
+
+        let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
+        assert_eq!(sprite.image, sheets.running_texture);
+        assert_eq!(atlas.layout, sheets.running_layout);
+        assert_eq!(
+            atlas.index, 0,
+            "switching sheets must clear stale multi-row attack indices"
+        );
+    }
+
+    #[test]
+    fn test_same_sheet_switch_preserves_current_atlas_index() {
+        let sheets = distinct_test_sheets();
+        let mut sprite = Sprite {
+            image: sheets.running_texture.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: sheets.running_layout.clone(),
+                index: 2,
+            }),
+            ..default()
+        };
+
+        apply_animation_sheet(
+            &mut sprite,
+            Some(&sheets),
+            &AnimationType::Running,
+            AttackAnimationStyle::Normal,
+        );
+
+        let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
+        assert_eq!(sprite.image, sheets.running_texture);
+        assert_eq!(atlas.layout, sheets.running_layout);
+        assert_eq!(
+            atlas.index, 2,
+            "reapplying the active sheet must not rewind a running animation"
+        );
     }
 
     #[test]

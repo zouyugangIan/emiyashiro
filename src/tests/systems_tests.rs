@@ -37,6 +37,10 @@ mod tests {
         Handle::Uuid(uuid::Uuid::from_u128(id), PhantomData)
     }
 
+    fn test_layout_handle(id: u128) -> Handle<TextureAtlasLayout> {
+        Handle::Uuid(uuid::Uuid::from_u128(id), PhantomData)
+    }
+
     fn create_test_game_assets(
         volume_icon: Handle<Image>,
         volume_muted_icon: Handle<Image>,
@@ -151,6 +155,42 @@ mod tests {
             reference_advance_layout: None,
             reference_advance_frame_count: 0,
         }
+    }
+
+    fn create_hf_shirou_atlas_test_assets() -> GameAssets {
+        let mut assets =
+            create_test_game_assets(test_image_handle(0xF001), test_image_handle(0xF002));
+
+        assets.shirou_spritesheet = Some(test_image_handle(0xC001));
+        assets.shirou_spritesheet_run = Some(test_image_handle(0xC002));
+        assets.shirou_spritesheet_attack = Some(test_image_handle(0xC003));
+        assets.shirou_spritesheet_overedge_light_attack = Some(test_image_handle(0xC004));
+        assets.shirou_spritesheet_overedge_heavy_attack = Some(test_image_handle(0xC005));
+        assets.shirou_atlas = Some(test_layout_handle(0xA001));
+        assets.shirou_atlas_run = Some(test_layout_handle(0xA002));
+        assets.shirou_atlas_attack = Some(test_layout_handle(0xA003));
+        assets.shirou_atlas_overedge_light_attack = Some(test_layout_handle(0xA004));
+        assets.shirou_atlas_overedge_heavy_attack = Some(test_layout_handle(0xA005));
+
+        assets.shirou_ref_ground_light = Some(test_image_handle(0xD001));
+        assets.shirou_ref_air_combo = Some(test_image_handle(0xD002));
+        assets.shirou_ref_heavy = Some(test_image_handle(0xD003));
+        assets.shirou_ref_ultimate = Some(test_image_handle(0xD004));
+        assets.shirou_ref_mobility = Some(test_image_handle(0xD005));
+        assets.shirou_ref_ninjutsu = Some(test_image_handle(0xD006));
+        assets.shirou_ref_weapon_proj = Some(test_image_handle(0xD007));
+        assets.shirou_ref_ground_light_rows = (0..5)
+            .map(|index| test_image_handle(0xE100 + index))
+            .collect();
+        assets.shirou_atlas_ref_ground_light = Some(test_layout_handle(0xB001));
+        assets.shirou_atlas_ref_air_combo = Some(test_layout_handle(0xB002));
+        assets.shirou_atlas_ref_heavy = Some(test_layout_handle(0xB003));
+        assets.shirou_atlas_ref_ultimate = Some(test_layout_handle(0xB004));
+        assets.shirou_atlas_ref_mobility = Some(test_layout_handle(0xB005));
+        assets.shirou_atlas_ref_ninjutsu = Some(test_layout_handle(0xB006));
+        assets.shirou_atlas_ref_weapon_proj = Some(test_layout_handle(0xB007));
+
+        assets
     }
 
     #[test]
@@ -1059,6 +1099,47 @@ mod tests {
         app.update();
         let state = app.world().resource::<State<GameState>>();
         assert_eq!(*state.get(), GameState::Playing);
+    }
+
+    #[test]
+    fn test_setup_game_spawns_hf_shirou_atlas_player_not_frame_fallback() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<CharacterSelection>()
+            .insert_resource(create_hf_shirou_atlas_test_assets())
+            .insert_resource(crate::components::animation_data::AnimationDataMap::default())
+            .init_resource::<crate::systems::ui::LoadedGameState>()
+            .add_systems(Update, game::setup_game);
+
+        app.update();
+
+        let mut query = app.world_mut().query_filtered::<(
+            &Sprite,
+            &SpriteAnimationSheets,
+            &crate::systems::sprite_animation::SpriteAnimation,
+            Option<&crate::systems::frame_animation::FrameAnimation>,
+        ), With<Player>>();
+        let players = query.iter(app.world()).collect::<Vec<_>>();
+        assert_eq!(players.len(), 1);
+
+        let (sprite, sheets, animation, frame_animation) = players[0];
+        assert_eq!(sprite.image, test_image_handle(0xC001));
+        let atlas = sprite.texture_atlas.as_ref().expect("player atlas");
+        assert_eq!(atlas.layout, test_layout_handle(0xA001));
+        assert_eq!(atlas.index, 0);
+        assert_eq!(
+            sprite.custom_size,
+            Some(crate::systems::game::PLAYER_RENDER_SIZE)
+        );
+        assert_eq!(sheets.core_texture, test_image_handle(0xC001));
+        assert_eq!(sheets.running_texture, test_image_handle(0xC002));
+        assert_eq!(sheets.attacking_texture, test_image_handle(0xC003));
+        assert_eq!(sheets.reference_ground_light_row_textures.len(), 5);
+        assert_eq!(animation.current_animation, AnimationType::Idle);
+        assert!(
+            frame_animation.is_none(),
+            "HF Shirou atlas player must not be downgraded to legacy frame animation"
+        );
     }
 
     #[test]
@@ -2287,7 +2368,7 @@ mod tests {
             .entity(player)
             .get::<AttackAnimationState>()
             .expect("first attack animation state");
-        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeLight1);
+        assert_eq!(attack_state.style, AttackAnimationStyle::GroundLightRow(3));
 
         advance_past_light_cooldown(&mut app);
         press_light(&mut app);
@@ -2296,7 +2377,7 @@ mod tests {
             .entity(player)
             .get::<AttackAnimationState>()
             .expect("second attack animation state");
-        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeLight2);
+        assert_eq!(attack_state.style, AttackAnimationStyle::GroundLightRow(4));
 
         advance_past_light_cooldown(&mut app);
         press_light(&mut app);
@@ -2305,16 +2386,17 @@ mod tests {
             .entity(player)
             .get::<AttackAnimationState>()
             .expect("third attack animation state");
-        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeLight3);
+        assert_eq!(attack_state.style, AttackAnimationStyle::GroundLightRow(5));
         assert!(
             attack_state.remaining
-                >= 3.0 * crate::asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS,
-            "each J press should play one complete punch segment"
+                >= crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS as f32
+                    * crate::asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS,
+            "each J press should play one complete generated ground-light row"
         );
     }
 
     #[test]
-    fn test_overedge_k_attack_uses_heavy_animation_style() {
+    fn test_overedge_k_attack_uses_generated_heavy_module_style() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
@@ -2348,18 +2430,18 @@ mod tests {
             .entity(player)
             .get::<AttackAnimationState>()
             .expect("attack animation state");
-        assert_eq!(attack_state.style, AttackAnimationStyle::OveredgeHeavy);
+        assert_eq!(attack_state.style, AttackAnimationStyle::HeavyRefRow(3));
         assert!(
             attack_state.remaining
-                >= crate::asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT as f32
+                >= crate::asset_paths::REFERENCE_BOARD_HEAVY_COLS as f32
                     * crate::asset_paths::HF_SHIROU_OVEREDGE_ATTACK_FRAME_DURATION_SECS
                     - 0.001,
-            "K should keep the 2+3 overedge animation active long enough to play"
+            "K should keep the generated heavy module active long enough to play"
         );
     }
 
     #[test]
-    fn test_overedge_attack_inputs_stay_on_overedge_body_styles() {
+    fn test_overedge_attack_inputs_use_generated_reference_modules() {
         fn trigger_overedge_style(keys: &[KeyCode]) -> AttackAnimationStyle {
             let mut app = App::new();
             app.add_plugins(MinimalPlugins)
@@ -2403,12 +2485,12 @@ mod tests {
         let skill_light = trigger_overedge_style(&[KeyCode::KeyX]);
         let row_heavy = trigger_overedge_style(&[KeyCode::ShiftLeft, KeyCode::KeyI]);
 
-        assert_eq!(row_light, AttackAnimationStyle::OveredgeLight1);
-        assert_eq!(skill_light, AttackAnimationStyle::OveredgeLight1);
-        assert_eq!(row_heavy, AttackAnimationStyle::OveredgeHeavy);
-        assert!(row_light.uses_overedge_sheet());
-        assert!(skill_light.uses_overedge_sheet());
-        assert!(row_heavy.uses_overedge_sheet());
+        assert_eq!(row_light, AttackAnimationStyle::GroundLightRow(1));
+        assert_eq!(skill_light, AttackAnimationStyle::NinjutsuRefRow(2));
+        assert_eq!(row_heavy, AttackAnimationStyle::HeavyRefRow(3));
+        assert!(row_light.uses_reference_sheet());
+        assert!(skill_light.uses_reference_sheet());
+        assert!(row_heavy.uses_reference_sheet());
     }
 
     #[test]
@@ -3326,7 +3408,7 @@ mod tests {
     }
 
     #[test]
-    fn test_clone_and_substitution_rows_spawn_afterimages_not_extra_players() {
+    fn test_clone_and_substitution_rows_do_not_spawn_fallback_vfx() {
         fn trigger_special_effect(
             key: KeyCode,
             shift: bool,
@@ -3369,10 +3451,10 @@ mod tests {
                 .get::<AttackAnimationState>()
                 .expect("attack animation state")
                 .style;
-            let afterimage_count = {
+            let fallback_vfx_count = {
                 let mut query = app
                     .world_mut()
-                    .query::<&crate::systems::combat::AttackAfterimage>();
+                    .query::<&crate::systems::combat::AttackReferenceActionVfx>();
                 query.iter(app.world()).count()
             };
             let player_count = {
@@ -3380,10 +3462,10 @@ mod tests {
                 query.iter(app.world()).count()
             };
 
-            (style, afterimage_count, player_count)
+            (style, fallback_vfx_count, player_count)
         }
 
-        let (clone_style, clone_afterimages, clone_players) =
+        let (clone_style, clone_vfx, clone_players) =
             trigger_special_effect(KeyCode::KeyX, true, PlayerState::default());
         assert_eq!(
             clone_style,
@@ -3391,15 +3473,15 @@ mod tests {
             "player body should not play the generated multi-body shadow-clone row"
         );
         assert_eq!(
-            clone_afterimages, 4,
-            "shadow clone action should be represented by short-lived VFX entities"
+            clone_vfx, 0,
+            "missing sprite sheets must not fall back to fake rectangle VFX"
         );
         assert_eq!(
             clone_players, 1,
             "clone VFX must not duplicate the player entity"
         );
 
-        let (sub_style, sub_afterimages, sub_players) = trigger_special_effect(
+        let (sub_style, sub_vfx, sub_players) = trigger_special_effect(
             KeyCode::KeyI,
             false,
             PlayerState {
@@ -3412,12 +3494,15 @@ mod tests {
             AttackAnimationStyle::MobilityRefRow(1),
             "player body should not play the generated multi-body substitution row"
         );
-        assert_eq!(sub_afterimages, 3);
+        assert_eq!(
+            sub_vfx, 0,
+            "missing sprite sheets must not fall back to fake rectangle VFX"
+        );
         assert_eq!(sub_players, 1);
     }
 
     #[test]
-    fn test_attack_afterimages_are_abstract_streaks_not_player_clones() {
+    fn test_reference_action_vfx_uses_generated_atlas_not_fallback_rectangles() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
@@ -3427,6 +3512,7 @@ mod tests {
             .add_systems(Update, crate::systems::combat::player_knife_attack);
 
         let player_image = test_image_handle(0xC10E);
+        let reference_image = test_image_handle(0xA11CE);
         app.world_mut().spawn((
             Player,
             Transform::from_xyz(0.0, GameConfig::GROUND_LEVEL, 0.0),
@@ -3443,6 +3529,7 @@ mod tests {
             FacingDirection::Right,
             AttackAnimationState::default(),
             ShroudState::default(),
+            create_test_sprite_animation_sheets(),
         ));
 
         {
@@ -3452,35 +3539,36 @@ mod tests {
         }
         app.update();
 
-        let afterimage_sprites = {
+        let reference_vfx_sprites = {
             let mut query = app
                 .world_mut()
-                .query_filtered::<&Sprite, With<crate::systems::combat::AttackAfterimage>>();
+                .query_filtered::<&Sprite, With<crate::systems::combat::AttackReferenceActionVfx>>(
+                );
             query.iter(app.world()).cloned().collect::<Vec<_>>()
         };
-        assert_eq!(afterimage_sprites.len(), 4);
+        assert_eq!(reference_vfx_sprites.len(), 1);
         assert!(
-            afterimage_sprites
+            reference_vfx_sprites
                 .iter()
-                .all(|sprite| sprite.texture_atlas.is_none()),
-            "afterimages should be abstract streak sprites, not atlas-based player clones"
+                .all(|sprite| sprite.texture_atlas.is_some()),
+            "reference action VFX must replay the generated attack atlas"
         );
         assert!(
-            afterimage_sprites
-                .iter()
-                .all(|sprite| sprite.custom_size.is_some()),
-            "afterimages should render as controlled streak shapes"
+            reference_vfx_sprites.iter().all(|sprite| sprite
+                .custom_size
+                .is_some_and(|size| size.x >= 156.0 && size.y >= 144.0)),
+            "reference action VFX should render as a full generated module frame"
         );
         assert!(
-            afterimage_sprites
+            reference_vfx_sprites
                 .iter()
-                .all(|sprite| sprite.image != player_image),
-            "afterimages should not reuse the player body texture"
+                .all(|sprite| sprite.image == reference_image && sprite.image != player_image),
+            "reference action VFX should use the generated module texture, not the player body"
         );
     }
 
     #[test]
-    fn test_generated_split_rows_spawn_abstract_vfx_not_extra_players() {
+    fn test_generated_split_rows_spawn_atlas_vfx_not_extra_players() {
         fn trigger_reference_vfx(
             key: KeyCode,
             shift: bool,
@@ -3564,12 +3652,12 @@ mod tests {
         assert_eq!(sub_vfx, 1);
         assert_eq!(sub_players, 1);
         assert_eq!(
-            sub_atlas_count, 0,
-            "substitution VFX should be abstract and must not replay a full character atlas row"
+            sub_atlas_count, 1,
+            "substitution VFX should replay the generated mobility atlas row"
         );
         assert!(
-            sub_size.x <= 180.0 && sub_size.y <= 40.0,
-            "substitution VFX should stay in slash/streak scale, not full-body scale"
+            sub_size.x >= 156.0 && sub_size.y >= 144.0,
+            "substitution VFX should render a complete generated module frame"
         );
 
         let (wall_style, wall_vfx, wall_players, wall_atlas_count, wall_size) =
@@ -3585,12 +3673,12 @@ mod tests {
         assert_eq!(wall_vfx, 1);
         assert_eq!(wall_players, 1);
         assert_eq!(
-            wall_atlas_count, 0,
-            "wall movement VFX should be abstract and must not replay a full character atlas row"
+            wall_atlas_count, 1,
+            "wall movement VFX should replay the generated mobility atlas row"
         );
         assert!(
-            wall_size.x <= 180.0 && wall_size.y <= 40.0,
-            "wall movement VFX should stay in slash/streak scale, not full-body scale"
+            wall_size.x >= 156.0 && wall_size.y >= 144.0,
+            "wall movement VFX should render a complete generated module frame"
         );
 
         let (clone_style, clone_vfx, clone_players, clone_atlas_count, clone_size) =
@@ -3599,12 +3687,12 @@ mod tests {
         assert_eq!(clone_vfx, 1);
         assert_eq!(clone_players, 1);
         assert_eq!(
-            clone_atlas_count, 0,
-            "shadow clone VFX should be abstract and must not replay a full character atlas row"
+            clone_atlas_count, 1,
+            "shadow clone VFX should replay the generated ninjutsu atlas row"
         );
         assert!(
-            clone_size.x <= 180.0 && clone_size.y <= 40.0,
-            "shadow clone VFX should stay in slash/streak scale, not full-body scale"
+            clone_size.x >= 156.0 && clone_size.y >= 144.0,
+            "shadow clone VFX should render a complete generated module frame"
         );
     }
 
@@ -3661,7 +3749,6 @@ mod tests {
                     crate::systems::combat::resolve_pending_knife_attacks,
                     crate::systems::player::player_movement,
                     crate::systems::player::player_jump,
-                    crate::systems::combat::animate_attack_afterimages,
                     crate::systems::combat::animate_attack_reference_action_vfx,
                     crate::systems::combat::cleanup_expired_knife_slashes,
                 )
@@ -3734,12 +3821,6 @@ mod tests {
             let mut query = app.world_mut().query::<&Player>();
             query.iter(app.world()).count()
         };
-        let afterimages = {
-            let mut query = app
-                .world_mut()
-                .query::<&crate::systems::combat::AttackAfterimage>();
-            query.iter(app.world()).count()
-        };
         let reference_vfx = {
             let mut query = app
                 .world_mut()
@@ -3758,10 +3839,6 @@ mod tests {
             "rapid inputs must not duplicate the player"
         );
         assert_eq!(
-            afterimages, 0,
-            "short-lived afterimages should clean up after pressure"
-        );
-        assert_eq!(
             reference_vfx, 0,
             "reference action VFX should clean up after pressure"
         );
@@ -3776,7 +3853,7 @@ mod tests {
     }
 
     #[test]
-    fn test_attack_afterimages_expire_quickly() {
+    fn test_reference_action_vfx_expires_quickly() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
@@ -3787,7 +3864,7 @@ mod tests {
                 Update,
                 (
                     crate::systems::combat::player_knife_attack,
-                    crate::systems::combat::animate_attack_afterimages,
+                    crate::systems::combat::animate_attack_reference_action_vfx,
                 )
                     .chain(),
             );
@@ -3801,6 +3878,7 @@ mod tests {
             FacingDirection::Right,
             AttackAnimationState::default(),
             ShroudState::default(),
+            create_test_sprite_animation_sheets(),
         ));
 
         {
@@ -3810,13 +3888,13 @@ mod tests {
         }
         app.update();
 
-        let initial_afterimages = {
+        let initial_reference_vfx = {
             let mut query = app
                 .world_mut()
-                .query::<&crate::systems::combat::AttackAfterimage>();
+                .query::<&crate::systems::combat::AttackReferenceActionVfx>();
             query.iter(app.world()).count()
         };
-        assert_eq!(initial_afterimages, 4);
+        assert_eq!(initial_reference_vfx, 1);
 
         {
             let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
@@ -3824,19 +3902,19 @@ mod tests {
             keyboard.release(KeyCode::KeyX);
             keyboard.clear();
         }
-        for _ in 0..24 {
+        for _ in 0..42 {
             app.update();
         }
 
-        let remaining_afterimages = {
+        let remaining_reference_vfx = {
             let mut query = app
                 .world_mut()
-                .query::<&crate::systems::combat::AttackAfterimage>();
+                .query::<&crate::systems::combat::AttackReferenceActionVfx>();
             query.iter(app.world()).count()
         };
         assert_eq!(
-            remaining_afterimages, 0,
-            "afterimages should fade before they can be mistaken for extra player bodies"
+            remaining_reference_vfx, 0,
+            "reference action VFX should fade before it can be mistaken for another player"
         );
     }
 

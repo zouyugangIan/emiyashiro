@@ -28,10 +28,10 @@
         playback_mode: "Once",
     ),
     "Crouching": (
-        // keep a stable crouch frame
-        frames: [7, 7],
-        frame_duration: 0.2,
-        playback_mode: "Loop",
+        // core sheet row 1 crouch settle: enter -> guarded crouch
+        frames: [6, 7],
+        frame_duration: 0.11,
+        playback_mode: "Once",
     ),
     "Landing": (
         // short landing settle

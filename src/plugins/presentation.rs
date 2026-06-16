@@ -36,7 +36,6 @@ impl Plugin for PresentationPlugin {
                 systems::enemy::update_enemy_telegraph_visuals,
                 systems::animation::trigger_audio_effects,
                 systems::combat::animate_projectile_visuals,
-                systems::combat::animate_attack_afterimages,
                 systems::combat::animate_attack_reference_action_vfx,
                 systems::attack_modules::update_reference_attack_module_previews,
                 systems::frame_animation::update_frame_animations,
