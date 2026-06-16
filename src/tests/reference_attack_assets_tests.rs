@@ -66,6 +66,19 @@ fn expected_sheet(id: &str) -> (&'static str, u32, u32) {
     }
 }
 
+fn expected_row_sheets(id: &str) -> &'static [&'static str] {
+    match id {
+        "ground_light" => &asset_paths::IMAGE_HF_SHIROU_ATTACK_GROUND_LIGHT_ROW_SHEETS,
+        "heavy"
+        | "air_combo"
+        | "mobility"
+        | "ninjutsu_projectiles"
+        | "ultimate"
+        | "weapon_projection" => &[],
+        other => panic!("unexpected attack sheet id: {other}"),
+    }
+}
+
 fn nonempty_field<'a>(row: &'a Value, name: &str) -> &'a str {
     row.get(name)
         .and_then(Value::as_str)
@@ -115,6 +128,7 @@ fn hf_shirou_attack_row_plan_matches_runtime_atlases() {
             .expect("asset_path");
         let source = sheet.get("source").and_then(Value::as_str).expect("source");
         let rows = sheet.get("rows").and_then(Value::as_array).expect("rows");
+        let row_sheets = expected_row_sheets(id);
 
         assert_eq!(
             asset_path, expected_asset_path,
@@ -138,6 +152,10 @@ fn hf_shirou_attack_row_plan_matches_runtime_atlases() {
             rows.len() as u32 * cell_height,
             "{id} height matches grid"
         );
+        assert!(
+            row_sheets.is_empty() || row_sheets.len() == rows.len(),
+            "{id} row sheets must either be omitted or cover every planned row"
+        );
 
         for (index, row) in rows.iter().enumerate() {
             assert_eq!(
@@ -145,6 +163,15 @@ fn hf_shirou_attack_row_plan_matches_runtime_atlases() {
                 Some(index as u64 + 1),
                 "{id} row numbers must stay sequential"
             );
+            if let Some(row_sheet) = row_sheets.get(index) {
+                let row_sheet_path = root.join("assets").join(row_sheet);
+                assert_eq!(
+                    png_dimensions(&row_sheet_path),
+                    (columns * cell_width, cell_height),
+                    "{id} row {} runtime PNG is a single-row atlas",
+                    index + 1
+                );
+            }
             nonempty_field(row, "name");
             nonempty_field(row, "primary_input");
             nonempty_field(row, "runtime_style");

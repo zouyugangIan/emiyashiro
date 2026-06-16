@@ -337,6 +337,13 @@ pub struct GameAssets {
     pub shirou_ref_ninjutsu: Option<Handle<Image>>,
     pub shirou_ref_weapon_proj: Option<Handle<Image>>,
     pub shirou_ref_advance: Option<Handle<Image>>,
+    pub shirou_ref_ground_light_rows: Vec<Handle<Image>>,
+    pub shirou_ref_air_combo_rows: Vec<Handle<Image>>,
+    pub shirou_ref_heavy_rows: Vec<Handle<Image>>,
+    pub shirou_ref_ultimate_rows: Vec<Handle<Image>>,
+    pub shirou_ref_mobility_rows: Vec<Handle<Image>>,
+    pub shirou_ref_ninjutsu_rows: Vec<Handle<Image>>,
+    pub shirou_ref_weapon_proj_rows: Vec<Handle<Image>>,
     pub shirou_atlas_ref_ground_light: Option<Handle<TextureAtlasLayout>>,
     pub shirou_atlas_ref_air_combo: Option<Handle<TextureAtlasLayout>>,
     pub shirou_atlas_ref_heavy: Option<Handle<TextureAtlasLayout>>,
@@ -357,6 +364,26 @@ pub struct GameAssets {
 }
 
 impl GameAssets {
+    fn reference_row_frame_count(
+        row_textures: &[Handle<Image>],
+        source_board: &Option<Handle<Image>>,
+        layout: &Option<Handle<TextureAtlasLayout>>,
+        columns: u32,
+        rows: u32,
+    ) -> usize {
+        if layout.is_none() {
+            return 0;
+        }
+
+        if !row_textures.is_empty() {
+            columns as usize
+        } else if source_board.is_some() {
+            (columns * rows) as usize
+        } else {
+            0
+        }
+    }
+
     /// 获取当前封面图片
     pub fn get_current_cover(&self) -> Handle<Image> {
         self.cover_textures[self.current_cover_index].clone()
@@ -439,75 +466,75 @@ impl GameAssets {
             },
             // Reference Board 精灵表
             reference_ground_light_texture: self.shirou_ref_ground_light.clone(),
+            reference_ground_light_row_textures: self.shirou_ref_ground_light_rows.clone(),
             reference_ground_light_layout: self.shirou_atlas_ref_ground_light.clone(),
-            reference_ground_light_frame_count: if self.shirou_ref_ground_light.is_some()
-                && self.shirou_atlas_ref_ground_light.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
-                    * asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS) as usize
-            } else {
-                0
-            },
+            reference_ground_light_frame_count: Self::reference_row_frame_count(
+                &self.shirou_ref_ground_light_rows,
+                &self.shirou_ref_ground_light,
+                &self.shirou_atlas_ref_ground_light,
+                asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS,
+                asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS,
+            ),
             reference_air_combo_texture: self.shirou_ref_air_combo.clone(),
+            reference_air_combo_row_textures: self.shirou_ref_air_combo_rows.clone(),
             reference_air_combo_layout: self.shirou_atlas_ref_air_combo.clone(),
-            reference_air_combo_frame_count: if self.shirou_ref_air_combo.is_some()
-                && self.shirou_atlas_ref_air_combo.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
-                    * asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS) as usize
-            } else {
-                0
-            },
+            reference_air_combo_frame_count: Self::reference_row_frame_count(
+                &self.shirou_ref_air_combo_rows,
+                &self.shirou_ref_air_combo,
+                &self.shirou_atlas_ref_air_combo,
+                asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS,
+                asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS,
+            ),
             reference_heavy_texture: self.shirou_ref_heavy.clone(),
+            reference_heavy_row_textures: self.shirou_ref_heavy_rows.clone(),
             reference_heavy_layout: self.shirou_atlas_ref_heavy.clone(),
-            reference_heavy_frame_count: if self.shirou_ref_heavy.is_some()
-                && self.shirou_atlas_ref_heavy.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_HEAVY_COLS * asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
-                    as usize
-            } else {
-                0
-            },
+            reference_heavy_frame_count: Self::reference_row_frame_count(
+                &self.shirou_ref_heavy_rows,
+                &self.shirou_ref_heavy,
+                &self.shirou_atlas_ref_heavy,
+                asset_paths::REFERENCE_BOARD_HEAVY_COLS,
+                asset_paths::REFERENCE_BOARD_HEAVY_ROWS,
+            ),
             reference_ultimate_texture: self.shirou_ref_ultimate.clone(),
+            reference_ultimate_row_textures: self.shirou_ref_ultimate_rows.clone(),
             reference_ultimate_layout: self.shirou_atlas_ref_ultimate.clone(),
-            reference_ultimate_frame_count: if self.shirou_ref_ultimate.is_some()
-                && self.shirou_atlas_ref_ultimate.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
-                    * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS) as usize
-            } else {
-                0
-            },
+            reference_ultimate_frame_count: Self::reference_row_frame_count(
+                &self.shirou_ref_ultimate_rows,
+                &self.shirou_ref_ultimate,
+                &self.shirou_atlas_ref_ultimate,
+                asset_paths::REFERENCE_BOARD_ULTIMATE_COLS,
+                asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS,
+            ),
             reference_mobility_texture: self.shirou_ref_mobility.clone(),
+            reference_mobility_row_textures: self.shirou_ref_mobility_rows.clone(),
             reference_mobility_layout: self.shirou_atlas_ref_mobility.clone(),
-            reference_mobility_frame_count: if self.shirou_ref_mobility.is_some()
-                && self.shirou_atlas_ref_mobility.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_MOBILITY_COLS
-                    * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS) as usize
-            } else {
-                0
-            },
+            reference_mobility_frame_count: Self::reference_row_frame_count(
+                &self.shirou_ref_mobility_rows,
+                &self.shirou_ref_mobility,
+                &self.shirou_atlas_ref_mobility,
+                asset_paths::REFERENCE_BOARD_MOBILITY_COLS,
+                asset_paths::REFERENCE_BOARD_MOBILITY_ROWS,
+            ),
             reference_ninjutsu_texture: self.shirou_ref_ninjutsu.clone(),
+            reference_ninjutsu_row_textures: self.shirou_ref_ninjutsu_rows.clone(),
             reference_ninjutsu_layout: self.shirou_atlas_ref_ninjutsu.clone(),
-            reference_ninjutsu_frame_count: if self.shirou_ref_ninjutsu.is_some()
-                && self.shirou_atlas_ref_ninjutsu.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
-                    * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS) as usize
-            } else {
-                0
-            },
+            reference_ninjutsu_frame_count: Self::reference_row_frame_count(
+                &self.shirou_ref_ninjutsu_rows,
+                &self.shirou_ref_ninjutsu,
+                &self.shirou_atlas_ref_ninjutsu,
+                asset_paths::REFERENCE_BOARD_NINJUTSU_COLS,
+                asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS,
+            ),
             reference_weapon_proj_texture: self.shirou_ref_weapon_proj.clone(),
+            reference_weapon_proj_row_textures: self.shirou_ref_weapon_proj_rows.clone(),
             reference_weapon_proj_layout: self.shirou_atlas_ref_weapon_proj.clone(),
-            reference_weapon_proj_frame_count: if self.shirou_ref_weapon_proj.is_some()
-                && self.shirou_atlas_ref_weapon_proj.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
-                    * asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS) as usize
-            } else {
-                0
-            },
+            reference_weapon_proj_frame_count: Self::reference_row_frame_count(
+                &self.shirou_ref_weapon_proj_rows,
+                &self.shirou_ref_weapon_proj,
+                &self.shirou_atlas_ref_weapon_proj,
+                asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS,
+                asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS,
+            ),
             reference_advance_texture: self.shirou_ref_advance.clone(),
             reference_advance_layout: self.shirou_atlas_ref_advance.clone(),
             reference_advance_frame_count: if self.shirou_ref_advance.is_some()

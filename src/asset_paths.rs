@@ -205,6 +205,13 @@ pub const IMAGE_HF_SHIROU_ATTACK_ULTIMATE_REFERENCE: &str =
     "images/characters/reference/hf_shirou_attack_ultimate_reference.png";
 pub const IMAGE_HF_SHIROU_ATTACK_WEAPON_PROJECTION_REFERENCE: &str =
     "images/characters/reference/hf_shirou_attack_weapon_projection_reference.png";
+pub const IMAGE_HF_SHIROU_ATTACK_GROUND_LIGHT_ROW_SHEETS: [&str; 5] = [
+    "images/characters/reference/v2_generated/rows/ground_light_v2_r01.png",
+    "images/characters/reference/v2_generated/rows/ground_light_v2_r02.png",
+    "images/characters/reference/v2_generated/rows/ground_light_v2_r03.png",
+    "images/characters/reference/v2_generated/rows/ground_light_v2_r04.png",
+    "images/characters/reference/v2_generated/rows/ground_light_v2_r05.png",
+];
 
 // Reference attack atlas parameters. The generated reference actions are
 // production 256px RGBA frames with no board label/header offset.

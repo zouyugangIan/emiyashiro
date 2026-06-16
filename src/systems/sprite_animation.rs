@@ -207,6 +207,10 @@ fn reference_board_row_frames(
     }
 
     let columns = columns as usize;
+    if available_frame_count == columns {
+        return bounded_frame_range(0, columns, available_frame_count);
+    }
+
     let start = (row as usize - 1).checked_mul(columns)?;
     bounded_frame_range(start, columns, available_frame_count)
 }
@@ -713,39 +717,71 @@ mod tests {
             overedge_heavy_attacking_frame_count:
                 asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT,
             reference_ground_light_texture: Some(test_image_handle(0xA006)),
+            reference_ground_light_row_textures: vec![
+                test_image_handle(0xA106),
+                test_image_handle(0xA107),
+                test_image_handle(0xA108),
+                test_image_handle(0xA109),
+                test_image_handle(0xA10A),
+            ],
             reference_ground_light_layout: Some(test_layout_handle(0xB006)),
-            reference_ground_light_frame_count: (asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
-                * asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
+            reference_ground_light_frame_count: asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
                 as usize,
             reference_air_combo_texture: Some(test_image_handle(0xA007)),
+            reference_air_combo_row_textures: vec![
+                test_image_handle(0xA10B),
+                test_image_handle(0xA10C),
+                test_image_handle(0xA10D),
+                test_image_handle(0xA10E),
+                test_image_handle(0xA10F),
+            ],
             reference_air_combo_layout: Some(test_layout_handle(0xB007)),
-            reference_air_combo_frame_count: (asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
-                * asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS)
-                as usize,
+            reference_air_combo_frame_count: asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS as usize,
             reference_heavy_texture: Some(test_image_handle(0xA008)),
+            reference_heavy_row_textures: vec![
+                test_image_handle(0xA110),
+                test_image_handle(0xA111),
+                test_image_handle(0xA112),
+                test_image_handle(0xA113),
+                test_image_handle(0xA114),
+            ],
             reference_heavy_layout: Some(test_layout_handle(0xB008)),
-            reference_heavy_frame_count: (asset_paths::REFERENCE_BOARD_HEAVY_COLS
-                * asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
-                as usize,
+            reference_heavy_frame_count: asset_paths::REFERENCE_BOARD_HEAVY_COLS as usize,
             reference_ultimate_texture: Some(test_image_handle(0xA009)),
+            reference_ultimate_row_textures: vec![
+                test_image_handle(0xA115),
+                test_image_handle(0xA116),
+                test_image_handle(0xA117),
+            ],
             reference_ultimate_layout: Some(test_layout_handle(0xB009)),
-            reference_ultimate_frame_count: (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
-                * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS)
-                as usize,
+            reference_ultimate_frame_count: asset_paths::REFERENCE_BOARD_ULTIMATE_COLS as usize,
             reference_mobility_texture: Some(test_image_handle(0xA00A)),
+            reference_mobility_row_textures: vec![
+                test_image_handle(0xA118),
+                test_image_handle(0xA119),
+                test_image_handle(0xA11A),
+                test_image_handle(0xA11B),
+            ],
             reference_mobility_layout: Some(test_layout_handle(0xB00A)),
-            reference_mobility_frame_count: (asset_paths::REFERENCE_BOARD_MOBILITY_COLS
-                * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS)
-                as usize,
+            reference_mobility_frame_count: asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize,
             reference_ninjutsu_texture: Some(test_image_handle(0xA00B)),
+            reference_ninjutsu_row_textures: vec![
+                test_image_handle(0xA11C),
+                test_image_handle(0xA11D),
+                test_image_handle(0xA11E),
+                test_image_handle(0xA11F),
+            ],
             reference_ninjutsu_layout: Some(test_layout_handle(0xB00B)),
-            reference_ninjutsu_frame_count: (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
-                * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS)
-                as usize,
+            reference_ninjutsu_frame_count: asset_paths::REFERENCE_BOARD_NINJUTSU_COLS as usize,
             reference_weapon_proj_texture: Some(test_image_handle(0xA00C)),
+            reference_weapon_proj_row_textures: vec![
+                test_image_handle(0xA120),
+                test_image_handle(0xA121),
+                test_image_handle(0xA122),
+                test_image_handle(0xA123),
+            ],
             reference_weapon_proj_layout: Some(test_layout_handle(0xB00C)),
-            reference_weapon_proj_frame_count: (asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
-                * asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS)
+            reference_weapon_proj_frame_count: asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
                 as usize,
             reference_advance_texture: None,
             reference_advance_layout: None,
@@ -809,9 +845,10 @@ mod tests {
         assert_eq!(
             sprite.image,
             sheets
-                .reference_ground_light_texture
-                .clone()
-                .expect("reference texture")
+                .reference_ground_light_row_textures
+                .get(1)
+                .cloned()
+                .expect("reference row texture")
         );
         let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
         assert_eq!(
@@ -949,69 +986,58 @@ mod tests {
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::GroundLightRow(1),
-                (crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
-                    as usize
+                crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS as usize
             ),
             Some(vec![0, 1, 2, 3, 4, 5, 6, 7])
         );
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::GroundLightRow(5),
-                (crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
-                    as usize
+                crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS as usize
             ),
-            Some(vec![32, 33, 34, 35, 36, 37, 38, 39])
+            Some(vec![0, 1, 2, 3, 4, 5, 6, 7])
         );
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::HeavyRefRow(3),
-                (crate::asset_paths::REFERENCE_BOARD_HEAVY_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_HEAVY_ROWS) as usize
+                crate::asset_paths::REFERENCE_BOARD_HEAVY_COLS as usize
             ),
-            Some(vec![16, 17, 18, 19, 20, 21, 22, 23])
+            Some(vec![0, 1, 2, 3, 4, 5, 6, 7])
         );
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::AirComboRow(5),
-                (crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS) as usize
+                crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS as usize
             ),
-            Some(vec![32, 33, 34, 35, 36, 37, 38, 39])
+            Some(vec![0, 1, 2, 3, 4, 5, 6, 7])
         );
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::MobilityRefRow(4),
-                (crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_MOBILITY_ROWS) as usize
+                crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize
             ),
-            Some(vec![18, 19, 20, 21, 22, 23])
+            Some(vec![0, 1, 2, 3, 4, 5])
         );
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::NinjutsuRefRow(4),
-                (crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS) as usize
+                crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS as usize
             ),
-            Some(vec![24, 25, 26, 27, 28, 29, 30, 31])
+            Some(vec![0, 1, 2, 3, 4, 5, 6, 7])
         );
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::UltimateRefRow(3),
-                (crate::asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS) as usize
+                crate::asset_paths::REFERENCE_BOARD_ULTIMATE_COLS as usize
             ),
-            Some(vec![16, 17, 18, 19, 20, 21, 22, 23])
+            Some(vec![0, 1, 2, 3, 4, 5, 6, 7])
         );
         assert_eq!(
             overedge_attack_frames(
                 AttackAnimationStyle::WeaponProjRefRow(4),
-                (crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS)
-                    as usize
+                crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS as usize
             ),
-            Some(vec![18, 19, 20, 21, 22, 23])
+            Some(vec![0, 1, 2, 3, 4, 5])
         );
     }
 

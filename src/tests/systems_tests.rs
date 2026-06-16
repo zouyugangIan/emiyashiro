@@ -71,6 +71,13 @@ mod tests {
             shirou_ref_ninjutsu: None,
             shirou_ref_weapon_proj: None,
             shirou_ref_advance: None,
+            shirou_ref_ground_light_rows: Vec::new(),
+            shirou_ref_air_combo_rows: Vec::new(),
+            shirou_ref_heavy_rows: Vec::new(),
+            shirou_ref_ultimate_rows: Vec::new(),
+            shirou_ref_mobility_rows: Vec::new(),
+            shirou_ref_ninjutsu_rows: Vec::new(),
+            shirou_ref_weapon_proj_rows: Vec::new(),
             shirou_atlas_ref_ground_light: None,
             shirou_atlas_ref_air_combo: None,
             shirou_atlas_ref_heavy: None,
@@ -107,40 +114,38 @@ mod tests {
             overedge_heavy_attacking_layout: None,
             overedge_heavy_attacking_frame_count: 0,
             reference_ground_light_texture: Some(image.clone()),
+            reference_ground_light_row_textures: vec![image.clone(); 5],
             reference_ground_light_layout: Some(layout.clone()),
             reference_ground_light_frame_count:
-                (crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS
-                    * crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS)
-                    as usize,
+                crate::asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS as usize,
             reference_air_combo_texture: Some(image.clone()),
+            reference_air_combo_row_textures: vec![image.clone(); 5],
             reference_air_combo_layout: Some(layout.clone()),
-            reference_air_combo_frame_count: (crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
-                * crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS)
+            reference_air_combo_frame_count: crate::asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
                 as usize,
             reference_heavy_texture: Some(image.clone()),
+            reference_heavy_row_textures: vec![image.clone(); 5],
             reference_heavy_layout: Some(layout.clone()),
-            reference_heavy_frame_count: (crate::asset_paths::REFERENCE_BOARD_HEAVY_COLS
-                * crate::asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
-                as usize,
+            reference_heavy_frame_count: crate::asset_paths::REFERENCE_BOARD_HEAVY_COLS as usize,
             reference_ultimate_texture: Some(image.clone()),
+            reference_ultimate_row_textures: vec![image.clone(); 3],
             reference_ultimate_layout: Some(layout.clone()),
-            reference_ultimate_frame_count: (crate::asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
-                * crate::asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS)
+            reference_ultimate_frame_count: crate::asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
                 as usize,
             reference_mobility_texture: Some(image.clone()),
+            reference_mobility_row_textures: vec![image.clone(); 4],
             reference_mobility_layout: Some(layout.clone()),
-            reference_mobility_frame_count: (crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS
-                * crate::asset_paths::REFERENCE_BOARD_MOBILITY_ROWS)
+            reference_mobility_frame_count: crate::asset_paths::REFERENCE_BOARD_MOBILITY_COLS
                 as usize,
             reference_ninjutsu_texture: Some(image.clone()),
+            reference_ninjutsu_row_textures: vec![image.clone(); 4],
             reference_ninjutsu_layout: Some(layout.clone()),
-            reference_ninjutsu_frame_count: (crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
-                * crate::asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS)
+            reference_ninjutsu_frame_count: crate::asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
                 as usize,
             reference_weapon_proj_texture: Some(image.clone()),
+            reference_weapon_proj_row_textures: vec![image.clone(); 4],
             reference_weapon_proj_layout: Some(layout.clone()),
-            reference_weapon_proj_frame_count: (crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
-                * crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS)
+            reference_weapon_proj_frame_count: crate::asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
                 as usize,
             reference_advance_texture: None,
             reference_advance_layout: None,

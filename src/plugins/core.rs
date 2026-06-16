@@ -120,6 +120,13 @@ fn setup_game_resources(
         shirou_ref_ninjutsu: None,
         shirou_ref_weapon_proj: None,
         shirou_ref_advance: None,
+        shirou_ref_ground_light_rows: Vec::new(),
+        shirou_ref_air_combo_rows: Vec::new(),
+        shirou_ref_heavy_rows: Vec::new(),
+        shirou_ref_ultimate_rows: Vec::new(),
+        shirou_ref_mobility_rows: Vec::new(),
+        shirou_ref_ninjutsu_rows: Vec::new(),
+        shirou_ref_weapon_proj_rows: Vec::new(),
         shirou_atlas_ref_ground_light: None,
         shirou_atlas_ref_air_combo: None,
         shirou_atlas_ref_heavy: None,
@@ -159,7 +166,7 @@ fn setup_game_resources(
     let ref_ground_light_layout = TextureAtlasLayout::from_grid(
         UVec2::from(asset_paths::REFERENCE_BOARD_GROUND_LIGHT_CELL),
         asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS,
-        asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS,
+        1,
         None,
         Some(UVec2::from(
             asset_paths::REFERENCE_BOARD_GROUND_LIGHT_OFFSET,
@@ -231,6 +238,10 @@ fn setup_game_resources(
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_WEAPON_PROJECTION_REFERENCE);
     let ref_advance_handle =
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_ADVANCED_ATTACK_MODULES_OVERVIEW);
+    let ref_ground_light_row_handles = asset_paths::IMAGE_HF_SHIROU_ATTACK_GROUND_LIGHT_ROW_SHEETS
+        .iter()
+        .map(|path| asset_server.load(*path))
+        .collect();
 
     let mut assets = game_assets;
     assets.shirou_spritesheet = Some(core_texture_handle);
@@ -255,6 +266,7 @@ fn setup_game_resources(
     assets.shirou_ref_ninjutsu = Some(ref_ninjutsu_handle);
     assets.shirou_ref_weapon_proj = Some(ref_weapon_proj_handle);
     assets.shirou_ref_advance = Some(ref_advance_handle);
+    assets.shirou_ref_ground_light_rows = ref_ground_light_row_handles;
     assets.shirou_atlas_ref_ground_light = Some(texture_atlases.add(ref_ground_light_layout));
     assets.shirou_atlas_ref_air_combo = Some(texture_atlases.add(ref_air_combo_layout));
     assets.shirou_atlas_ref_heavy = Some(texture_atlases.add(ref_heavy_layout));
