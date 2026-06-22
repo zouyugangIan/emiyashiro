@@ -152,9 +152,27 @@ fn setup_game_resources(
     let overedge_heavy_attack_texture_handle =
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_OVEREDGE_HEAVY_ATTACK_SHEET);
 
-    let core_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 2, None, None);
-    let run_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 5, 1, None, None);
-    let attack_layout = TextureAtlasLayout::from_grid(UVec2::new(256, 256), 4, 1, None, None);
+    let core_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(256, 256),
+        asset_paths::HF_SHIROU_CORE_COLS,
+        asset_paths::HF_SHIROU_CORE_ROWS,
+        None,
+        None,
+    );
+    let run_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(256, 256),
+        asset_paths::HF_SHIROU_RUN_COLS,
+        1,
+        None,
+        None,
+    );
+    let attack_layout = TextureAtlasLayout::from_grid(
+        UVec2::new(256, 256),
+        asset_paths::HF_SHIROU_ATTACK_COLS,
+        1,
+        None,
+        None,
+    );
     // Overedge light sheet: 2816x256, 11帧 1行
     let overedge_light_attack_layout =
         TextureAtlasLayout::from_grid(UVec2::new(256, 256), 11, 1, None, None);

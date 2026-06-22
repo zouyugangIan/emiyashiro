@@ -479,6 +479,9 @@ pub struct ServerCorrectionState {
 #[derive(Component)]
 pub struct LocalPlayer;
 
+#[derive(Component)]
+pub struct RemotePlayer;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum LocalCorrectionMode {
     Noop,
@@ -507,6 +510,23 @@ fn smoothstep(t: f32) -> f32 {
     x * x * (3.0 - 2.0 * x)
 }
 
+fn bind_local_player_id(
+    commands: &mut Commands,
+    entity_map: &mut NetworkEntityMap,
+    local_entity: Entity,
+    id: u64,
+) {
+    entity_map
+        .0
+        .retain(|_, mapped_entity| *mapped_entity != local_entity);
+
+    if let Some(stale_entity) = entity_map.0.insert(id, local_entity)
+        && stale_entity != local_entity
+    {
+        commands.entity(stale_entity).despawn();
+    }
+}
+
 #[derive(SystemParam)]
 pub struct NetworkEventParams<'w, 's> {
     net: ResMut<'w, NetworkResource>,
@@ -521,7 +541,7 @@ pub struct NetworkEventParams<'w, 's> {
             &'static mut Transform,
             Option<&'static mut InterpolationState>,
         ),
-        Without<LocalPlayer>,
+        (With<RemotePlayer>, Without<LocalPlayer>),
     >,
     local_player_query: Query<
         'w,
@@ -560,11 +580,7 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
 
                 if let Ok((entity, _, mut net_id, _)) = params.local_player_query.single_mut() {
                     net_id.0 = id;
-                    params
-                        .entity_map
-                        .0
-                        .retain(|_, mapped_entity| *mapped_entity != entity);
-                    params.entity_map.0.insert(id, entity);
+                    bind_local_player_id(&mut commands, &mut params.entity_map, entity, id);
                     info!("Updated local player NetworkId to {}", id);
                 }
             }
@@ -586,11 +602,12 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                             params.local_player_query.single_mut()
                         {
                             net_id.0 = player_state.id;
-                            params
-                                .entity_map
-                                .0
-                                .retain(|_, mapped_entity| *mapped_entity != entity);
-                            params.entity_map.0.insert(player_state.id, entity);
+                            bind_local_player_id(
+                                &mut commands,
+                                &mut params.entity_map,
+                                entity,
+                                player_state.id,
+                            );
 
                             let target_position = Vec3::new(
                                 player_state.position.x,
@@ -661,6 +678,7 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                             },
                             Transform::from_translation(player_state.position)
                                 .with_scale(Vec3::splat(0.5)),
+                            RemotePlayer,
                             crate::components::network::NetworkId(player_state.id),
                             InterpolationState {
                                 start_pos: player_state.position,
@@ -710,11 +728,12 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                             params.local_player_query.single_mut()
                         {
                             net_id.0 = player_state.id;
-                            params
-                                .entity_map
-                                .0
-                                .retain(|_, mapped_entity| *mapped_entity != entity);
-                            params.entity_map.0.insert(player_state.id, entity);
+                            bind_local_player_id(
+                                &mut commands,
+                                &mut params.entity_map,
+                                entity,
+                                player_state.id,
+                            );
 
                             let target_position = Vec3::new(
                                 player_state.position.x,
@@ -785,6 +804,7 @@ pub fn handle_network_events(mut commands: Commands, mut params: NetworkEventPar
                             },
                             Transform::from_translation(player_state.position)
                                 .with_scale(Vec3::splat(0.5)),
+                            RemotePlayer,
                             crate::components::network::NetworkId(player_state.id),
                             InterpolationState {
                                 start_pos: player_state.position,
@@ -836,7 +856,7 @@ pub fn apply_server_corrections(
 
 pub fn interpolate_positions(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Transform, &mut InterpolationState)>,
+    mut query: Query<(Entity, &mut Transform, &mut InterpolationState), With<RemotePlayer>>,
     time: Res<Time>,
 ) {
     let current_time = time.elapsed_secs();
@@ -948,6 +968,56 @@ mod tests {
     }
 
     #[test]
+    fn welcome_replaces_stale_remote_shadow_for_local_id() {
+        let mut app = setup_network_event_app();
+        let local_entity = app
+            .world_mut()
+            .spawn((
+                LocalPlayer,
+                NetworkId(0),
+                Transform::from_xyz(0.0, 0.0, 1.0),
+            ))
+            .id();
+        let stale_remote = app
+            .world_mut()
+            .spawn((
+                RemotePlayer,
+                NetworkId(9),
+                Transform::from_xyz(10.0, 0.0, 1.0),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<NetworkEntityMap>()
+            .0
+            .insert(9, stale_remote);
+
+        let packet_rx = app.world().resource::<NetworkResource>().packet_rx.clone();
+        if let Ok(mut queue) = packet_rx.lock() {
+            queue.push_back(GamePacket::Welcome {
+                id: 9,
+                message: "welcome".to_string(),
+            });
+        }
+
+        app.update();
+
+        let local_net_id = app
+            .world()
+            .entity(local_entity)
+            .get::<NetworkId>()
+            .expect("local player should keep NetworkId");
+        assert_eq!(local_net_id.0, 9);
+
+        let entity_map = app.world().resource::<NetworkEntityMap>();
+        assert_eq!(entity_map.0.get(&9), Some(&local_entity));
+        assert!(
+            app.world().get_entity(stale_remote).is_err(),
+            "stale remote entity for the local id should be despawned"
+        );
+    }
+
+    #[test]
     fn world_snapshot_delta_updates_and_removes_remote_entities() {
         let mut app = setup_network_event_app();
         app.world_mut().resource_mut::<MyNetworkId>().0 = Some(1);
@@ -962,7 +1032,11 @@ mod tests {
             .id();
         let remote_entity = app
             .world_mut()
-            .spawn((NetworkId(2), Transform::from_xyz(10.0, 0.0, 1.0)))
+            .spawn((
+                RemotePlayer,
+                NetworkId(2),
+                Transform::from_xyz(10.0, 0.0, 1.0),
+            ))
             .id();
         {
             let mut map = app.world_mut().resource_mut::<NetworkEntityMap>();
@@ -1014,6 +1088,49 @@ mod tests {
         assert!(
             app.world().get_entity(remote_entity).is_err(),
             "delta remove should despawn remote entity"
+        );
+    }
+
+    #[test]
+    fn world_snapshot_replaces_non_remote_stale_mapping_without_mutating_entity() {
+        let mut app = setup_network_event_app();
+        app.world_mut().resource_mut::<MyNetworkId>().0 = Some(1);
+
+        let stale_non_remote = app
+            .world_mut()
+            .spawn((NetworkId(2), Transform::from_xyz(999.0, 0.0, 1.0)))
+            .id();
+        app.world_mut()
+            .resource_mut::<NetworkEntityMap>()
+            .0
+            .insert(2, stale_non_remote);
+
+        let packet_rx = app.world().resource::<NetworkResource>().packet_rx.clone();
+        if let Ok(mut queue) = packet_rx.lock() {
+            queue.push_back(GamePacket::WorldSnapshot {
+                tick: 1,
+                players: vec![test_player_state(2, Vec3::new(25.0, 0.0, 1.0))],
+            });
+        }
+
+        app.update();
+
+        let stale_transform = app
+            .world()
+            .entity(stale_non_remote)
+            .get::<Transform>()
+            .expect("stale non-remote entity should remain available");
+        assert_eq!(stale_transform.translation, Vec3::new(999.0, 0.0, 1.0));
+
+        let entity_map = app.world().resource::<NetworkEntityMap>();
+        let replacement = *entity_map
+            .0
+            .get(&2)
+            .expect("snapshot should replace the stale mapping");
+        assert_ne!(replacement, stale_non_remote);
+        assert!(
+            app.world().entity(replacement).contains::<RemotePlayer>(),
+            "replacement mapping should point at an explicit remote player"
         );
     }
 

@@ -133,6 +133,7 @@ pub struct KnifeSlashFeedback {
 
 #[derive(Component, Debug)]
 pub struct AttackReferenceActionVfx {
+    owner: Entity,
     timer: Timer,
     frame_start: usize,
     frame_count: usize,
@@ -1455,18 +1456,27 @@ fn reference_action_vfx_sheet<'a>(
     let sprite_sheets = sprite_sheets?;
     let (texture, layout) =
         sprite_sheets.select_sheet_for_attack_style(&AnimationType::Attacking, style)?;
-    let (frame_start, frame_count) = reference_action_vfx_frame_range(style)?;
-    let frame_start = if reference_action_uses_split_row_sheet(Some(sprite_sheets), style) {
-        0
-    } else {
-        frame_start
-    };
+    let (mut frame_start, frame_count) = reference_action_vfx_frame_range(style)?;
+    if reference_action_uses_split_row_sheet(Some(sprite_sheets), style) {
+        frame_start = 0;
+    }
+
+    let available_frame_count = sprite_sheets.attacking_frame_count(style)?;
+    let frame_end = frame_start.checked_add(frame_count)?;
+    if frame_count == 0 || frame_end > available_frame_count {
+        warn!(
+            "Skipping reference action VFX for {:?}: frame range {}..{} exceeds {} available frames",
+            style, frame_start, frame_end, available_frame_count
+        );
+        return None;
+    }
 
     Some((texture, layout, frame_start, frame_count))
 }
 
 fn spawn_reference_action_vfx(
     commands: &mut Commands,
+    owner: Entity,
     player_transform: &Transform,
     sprite_sheets: Option<&SpriteAnimationSheets>,
     facing: f32,
@@ -1499,6 +1509,7 @@ fn spawn_reference_action_vfx(
         },
         transform,
         AttackReferenceActionVfx {
+            owner,
             timer: Timer::from_seconds(duration, TimerMode::Once),
             frame_start,
             frame_count,
@@ -1506,6 +1517,18 @@ fn spawn_reference_action_vfx(
             drift,
         },
     ));
+}
+
+fn despawn_reference_action_vfx_for_owner(
+    commands: &mut Commands,
+    owner: Entity,
+    reference_vfx_query: &Query<(Entity, &AttackReferenceActionVfx)>,
+) {
+    for (entity, vfx) in reference_vfx_query.iter() {
+        if vfx.owner == owner {
+            commands.entity(entity).despawn();
+        }
+    }
 }
 
 fn stable_player_visual_style(style: AttackAnimationStyle) -> AttackAnimationStyle {
@@ -1519,6 +1542,7 @@ fn stable_player_visual_style(style: AttackAnimationStyle) -> AttackAnimationSty
 
 fn spawn_attack_reference_action_vfx(
     commands: &mut Commands,
+    owner: Entity,
     player_transform: Option<&Transform>,
     _player_sprite: Option<&Sprite>,
     sprite_sheets: Option<&SpriteAnimationSheets>,
@@ -1534,6 +1558,7 @@ fn spawn_attack_reference_action_vfx(
     };
     spawn_reference_action_vfx(
         commands,
+        owner,
         player_transform,
         sprite_sheets,
         facing,
@@ -1747,6 +1772,7 @@ fn perform_knife_attack(
     commands: &mut Commands,
     runtime: &mut KnifeComboRuntime,
     attack_animation: &mut AttackAnimationState,
+    reference_vfx_query: &Query<(Entity, &AttackReferenceActionVfx)>,
     request: KnifeAttackRequest,
 ) {
     let max_combo_steps = request.knife_tuning.max_combo_steps.max(1);
@@ -1810,8 +1836,10 @@ fn perform_knife_attack(
     if let Some(momentum) = attack_momentum_for_style(attack_style, facing) {
         commands.entity(request.player_entity).insert(momentum);
     }
+    despawn_reference_action_vfx_for_owner(commands, request.player_entity, reference_vfx_query);
     spawn_attack_reference_action_vfx(
         commands,
+        request.player_entity,
         request.player_transform,
         request.player_sprite,
         request.sprite_sheets,
@@ -1895,6 +1923,7 @@ pub fn player_knife_attack(
     keyboard: Res<ButtonInput<KeyCode>>,
     game_input: Option<Res<crate::systems::input::GameInput>>,
     mut player_query: Query<PlayerKnifeAttackItem, With<Player>>,
+    reference_vfx_query: Query<(Entity, &AttackReferenceActionVfx)>,
     tuning: Option<Res<GameplayTuning>>,
     mut runtime: Local<KnifeComboRuntime>,
     time: Res<Time>,
@@ -1993,6 +2022,7 @@ pub fn player_knife_attack(
                 &mut commands,
                 &mut runtime,
                 &mut attack_animation,
+                &reference_vfx_query,
                 KnifeAttackRequest {
                     player_entity,
                     player_transform,
@@ -2029,6 +2059,7 @@ pub fn player_knife_attack(
             &mut commands,
             &mut runtime,
             &mut attack_animation,
+            &reference_vfx_query,
             KnifeAttackRequest {
                 player_entity,
                 player_transform,
@@ -2565,4 +2596,139 @@ pub fn spawn_enemy_projectile(
         },
         crate::systems::collision::CollisionBox::new(ENEMY_PROJECTILE_COLLISION_SIZE),
     ));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::marker::PhantomData;
+
+    #[derive(Resource)]
+    struct TestOwner(Entity);
+
+    fn test_image_handle(id: u128) -> Handle<Image> {
+        Handle::Uuid(uuid::Uuid::from_u128(id), PhantomData)
+    }
+
+    fn test_layout_handle(id: u128) -> Handle<TextureAtlasLayout> {
+        Handle::Uuid(uuid::Uuid::from_u128(id), PhantomData)
+    }
+
+    fn test_sprite_animation_sheets() -> SpriteAnimationSheets {
+        SpriteAnimationSheets {
+            core_texture: test_image_handle(0xC001),
+            core_layout: test_layout_handle(0xD001),
+            running_texture: test_image_handle(0xC002),
+            running_layout: test_layout_handle(0xD002),
+            attacking_texture: test_image_handle(0xC003),
+            attacking_layout: test_layout_handle(0xD003),
+            overedge_light_attacking_texture: None,
+            overedge_light_attacking_layout: None,
+            overedge_light_attacking_frame_count: 0,
+            overedge_heavy_attacking_texture: None,
+            overedge_heavy_attacking_layout: None,
+            overedge_heavy_attacking_frame_count: 0,
+            reference_ground_light_texture: None,
+            reference_ground_light_row_textures: Vec::new(),
+            reference_ground_light_layout: None,
+            reference_ground_light_frame_count: 0,
+            reference_air_combo_texture: None,
+            reference_air_combo_row_textures: Vec::new(),
+            reference_air_combo_layout: None,
+            reference_air_combo_frame_count: 0,
+            reference_heavy_texture: None,
+            reference_heavy_row_textures: Vec::new(),
+            reference_heavy_layout: None,
+            reference_heavy_frame_count: 0,
+            reference_ultimate_texture: None,
+            reference_ultimate_row_textures: Vec::new(),
+            reference_ultimate_layout: None,
+            reference_ultimate_frame_count: 0,
+            reference_mobility_texture: None,
+            reference_mobility_row_textures: Vec::new(),
+            reference_mobility_layout: None,
+            reference_mobility_frame_count: 0,
+            reference_ninjutsu_texture: None,
+            reference_ninjutsu_row_textures: Vec::new(),
+            reference_ninjutsu_layout: None,
+            reference_ninjutsu_frame_count: 0,
+            reference_weapon_proj_texture: None,
+            reference_weapon_proj_row_textures: Vec::new(),
+            reference_weapon_proj_layout: None,
+            reference_weapon_proj_frame_count: 0,
+            reference_advance_texture: None,
+            reference_advance_layout: None,
+            reference_advance_frame_count: 0,
+        }
+    }
+
+    fn test_reference_action_vfx(owner: Entity) -> AttackReferenceActionVfx {
+        AttackReferenceActionVfx {
+            owner,
+            timer: Timer::from_seconds(0.2, TimerMode::Once),
+            frame_start: 0,
+            frame_count: 1,
+            base_alpha: 0.2,
+            drift: Vec2::ZERO,
+        }
+    }
+
+    fn cleanup_reference_vfx_test_system(
+        mut commands: Commands,
+        owner: Res<TestOwner>,
+        query: Query<(Entity, &AttackReferenceActionVfx)>,
+    ) {
+        despawn_reference_action_vfx_for_owner(&mut commands, owner.0, &query);
+    }
+
+    #[test]
+    fn reference_action_vfx_cleanup_is_scoped_to_owner() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let owner = app.world_mut().spawn_empty().id();
+        let other_owner = app.world_mut().spawn_empty().id();
+        let owned_vfx = app.world_mut().spawn(test_reference_action_vfx(owner)).id();
+        let other_vfx = app
+            .world_mut()
+            .spawn(test_reference_action_vfx(other_owner))
+            .id();
+
+        app.insert_resource(TestOwner(owner))
+            .add_systems(Update, cleanup_reference_vfx_test_system);
+        app.update();
+
+        assert!(
+            app.world().get_entity(owned_vfx).is_err(),
+            "new attacks should despawn existing reference VFX for the same player"
+        );
+        assert!(
+            app.world().get_entity(other_vfx).is_ok(),
+            "reference VFX for other owners should not be despawned"
+        );
+    }
+
+    #[test]
+    fn reference_action_vfx_requires_matching_reference_sheet_frames() {
+        let mut sheets = test_sprite_animation_sheets();
+
+        assert!(
+            reference_action_vfx_sheet(Some(&sheets), AttackAnimationStyle::MobilityRefRow(3))
+                .is_none(),
+            "reference VFX should not fall back to the base attack sheet"
+        );
+
+        sheets.reference_mobility_row_textures = vec![test_image_handle(0xC101)];
+        sheets.reference_mobility_layout = Some(test_layout_handle(0xD101));
+        sheets.reference_mobility_frame_count = asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize;
+
+        let (_, _, frame_start, frame_count) =
+            reference_action_vfx_sheet(Some(&sheets), AttackAnimationStyle::MobilityRefRow(3))
+                .expect("valid split-row reference sheet should spawn VFX");
+        assert_eq!(frame_start, 0);
+        assert_eq!(
+            frame_count,
+            asset_paths::REFERENCE_BOARD_MOBILITY_COLS as usize
+        );
+    }
 }

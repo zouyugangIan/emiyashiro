@@ -300,6 +300,70 @@ fn overedge_attack_frames(
     }
 }
 
+fn base_sheet_frame_count(
+    sprite_sheets: Option<&SpriteAnimationSheets>,
+    animation_type: &AnimationType,
+) -> Option<usize> {
+    let sprite_sheets = sprite_sheets?;
+
+    match animation_type.sprite_sheet_kind() {
+        SpriteSheetKind::Core => Some(asset_paths::HF_SHIROU_CORE_FRAME_COUNT),
+        SpriteSheetKind::Running => {
+            if sprite_sheets.running_texture == sprite_sheets.core_texture
+                && sprite_sheets.running_layout == sprite_sheets.core_layout
+            {
+                Some(asset_paths::HF_SHIROU_CORE_FRAME_COUNT)
+            } else {
+                Some(asset_paths::HF_SHIROU_RUN_FRAME_COUNT)
+            }
+        }
+        SpriteSheetKind::Attacking => {
+            if sprite_sheets.attacking_texture == sprite_sheets.core_texture
+                && sprite_sheets.attacking_layout == sprite_sheets.core_layout
+            {
+                Some(asset_paths::HF_SHIROU_CORE_FRAME_COUNT)
+            } else {
+                Some(asset_paths::HF_SHIROU_ATTACK_FRAME_COUNT)
+            }
+        }
+    }
+}
+
+fn selected_sheet_frame_count(
+    sprite_sheets: Option<&SpriteAnimationSheets>,
+    animation_type: &AnimationType,
+    attack_style: AttackAnimationStyle,
+) -> Option<usize> {
+    if *animation_type == AnimationType::Attacking
+        && let Some(frame_count) =
+            sprite_sheets.and_then(|sheets| sheets.attacking_frame_count(attack_style))
+    {
+        return Some(frame_count);
+    }
+
+    base_sheet_frame_count(sprite_sheets, animation_type)
+}
+
+fn sanitize_clip_frames(
+    clip: &mut AnimationClipData,
+    available_frame_count: Option<usize>,
+    character_frame: usize,
+) {
+    let Some(available_frame_count) = available_frame_count else {
+        return;
+    };
+
+    if available_frame_count == 0 {
+        return;
+    }
+
+    clip.frames.retain(|frame| *frame < available_frame_count);
+    if clip.frames.is_empty() {
+        clip.frames
+            .push(character_frame.min(available_frame_count - 1));
+    }
+}
+
 fn resolved_animation_clip(
     animation: &SpriteAnimation,
     animation_type: &AnimationType,
@@ -317,6 +381,12 @@ fn resolved_animation_clip(
     {
         clip.frames = frames;
     }
+
+    sanitize_clip_frames(
+        &mut clip,
+        selected_sheet_frame_count(sprite_sheets, animation_type, attack_style),
+        animation.current_frame,
+    );
 
     Some(clip)
 }
@@ -561,11 +631,9 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
             animation.current_frame = current_clip.frames.len().saturating_sub(1);
         }
 
-        if current_key == AnimationType::Attacking {
-            let attack_style =
-                resolved_attack_style(&current_key, attack_style, shroud, player_state);
-            apply_animation_sheet(&mut sprite, sprite_sheets, &current_key, attack_style);
-        }
+        let sheet_attack_style =
+            resolved_attack_style(&current_key, attack_style, shroud, player_state);
+        apply_animation_sheet(&mut sprite, sprite_sheets, &current_key, sheet_attack_style);
 
         let horizontal_speed_abs = velocity.map(|v| v.x.abs()).unwrap_or(0.0);
         let target_duration = current_clip.frame_duration_for_speed(horizontal_speed_abs);
@@ -928,6 +996,111 @@ mod tests {
         assert_eq!(sprite.image, sheets.core_texture);
         let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
         assert_eq!(atlas.layout, sheets.core_layout);
+    }
+
+    #[test]
+    fn test_update_sprite_animations_restores_missing_core_atlas() {
+        let sheets = distinct_test_sheets();
+        let mut animations = std::collections::HashMap::new();
+        animations.insert(
+            AnimationType::Idle,
+            AnimationClipData {
+                frames: vec![0, 1],
+                frame_duration: 0.1,
+                playback_mode: PlaybackMode::Loop,
+                speed_scale_by_velocity: false,
+                speed_reference: 150.0,
+                min_frame_duration: 0.05,
+            },
+        );
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, update_sprite_animations);
+        app.world_mut().spawn((
+            SpriteAnimation {
+                current_animation: AnimationType::Idle,
+                frame_timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+                current_frame: 0,
+                frame_direction: 1,
+                last_attack_trigger_serial: 0,
+                previous_grounded: true,
+                apply_immediate_frame: true,
+                animations,
+            },
+            Sprite {
+                image: sheets.core_texture.clone(),
+                texture_atlas: None,
+                ..default()
+            },
+            sheets.clone(),
+        ));
+
+        app.update();
+
+        let mut query = app.world_mut().query::<&Sprite>();
+        let sprite = query.single(app.world()).expect("animated sprite");
+        let atlas = sprite
+            .texture_atlas
+            .as_ref()
+            .expect("sprite animation should restore missing core atlas");
+        assert_eq!(sprite.image, sheets.core_texture);
+        assert_eq!(atlas.layout, sheets.core_layout);
+        assert_eq!(atlas.index, 0);
+    }
+
+    #[test]
+    fn test_update_sprite_animations_clamps_invalid_core_frame_indices() {
+        let sheets = distinct_test_sheets();
+        let mut animations = std::collections::HashMap::new();
+        animations.insert(
+            AnimationType::Jumping,
+            AnimationClipData {
+                frames: vec![16, 17, 18],
+                frame_duration: 0.1,
+                playback_mode: PlaybackMode::Once,
+                speed_scale_by_velocity: false,
+                speed_reference: 150.0,
+                min_frame_duration: 0.05,
+            },
+        );
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, update_sprite_animations);
+        app.world_mut().spawn((
+            SpriteAnimation {
+                current_animation: AnimationType::Jumping,
+                frame_timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+                current_frame: 0,
+                frame_direction: 1,
+                last_attack_trigger_serial: 0,
+                previous_grounded: false,
+                apply_immediate_frame: true,
+                animations,
+            },
+            Sprite {
+                image: sheets.core_texture.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: sheets.core_layout.clone(),
+                    index: 99,
+                }),
+                ..default()
+            },
+            sheets.clone(),
+        ));
+
+        app.update();
+
+        let mut query = app.world_mut().query::<&Sprite>();
+        let sprite = query.single(app.world()).expect("animated sprite");
+        let atlas = sprite.texture_atlas.as_ref().expect("texture atlas");
+        assert_eq!(sprite.image, sheets.core_texture);
+        assert_eq!(atlas.layout, sheets.core_layout);
+        assert_eq!(
+            atlas.index, 0,
+            "invalid frame indices must not reach Bevy's atlas renderer"
+        );
     }
 
     #[test]

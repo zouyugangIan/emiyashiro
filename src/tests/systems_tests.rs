@@ -4794,6 +4794,7 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn((
+                crate::systems::network::RemotePlayer,
                 Transform::from_xyz(0.0, 0.0, 0.0),
                 crate::systems::network::InterpolationState {
                     start_pos: Vec3::new(0.0, 0.0, 0.0),
