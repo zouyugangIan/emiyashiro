@@ -94,6 +94,31 @@ pub const SAKURA_JUMPING_FRAMES: &[&str] = &[
 // Sakura 蹲下动画帧
 pub const SAKURA_CROUCHING_FRAMES: &[&str] = &[IMAGE_CHAR_SAKURA_IDLE13, IMAGE_CHAR_SAKURA_IDLE14];
 
+// Sakura 2P production attack atlases. All sheets use transparent 256x256 cells
+// and are indexed left-to-right, top-to-bottom.
+pub const IMAGE_SAKURA_ATTACK_GROUND_LIGHT: &str =
+    "images/characters/sakura_attack/sakura_attack_ground_light.png";
+pub const IMAGE_SAKURA_ATTACK_HEAVY: &str =
+    "images/characters/sakura_attack/sakura_attack_heavy.png";
+pub const IMAGE_SAKURA_ATTACK_AIR_COMBO: &str =
+    "images/characters/sakura_attack/sakura_attack_air_combo.png";
+pub const IMAGE_SAKURA_ATTACK_MOBILITY: &str =
+    "images/characters/sakura_attack/sakura_attack_mobility.png";
+pub const IMAGE_SAKURA_ATTACK_NINJUTSU: &str =
+    "images/characters/sakura_attack/sakura_attack_ninjutsu.png";
+pub const IMAGE_SAKURA_ATTACK_ULTIMATE: &str =
+    "images/characters/sakura_attack/sakura_attack_ultimate.png";
+pub const IMAGE_SAKURA_ATTACK_WEAPON_PROJECTION: &str =
+    "images/characters/sakura_attack/sakura_attack_weapon_projection.png";
+pub const SAKURA_ATTACK_CELL: (u32, u32) = (256, 256);
+pub const SAKURA_ATTACK_GROUND_LIGHT_GRID: (u32, u32) = (8, 5);
+pub const SAKURA_ATTACK_HEAVY_GRID: (u32, u32) = (8, 5);
+pub const SAKURA_ATTACK_AIR_COMBO_GRID: (u32, u32) = (8, 5);
+pub const SAKURA_ATTACK_MOBILITY_GRID: (u32, u32) = (6, 4);
+pub const SAKURA_ATTACK_NINJUTSU_GRID: (u32, u32) = (8, 4);
+pub const SAKURA_ATTACK_ULTIMATE_GRID: (u32, u32) = (8, 3);
+pub const SAKURA_ATTACK_WEAPON_PROJECTION_GRID: (u32, u32) = (6, 4);
+
 pub const IMAGE_HF_SHIROU_CORE_SHEET: &str = "images/characters/hf_shirou_core_sheet.png";
 pub const IMAGE_HF_SHIROU_RUN_SHEET: &str = "images/characters/hf_shirou_run_sheet.png";
 pub const IMAGE_HF_SHIROU_ATTACK_SHEET: &str = "images/characters/hf_shirou_attack_sheet.png";

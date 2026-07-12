@@ -11,6 +11,7 @@ These images are production attack atlases for the HF Shirou action module. Runt
 
 - `v2_generated/rows/ground_light_v2_r01.png` through `v2_generated/rows/ground_light_v2_r05.png`: Codex/model-generated 8-frame ground-light row atlases.
 - Heavy, air combo, mobility, ninjutsu, ultimate, and weapon projection runtime animation is selected from the multi-row reference boards below.
+- The repaired ground-light finisher and heavy rows are assembled only from visually approved, complete HF Shirou frames. This intentionally favors clean silhouettes and stable cell boundaries over retaining damaged generated in-betweens.
 
 ## Source And Preview Boards
 
@@ -21,7 +22,7 @@ These images are production attack atlases for the HF Shirou action module. Runt
 - `hf_shirou_attack_ninjutsu_projectiles_reference.png`: 8x4 fire, wind, lightning, shadow clone skills.
 - `hf_shirou_attack_ultimate_reference.png`: 8x3 ultimate techniques.
 - `hf_shirou_attack_weapon_projection_reference.png`: 6x4 short sword, twin blade, long sword, bow projection.
-- `v2_generated/hf_shirou_ground_light_v2_reference.png`: Codex/model-generated ground-light source board. The runtime `hf_shirou_attack_ground_light_reference.png` mirrors this image.
+- `v2_generated/hf_shirou_ground_light_v2_reference.png`: original Codex/model-generated ground-light source board retained for provenance. The production reference board and row 5 contain the repaired full-frame finisher.
 
 ## Sprite Split And Row Plan
 

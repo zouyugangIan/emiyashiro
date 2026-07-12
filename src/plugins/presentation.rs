@@ -48,9 +48,11 @@ impl Plugin for PresentationPlugin {
             (
                 systems::image_sequence_animation::setup_sakura_image_sequence_animation,
                 systems::image_sequence_animation::update_image_sequence_animation_state,
+                systems::image_sequence_animation::advance_sakura_attack_atlas_animations,
                 systems::image_sequence_animation::advance_image_sequence_animations,
             )
                 .chain()
+                .after(systems::sprite_animation::tick_attack_animation_states)
                 .in_set(GameSystemSet::Animation)
                 .run_if(in_state(GameState::Playing)),
         )

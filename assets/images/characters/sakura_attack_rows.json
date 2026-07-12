@@ -1,0 +1,93 @@
+{
+  "character": "Sakura 2P",
+  "cell_size": [256, 256],
+  "frame_timing_secs": 0.07,
+  "sheets": [
+    {
+      "id": "ground_light",
+      "asset_path": "images/characters/sakura_attack/sakura_attack_ground_light.png",
+      "source": "assets/images/characters/sakura_attack/sakura_attack_ground_light.png",
+      "columns": 8,
+      "rows": [
+        {"row": 1, "name": "Kunai palm jab", "primary_input": "J/Z/L or Y", "runtime_style": "GroundLightRow(1)", "combo_role": "Fast opener", "gameplay": "Short recovery and compact reach."},
+        {"row": 2, "name": "Rising shadow slash", "primary_input": "J/Z/L or U", "runtime_style": "GroundLightRow(2)", "combo_role": "Vertical chain hit", "gameplay": "Covers hops and adds lift."},
+        {"row": 3, "name": "Cursed ribbon thrust", "primary_input": "J/Z/L or I", "runtime_style": "GroundLightRow(3)", "combo_role": "Linear finisher", "gameplay": "Long horizontal reach."},
+        {"row": 4, "name": "Low petal sweep", "primary_input": "O", "runtime_style": "GroundLightRow(4)", "combo_role": "Ground crowd control", "gameplay": "Wide low sweep."},
+        {"row": 5, "name": "Violet crescent launcher", "primary_input": "P", "runtime_style": "GroundLightRow(5)", "combo_role": "Manual launcher", "gameplay": "Large vertical crescent."}
+      ]
+    },
+    {
+      "id": "heavy",
+      "asset_path": "images/characters/sakura_attack/sakura_attack_heavy.png",
+      "source": "assets/images/characters/sakura_attack/sakura_attack_heavy.png",
+      "columns": 8,
+      "rows": [
+        {"row": 1, "name": "Kodachi cleave", "primary_input": "K or Shift+Y", "runtime_style": "HeavyRefRow(1)", "combo_role": "Heavy opener", "gameplay": "Deliberate windup and strong hitstop."},
+        {"row": 2, "name": "Overhead breaker", "primary_input": "K or Shift+U", "runtime_style": "HeavyRefRow(2)", "combo_role": "Vertical breaker", "gameplay": "High vertical coverage."},
+        {"row": 3, "name": "Cursed chain spear", "primary_input": "K or Shift+I", "runtime_style": "HeavyRefRow(3)", "combo_role": "Long heavy thrust", "gameplay": "Strong forward knockback."},
+        {"row": 4, "name": "Violet cyclone", "primary_input": "Shift+O", "runtime_style": "HeavyRefRow(4)", "combo_role": "Circular heavy", "gameplay": "Wide grounded control."},
+        {"row": 5, "name": "Shadow eruption", "primary_input": "Shift+P", "runtime_style": "HeavyRefRow(5)", "combo_role": "Spectacle finisher", "gameplay": "Largest heavy impact read."}
+      ]
+    },
+    {
+      "id": "air_combo",
+      "asset_path": "images/characters/sakura_attack/sakura_attack_air_combo.png",
+      "source": "assets/images/characters/sakura_attack/sakura_attack_air_combo.png",
+      "columns": 8,
+      "rows": [
+        {"row": 1, "name": "Aerial kunai slash", "primary_input": "Air J/Z/L or Y", "runtime_style": "AirComboRow(1)", "combo_role": "Air opener", "gameplay": "Stable airborne attack."},
+        {"row": 2, "name": "Air shadow thrust", "primary_input": "Air U", "runtime_style": "AirComboRow(2)", "combo_role": "Forward air poke", "gameplay": "Adds horizontal pressure."},
+        {"row": 3, "name": "Diving kodachi", "primary_input": "Air I", "runtime_style": "AirComboRow(3)", "combo_role": "Downward commitment", "gameplay": "Readable dive attack."},
+        {"row": 4, "name": "Petal ring", "primary_input": "Air O", "runtime_style": "AirComboRow(4)", "combo_role": "Air crowd control", "gameplay": "Wide spinning coverage."},
+        {"row": 5, "name": "Shadow meteor", "primary_input": "Air P", "runtime_style": "AirComboRow(5)", "combo_role": "Air finisher", "gameplay": "Large landing impact."}
+      ]
+    },
+    {
+      "id": "mobility",
+      "asset_path": "images/characters/sakura_attack/sakura_attack_mobility.png",
+      "source": "assets/images/characters/sakura_attack/sakura_attack_mobility.png",
+      "columns": 6,
+      "rows": [
+        {"row": 1, "name": "Shadow-step slash", "primary_input": "Crouch+Y", "runtime_style": "MobilityRefRow(1)", "combo_role": "Forward burst", "gameplay": "Fast protected movement."},
+        {"row": 2, "name": "Petal slide", "primary_input": "Crouch+U", "runtime_style": "MobilityRefRow(2)", "combo_role": "Low advance", "gameplay": "Low-profile slide."},
+        {"row": 3, "name": "Substitution streak", "primary_input": "Crouch+I", "runtime_style": "MobilityRefRow(3)", "combo_role": "Evasive burst", "gameplay": "One body plus abstract streaks."},
+        {"row": 4, "name": "Wall kick launch", "primary_input": "Crouch+O/P", "runtime_style": "MobilityRefRow(4)", "combo_role": "Wall launcher", "gameplay": "Upward wall-style movement."}
+      ]
+    },
+    {
+      "id": "ninjutsu_projectiles",
+      "asset_path": "images/characters/sakura_attack/sakura_attack_ninjutsu.png",
+      "source": "assets/images/characters/sakura_attack/sakura_attack_ninjutsu.png",
+      "columns": 8,
+      "rows": [
+        {"row": 1, "name": "Cursed flame", "primary_input": "X", "runtime_style": "NinjutsuRefRow(1)", "combo_role": "Burst projectile", "gameplay": "Growing violet projectile."},
+        {"row": 2, "name": "Petal wind wave", "primary_input": "X", "runtime_style": "NinjutsuRefRow(2)", "combo_role": "Fast wave", "gameplay": "Wide horizontal projectile."},
+        {"row": 3, "name": "Shadow lightning", "primary_input": "X", "runtime_style": "NinjutsuRefRow(3)", "combo_role": "Vertical strike", "gameplay": "Tall lightning pillar."},
+        {"row": 4, "name": "Shadow bind", "primary_input": "Shift+X", "runtime_style": "NinjutsuRefRow(4)", "combo_role": "Binding slash", "gameplay": "One body with abstract shadow ribbons."}
+      ]
+    },
+    {
+      "id": "ultimate",
+      "asset_path": "images/characters/sakura_attack/sakura_attack_ultimate.png",
+      "source": "assets/images/characters/sakura_attack/sakura_attack_ultimate.png",
+      "columns": 8,
+      "rows": [
+        {"row": 1, "name": "Cursed blade field", "primary_input": "Crouch+K", "runtime_style": "UltimateRefRow(1)", "combo_role": "Field opener", "gameplay": "Area denial with thorn blades."},
+        {"row": 2, "name": "Shadow cross beam", "primary_input": "Crouch+K", "runtime_style": "UltimateRefRow(2)", "combo_role": "Forward burst", "gameplay": "High knockback beam."},
+        {"row": 3, "name": "Bounded shadow garden", "primary_input": "Crouch+K", "runtime_style": "UltimateRefRow(3)", "combo_role": "Ultimate finisher", "gameplay": "Largest shadow-lance field."}
+      ]
+    },
+    {
+      "id": "weapon_projection",
+      "asset_path": "images/characters/sakura_attack/sakura_attack_weapon_projection.png",
+      "source": "assets/images/characters/sakura_attack/sakura_attack_weapon_projection.png",
+      "columns": 6,
+      "rows": [
+        {"row": 1, "name": "Violet kodachi", "primary_input": "Crouch+X", "runtime_style": "WeaponProjRefRow(1)", "combo_role": "Short blade form", "gameplay": "Fast close weapon."},
+        {"row": 2, "name": "Twin wakizashi", "primary_input": "Crouch+X", "runtime_style": "WeaponProjRefRow(2)", "combo_role": "Dual blade form", "gameplay": "Wide paired stance."},
+        {"row": 3, "name": "Shadow odachi", "primary_input": "Crouch+X", "runtime_style": "WeaponProjRefRow(3)", "combo_role": "Long weapon form", "gameplay": "Extended melee reach."},
+        {"row": 4, "name": "Cursed bow", "primary_input": "Crouch+X", "runtime_style": "WeaponProjRefRow(4)", "combo_role": "Bow form", "gameplay": "Draw, release, and recover."}
+      ]
+    }
+  ]
+}
