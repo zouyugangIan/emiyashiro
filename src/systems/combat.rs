@@ -7,6 +7,7 @@ use crate::{
     resources::{GameConfig, GameplayTuning},
     states::GameState,
 };
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 const PLAYER_CONTACT_DAMAGE_COOLDOWN: f32 = 1.0;
@@ -163,6 +164,29 @@ type PlayerKnifeAttackItem<'a> = (
     &'a ShroudState,
     &'a mut AttackAnimationState,
 );
+
+type PlayerProjectileItem<'a> = (
+    &'a Transform,
+    Option<&'a FacingDirection>,
+    Option<&'a AttackAnimationState>,
+);
+
+type KnifeSlashCleanupItem<'a> = (
+    Entity,
+    &'a mut KnifeSlash,
+    Option<&'a KnifeSlashFeedback>,
+    Option<&'a mut Sprite>,
+    Option<&'a mut Transform>,
+);
+
+#[derive(SystemParam)]
+pub struct KnifeAttackResources<'w, 's> {
+    keyboard: Res<'w, ButtonInput<KeyCode>>,
+    game_input: Option<Res<'w, crate::systems::input::GameInput>>,
+    tuning: Option<Res<'w, GameplayTuning>>,
+    runtime: Local<'s, KnifeComboRuntime>,
+    time: Res<'w, Time>,
+}
 
 struct KnifeAttackRequest<'a> {
     player_entity: Entity,
@@ -601,7 +625,6 @@ fn knife_attack_preset_for_style(
                 knockback_x: base.knockback_x * 2.2,
                 knockback_y: 90.0,
                 hit_stop_secs: base.hit_stop_secs + 0.06,
-                ..base
             }
         }
         AttackAnimationStyle::MobilityRef | AttackAnimationStyle::MobilityRefRow(_) => {
@@ -620,7 +643,6 @@ fn knife_attack_preset_for_style(
                 knockback_x: base.knockback_x * 1.25,
                 knockback_y: base.knockback_y * 0.7,
                 hit_stop_secs: base.hit_stop_secs + 0.006,
-                ..base
             }
         }
         AttackAnimationStyle::NinjutsuRef | AttackAnimationStyle::NinjutsuRefRow(_) => {
@@ -1444,15 +1466,10 @@ fn reference_action_uses_split_row_sheet(
     }
 }
 
-fn reference_action_vfx_sheet<'a>(
-    sprite_sheets: Option<&'a SpriteAnimationSheets>,
+fn reference_action_vfx_sheet(
+    sprite_sheets: Option<&SpriteAnimationSheets>,
     style: AttackAnimationStyle,
-) -> Option<(
-    &'a Handle<Image>,
-    &'a Handle<TextureAtlasLayout>,
-    usize,
-    usize,
-)> {
+) -> Option<(&Handle<Image>, &Handle<TextureAtlasLayout>, usize, usize)> {
     let sprite_sheets = sprite_sheets?;
     let (texture, layout) =
         sprite_sheets.select_sheet_for_attack_style(&AnimationType::Attacking, style)?;
@@ -1863,14 +1880,7 @@ pub fn player_shoot_projectile(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     game_input: Option<Res<crate::systems::input::GameInput>>,
-    player_query: Query<
-        (
-            &Transform,
-            Option<&FacingDirection>,
-            Option<&AttackAnimationState>,
-        ),
-        With<Player>,
-    >,
+    player_query: Query<PlayerProjectileItem, With<Player>>,
     mut cooldown: Local<f32>,
     time: Res<Time>,
     shroud_query: Query<&ShroudState, With<Player>>,
@@ -1920,14 +1930,17 @@ pub fn player_shoot_projectile(
 /// 也支持 Reference Board 攻击模组（Shift+V 未激活时）。
 pub fn player_knife_attack(
     mut commands: Commands,
-    keyboard: Res<ButtonInput<KeyCode>>,
-    game_input: Option<Res<crate::systems::input::GameInput>>,
     mut player_query: Query<PlayerKnifeAttackItem, With<Player>>,
     reference_vfx_query: Query<(Entity, &AttackReferenceActionVfx)>,
-    tuning: Option<Res<GameplayTuning>>,
-    mut runtime: Local<KnifeComboRuntime>,
-    time: Res<Time>,
+    resources: KnifeAttackResources,
 ) {
+    let KnifeAttackResources {
+        keyboard,
+        game_input,
+        tuning,
+        mut runtime,
+        time,
+    } = resources;
     let default_tuning = GameplayTuning::default();
     let knife_tuning = &tuning.as_deref().unwrap_or(&default_tuning).knife;
 
@@ -2193,13 +2206,7 @@ pub fn cleanup_expired_enemy_projectiles(
 /// 清理超时刀攻击命中盒。
 pub fn cleanup_expired_knife_slashes(
     mut commands: Commands,
-    mut knife_query: Query<(
-        Entity,
-        &mut KnifeSlash,
-        Option<&KnifeSlashFeedback>,
-        Option<&mut Sprite>,
-        Option<&mut Transform>,
-    )>,
+    mut knife_query: Query<KnifeSlashCleanupItem>,
     time: Res<Time>,
 ) {
     for (entity, mut knife_slash, feedback, sprite, transform) in knife_query.iter_mut() {
@@ -2548,7 +2555,7 @@ pub fn apply_damage_events(
             }
 
             if health.is_dead() {
-                next_state.set(GameState::GameOver);
+                NextState::set_if_neq(&mut next_state, GameState::GameOver);
                 camera_impulse_writer.write(CameraImpulseEvent {
                     intensity: 8.0,
                     duration: 0.2,

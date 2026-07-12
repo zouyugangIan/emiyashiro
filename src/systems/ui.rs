@@ -238,8 +238,8 @@ type HealthTextQuery<'w, 's> = Query<
 /// 镨佸墽鐤嗗〒锻婂灆锟?HUD
 fn save_player_label(character: &CharacterType) -> &'static str {
     match character {
-        CharacterType::Shirou1 => "1P",
-        CharacterType::Shirou2 => "2P",
+        CharacterType::Shirou => "1P",
+        CharacterType::Sakura => "2P",
     }
 }
 
@@ -277,8 +277,8 @@ pub fn setup_game_hud(
                         crate::systems::text_constants::GameHUDText::SCORE_LABEL
                     )),
                     TextFont {
-                        font: assets.font.clone(),
-                        font_size: 24.0,
+                        font: assets.font.clone().into(),
+                        font_size: FontSize::Px(24.0),
                         ..default()
                     },
                     TextColor(Color::WHITE),
@@ -295,7 +295,7 @@ pub fn setup_game_hud(
                         crate::systems::text_constants::GameHUDText::SCORE_LABEL
                     )),
                     TextFont {
-                        font_size: 24.0,
+                        font_size: FontSize::Px(24.0),
                         ..default()
                     },
                     TextColor(Color::WHITE),
@@ -315,7 +315,7 @@ pub fn setup_game_hud(
                     crate::systems::text_constants::GameHUDText::METERS_UNIT
                 )),
                 TextFont {
-                    font_size: 20.0,
+                    font_size: FontSize::Px(20.0),
                     ..default()
                 },
                 TextColor(Color::WHITE),
@@ -330,7 +330,7 @@ pub fn setup_game_hud(
             parent.spawn((
                 Text::new("HP: 100/100"),
                 TextFont {
-                    font_size: 20.0,
+                    font_size: FontSize::Px(20.0),
                     ..default()
                 },
                 TextColor(Color::srgb(0.85, 0.95, 0.85)),
@@ -344,7 +344,7 @@ pub fn setup_game_hud(
             parent.spawn((
                 Text::new(crate::systems::text_constants::PauseMenuText::CONTROLS_HINT),
                 TextFont {
-                    font_size: 16.0,
+                    font_size: FontSize::Px(16.0),
                     ..default()
                 },
                 TextColor(Color::srgba(1.0, 1.0, 1.0, 0.7)),
@@ -449,8 +449,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                     parent.spawn((
                         Text::new(PauseMenuText::TITLE),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 36.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(36.0),
                             ..default()
                         },
                         TextColor(Color::WHITE),
@@ -481,8 +481,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             parent.spawn((
                                 Text::new(PauseMenuText::RESUME_GAME),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 20.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(20.0),
                                     ..default()
                                 },
                                 TextColor(Color::WHITE),
@@ -510,8 +510,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             parent.spawn((
                                 Text::new(PauseMenuText::SAVE_GAME),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 20.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(20.0),
                                     ..default()
                                 },
                                 TextColor(Color::WHITE),
@@ -539,8 +539,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             parent.spawn((
                                 Text::new(PauseMenuText::LOAD_GAME),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 20.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(20.0),
                                     ..default()
                                 },
                                 TextColor(Color::WHITE),
@@ -567,8 +567,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             parent.spawn((
                                 Text::new(PauseMenuText::SETTINGS),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 20.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(20.0),
                                     ..default()
                                 },
                                 TextColor(Color::srgba(0.92, 0.88, 0.82, 1.0)),
@@ -596,8 +596,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                             parent.spawn((
                                 Text::new(PauseMenuText::MAIN_MENU),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 20.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(20.0),
                                     ..default()
                                 },
                                 TextColor(Color::WHITE),
@@ -637,8 +637,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                                     parent.spawn((
                                         Text::new(PauseMenuText::ESC_RESUME),
                                         TextFont {
-                                            font: font_handle.clone(),
-                                            font_size: 14.0,
+                                            font: font_handle.clone().into(),
+                                            font_size: FontSize::Px(14.0),
                                             ..default()
                                         },
                                         TextColor(Color::WHITE),
@@ -666,8 +666,8 @@ pub fn setup_pause_menu(mut commands: Commands, game_assets: Option<Res<GameAsse
                                     parent.spawn((
                                         Text::new(PauseMenuText::Q_MAIN_MENU),
                                         TextFont {
-                                            font: font_handle.clone(),
-                                            font_size: 14.0,
+                                            font: font_handle.clone().into(),
+                                            font_size: FontSize::Px(14.0),
                                             ..default()
                                         },
                                         TextColor(Color::WHITE),
@@ -762,8 +762,8 @@ pub fn setup_save_dialog(
                     parent.spawn((
                         Text::new(SaveLoadText::SAVE_DIALOG_TITLE),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 28.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(28.0),
                             ..default()
                         },
                         TextColor(Color::WHITE),
@@ -773,8 +773,8 @@ pub fn setup_save_dialog(
                     parent.spawn((
                         Text::new(SaveLoadText::ENTER_SAVE_NAME),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 18.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(18.0),
                             ..default()
                         },
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
@@ -800,8 +800,8 @@ pub fn setup_save_dialog(
                             parent.spawn((
                                 Text::new(SaveLoadText::NAME_PLACEHOLDER),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 16.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(16.0),
                                     ..default()
                                 },
                                 TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)), // Placeholder color
@@ -812,8 +812,8 @@ pub fn setup_save_dialog(
                             parent.spawn((
                                 Text::new("|"),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 16.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(16.0),
                                     ..default()
                                 },
                                 TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
@@ -833,8 +833,8 @@ pub fn setup_save_dialog(
                     parent.spawn((
                         Text::new(initial_status_text.clone()),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 12.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(12.0),
                             ..default()
                         },
                         TextColor(initial_status_color),
@@ -872,8 +872,8 @@ pub fn setup_save_dialog(
                                     parent.spawn((
                                         Text::new(SaveLoadText::SAVE_BUTTON),
                                         TextFont {
-                                            font: font_handle.clone(),
-                                            font_size: 18.0,
+                                            font: font_handle.clone().into(),
+                                            font_size: FontSize::Px(18.0),
                                             ..default()
                                         },
                                         TextColor(Color::WHITE),
@@ -900,8 +900,8 @@ pub fn setup_save_dialog(
                                     parent.spawn((
                                         Text::new(SaveLoadText::CANCEL_BUTTON),
                                         TextFont {
-                                            font: font_handle.clone(),
-                                            font_size: 18.0,
+                                            font: font_handle.clone().into(),
+                                            font_size: FontSize::Px(18.0),
                                             ..default()
                                         },
                                         TextColor(Color::WHITE),
@@ -1097,7 +1097,7 @@ pub fn handle_save_dialog_interactions(
                         save_name,
                         state: state.clone(),
                     });
-                    next_state.set(GameState::Paused);
+                    NextState::set_if_neq(&mut next_state, GameState::Paused);
                 }
                 Err(error) => {
                     save_load_ui_state.error_message =
@@ -1110,7 +1110,7 @@ pub fn handle_save_dialog_interactions(
             save_load_ui_state.error_message = "No paused game snapshot to save".to_string();
             save_load_ui_state.status_message.clear();
             crate::debug_log!("No game state to save: PauseManager snapshot is empty");
-            next_state.set(GameState::Paused);
+            NextState::set_if_neq(&mut next_state, GameState::Paused);
         }
     } else if should_cancel {
         if save_load_ui_state.is_busy {
@@ -1120,7 +1120,7 @@ pub fn handle_save_dialog_interactions(
 
         save_load_ui_state.pending_load_index = None;
         // 閸欐牗绉锋穱婵嗙摠阌涘矁绻戦崶镣存畯閸嬫粏褰嶉崡?
-        next_state.set(GameState::Paused);
+        NextState::set_if_neq(&mut next_state, GameState::Paused);
         crate::debug_log!("Save canceled");
     }
 }
@@ -1191,8 +1191,8 @@ pub fn setup_load_table(
             parent.spawn((
                 Text::new(crate::systems::text_constants::SaveLoadText::LOAD_DIALOG_TITLE),
                 TextFont {
-                    font: font_handle.clone(),
-                    font_size: 28.0,
+                    font: font_handle.clone().into(),
+                    font_size: FontSize::Px(28.0),
                     ..default()
                 },
                 TextColor(Color::WHITE),
@@ -1206,8 +1206,8 @@ pub fn setup_load_table(
             parent.spawn((
                 Text::new(initial_status_text.clone()),
                 TextFont {
-                    font: font_handle.clone(),
-                    font_size: 14.0,
+                    font: font_handle.clone().into(),
+                    font_size: FontSize::Px(14.0),
                     ..default()
                 },
                 TextColor(initial_status_color),
@@ -1257,8 +1257,8 @@ pub fn setup_load_table(
                         parent.spawn((
                             Text::new(*header),
                             TextFont {
-                                font: font_handle.clone(),
-                                font_size: 14.0,
+                                font: font_handle.clone().into(),
+                                font_size: FontSize::Px(14.0),
                                 ..default()
                             },
                             TextColor(Color::WHITE),
@@ -1291,8 +1291,8 @@ pub fn setup_load_table(
                         parent.spawn((
                             Text::new(crate::systems::text_constants::SaveLoadText::NO_SAVES_FOUND),
                             TextFont {
-                                font: font_handle.clone(),
-                                font_size: 18.0,
+                                font: font_handle.clone().into(),
+                                font_size: FontSize::Px(18.0),
                                 ..default()
                             },
                             TextColor(Color::srgba(1.0, 1.0, 1.0, 0.6)),
@@ -1346,8 +1346,8 @@ pub fn setup_load_table(
                                         parent.spawn((
                                             Text::new(value.clone()),
                                             TextFont {
-                                                font: font_handle.clone(),
-                                                font_size: 13.0,
+                                                font: font_handle.clone().into(),
+                                                font_size: FontSize::Px(13.0),
                                                 ..default()
                                             },
                                             TextColor(if i == 1 {
@@ -1392,8 +1392,8 @@ pub fn setup_load_table(
                                     parent.spawn((
                                         Text::new(crate::systems::text_constants::SaveLoadText::RENAME_BUTTON),
                                         TextFont {
-                                            font: font_handle.clone(),
-                                            font_size: 10.0,
+                                            font: font_handle.clone().into(),
+                                            font_size: FontSize::Px(10.0),
                                             ..default()
                                         },
                                         TextColor(Color::WHITE),
@@ -1419,8 +1419,8 @@ pub fn setup_load_table(
                                     parent.spawn((
                                         Text::new(crate::systems::text_constants::SaveLoadText::DELETE_BUTTON),
                                         TextFont {
-                                            font: font_handle.clone(),
-                                            font_size: 10.0,
+                                            font: font_handle.clone().into(),
+                                            font_size: FontSize::Px(10.0),
                                             ..default()
                                         },
                                         TextColor(Color::WHITE),
@@ -1462,8 +1462,8 @@ pub fn setup_load_table(
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::REFRESH_BUTTON),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 16.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(16.0),
                             ..default()
                         },
                         TextColor(Color::WHITE),
@@ -1488,8 +1488,8 @@ pub fn setup_load_table(
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::BACK_BUTTON),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 16.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(16.0),
                             ..default()
                         },
                         TextColor(Color::WHITE),
@@ -1565,8 +1565,8 @@ pub fn setup_rename_dialog(
                             crate::systems::text_constants::SaveLoadText::RENAME_DIALOG_TITLE,
                         ),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 24.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(24.0),
                             ..default()
                         },
                         TextColor(Color::WHITE),
@@ -1576,8 +1576,8 @@ pub fn setup_rename_dialog(
                     parent.spawn((
                         Text::new(format!("Current name: {}", rename_input.original_name)),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 16.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(16.0),
                             ..default()
                         },
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.7)),
@@ -1587,8 +1587,8 @@ pub fn setup_rename_dialog(
                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::ENTER_NEW_NAME),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 16.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(16.0),
                             ..default()
                         },
                         TextColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
@@ -1614,8 +1614,8 @@ pub fn setup_rename_dialog(
                             parent.spawn((
                                 Text::new(rename_input.current_name.clone()),
                                 TextFont {
-                                    font: font_handle.clone(),
-                                    font_size: 16.0,
+                                    font: font_handle.clone().into(),
+                                    font_size: FontSize::Px(16.0),
                                     ..default()
                                 },
                                 TextColor(Color::WHITE),
@@ -1653,8 +1653,8 @@ pub fn setup_rename_dialog(
                                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::CONFIRM_BUTTON),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 18.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(18.0),
                             ..default()
                         },
                         TextColor(Color::WHITE),
@@ -1681,8 +1681,8 @@ pub fn setup_rename_dialog(
                                     parent.spawn((
                         Text::new(crate::systems::text_constants::SaveLoadText::CANCEL_BUTTON),
                         TextFont {
-                            font: font_handle.clone(),
-                            font_size: 18.0,
+                            font: font_handle.clone().into(),
+                            font_size: FontSize::Px(18.0),
                             ..default()
                         },
                         TextColor(Color::WHITE),
@@ -1825,7 +1825,7 @@ pub fn handle_load_table_interactions(
             save_load_ui_state.pending_load_index = None;
             rename_input.original_name = save_file.name.clone();
             rename_input.save_index = index;
-            next_state.set(GameState::RenameDialog);
+            NextState::set_if_neq(&mut next_state, GameState::RenameDialog);
             crate::debug_log!("Renaming save: {}", save_file.name);
         }
     }
@@ -1878,7 +1878,7 @@ pub fn handle_load_table_interactions(
 
         // 鐟欙箑褰傜€涙ɑ銆傞弬锲︽阉殿偅寮块狝鍫曞櫢閺傛澘濮炴潪绲孖
         crate::systems::pause_save::scan_save_files(save_file_manager);
-        next_state.set(GameState::LoadTable);
+        NextState::set_if_neq(&mut next_state, GameState::LoadTable);
         crate::debug_log!("Refreshing save list and reloading UI");
     }
     // 婢跺嫮镇婃潻鏂挎礀
@@ -1899,7 +1899,7 @@ pub fn handle_load_table_interactions(
             .previous_state
             .clone()
             .unwrap_or(GameState::Menu);
-        next_state.set(target_state.clone());
+        NextState::set_if_neq(&mut next_state, target_state.clone());
         loaded_game_state.previous_state = None; // 濞揿懐镇婇悩鑸碘偓?
         match target_state {
             GameState::Menu => crate::debug_log!("Back to main menu"),
@@ -2016,7 +2016,7 @@ pub fn handle_rename_dialog_interactions(
                         new_name
                     );
                     rename_input.is_editing = false;
-                    next_state.set(GameState::LoadTable);
+                    NextState::set_if_neq(&mut next_state, GameState::LoadTable);
                 }
                 Err(e) => {
                     crate::debug_log!(
@@ -2024,14 +2024,14 @@ pub fn handle_rename_dialog_interactions(
                         crate::systems::text_constants::SaveLoadText::RENAME_ERROR,
                         e
                     );
-                    next_state.set(GameState::LoadTable);
+                    NextState::set_if_neq(&mut next_state, GameState::LoadTable);
                 }
             }
         }
     } else if should_cancel {
         // 閸欐牗绉烽柌宥呮嚒閸氩稄绱濇潻鏂挎礀閸旂姾娴囩悰銊︾壐
         rename_input.is_editing = false;
-        next_state.set(GameState::LoadTable);
+        NextState::set_if_neq(&mut next_state, GameState::LoadTable);
         crate::debug_log!("Rename cancelled");
     }
 }
@@ -2062,11 +2062,11 @@ pub fn handle_pause_menu_interactions(
             Interaction::Pressed => {
                 if resume_btn.is_some() || esc_btn.is_some() {
                     // 缂布呯敾濞揿憡锟?
-                    next_state.set(GameState::Playing);
+                    NextState::set_if_neq(&mut next_state, GameState::Playing);
                     crate::debug_log!("Resume game");
                 } else if save_btn.is_some() {
                     // 鏉╂稑鍙嗘穱婵嗙摠鐎电锎借?
-                    next_state.set(GameState::SaveDialog);
+                    NextState::set_if_neq(&mut next_state, GameState::SaveDialog);
                     crate::debug_log!("Open save dialog");
                 } else if load_btn.is_some() {
                     // 鏉╂稑鍙嗛崝钟烘祰鐞涖剑鐗搁敍宀冾唶瑜版洘娼靛┃镒Ц锟?
@@ -2076,7 +2076,7 @@ pub fn handle_pause_menu_interactions(
                     if !save_load_ui_state.is_busy {
                         save_load_ui_state.status_message.clear();
                     }
-                    next_state.set(GameState::LoadTable);
+                    NextState::set_if_neq(&mut next_state, GameState::LoadTable);
                     crate::debug_log!("Open load table from pause menu");
                 } else if settings_btn.is_some() {
                     crate::systems::settings_ui::open_settings_overlay_from_resources(
@@ -2091,7 +2091,7 @@ pub fn handle_pause_menu_interactions(
                     pause_manager.resume_game(); // Clear paused snapshot state
                     save_load_ui_state.pending_load_index = None;
                     save_load_ui_state.is_busy = false;
-                    next_state.set(GameState::Menu);
+                    NextState::set_if_neq(&mut next_state, GameState::Menu);
                     crate::debug_log!("Return to main menu");
                 }
                 *color = BackgroundColor(Color::srgba(0.05, 0.05, 0.05, 0.9));

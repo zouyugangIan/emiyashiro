@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 impl Database {
     /// 创建或获取玩家
-    #[allow(dead_code)]
     pub async fn get_or_create_player(&self, username: &str) -> Result<Player, sqlx::Error> {
         // 尝试获取现有玩家
         if let Ok(player) = self.get_player_by_username(username).await {
@@ -28,7 +27,6 @@ impl Database {
     }
 
     /// 根据用户名获取玩家
-    #[allow(dead_code)]
     pub async fn get_player_by_username(&self, username: &str) -> Result<Player, sqlx::Error> {
         let row = sqlx::query(
             "SELECT id, username, created_at, updated_at FROM players WHERE username = $1",
@@ -46,7 +44,6 @@ impl Database {
     }
 
     /// 创建游戏会话
-    #[allow(dead_code)]
     pub async fn create_game_session(
         &self,
         player_id: Uuid,
@@ -78,7 +75,6 @@ impl Database {
     }
 
     /// 更新游戏会话
-    #[allow(dead_code)]
     pub async fn update_game_session(
         &self,
         session_id: Uuid,
@@ -106,7 +102,6 @@ impl Database {
     }
 
     /// 记录玩家操作
-    #[allow(dead_code)]
     pub async fn log_player_action(
         &self,
         session_id: Uuid,
@@ -134,14 +129,14 @@ impl Database {
     }
 
     /// 保存游戏存档
-    #[allow(dead_code)]
     pub async fn save_game(
         &self,
         player_id: Uuid,
         save_name: &str,
         game_data: &GameData,
     ) -> Result<Uuid, sqlx::Error> {
-        let game_data_json = serde_json::to_value(game_data).unwrap();
+        let game_data_json =
+            serde_json::to_value(game_data).map_err(|error| sqlx::Error::Encode(error.into()))?;
 
         let row = sqlx::query(
             r#"
@@ -162,7 +157,6 @@ impl Database {
     }
 
     /// 加载游戏存档
-    #[allow(dead_code)]
     pub async fn load_game(
         &self,
         player_id: Uuid,
@@ -176,13 +170,13 @@ impl Database {
                 .await?;
 
         let game_data_json: serde_json::Value = row.get("game_data");
-        let game_data: GameData = serde_json::from_value(game_data_json).unwrap();
+        let game_data = serde_json::from_value(game_data_json)
+            .map_err(|error| sqlx::Error::Decode(error.into()))?;
 
         Ok(game_data)
     }
 
     /// 获取玩家的所有存档
-    #[allow(dead_code)]
     pub async fn get_player_saves(&self, player_id: Uuid) -> Result<Vec<SaveGame>, sqlx::Error> {
         let rows = sqlx::query(
             "SELECT id, player_id, save_name, game_data, created_at, updated_at FROM save_games WHERE player_id = $1 ORDER BY updated_at DESC"

@@ -142,8 +142,8 @@ pub fn display_progress_indicator(
                 parent.spawn((
                     Text::new(progress.current_operation.clone().unwrap_or_default()),
                     TextFont {
-                        font: font.clone(),
-                        font_size: 16.0,
+                        font: font.clone().into(),
+                        font_size: FontSize::Px(16.0),
                         ..default()
                     },
                     TextColor(Color::WHITE),
@@ -179,8 +179,8 @@ pub fn display_progress_indicator(
                 parent.spawn((
                     Text::new(format!("{:.1}%", progress.progress_percentage)),
                     TextFont {
-                        font,
-                        font_size: 14.0,
+                        font: font.into(),
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
                     TextColor(Color::WHITE),

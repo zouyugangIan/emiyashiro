@@ -48,48 +48,12 @@ mod tests {
         GameAssets {
             cover_textures: vec![Handle::default()],
             current_cover_index: 0,
-            shirou_animation_frames: vec![Handle::default()],
-            sakura_animation_frames: vec![Handle::default()],
-            current_shirou_frame: 0,
-            current_sakura_frame: 0,
+            shirou_initial_image: Handle::default(),
+            sakura_initial_image: Handle::default(),
+            hf_shirou_animation: None,
             font: Handle::default(),
             volume_icon,
             volume_muted_icon,
-            shirou_spritesheet: None,
-            shirou_spritesheet_run: None,
-            shirou_spritesheet_attack: None,
-            shirou_spritesheet_overedge_light_attack: None,
-            shirou_spritesheet_overedge_heavy_attack: None,
-            sakura_spritesheet: None,
-            shirou_atlas: None,
-            shirou_atlas_run: None,
-            shirou_atlas_attack: None,
-            shirou_atlas_overedge_light_attack: None,
-            shirou_atlas_overedge_heavy_attack: None,
-            sakura_atlas: None,
-            shirou_ref_ground_light: None,
-            shirou_ref_air_combo: None,
-            shirou_ref_heavy: None,
-            shirou_ref_ultimate: None,
-            shirou_ref_mobility: None,
-            shirou_ref_ninjutsu: None,
-            shirou_ref_weapon_proj: None,
-            shirou_ref_advance: None,
-            shirou_ref_ground_light_rows: Vec::new(),
-            shirou_ref_air_combo_rows: Vec::new(),
-            shirou_ref_heavy_rows: Vec::new(),
-            shirou_ref_ultimate_rows: Vec::new(),
-            shirou_ref_mobility_rows: Vec::new(),
-            shirou_ref_ninjutsu_rows: Vec::new(),
-            shirou_ref_weapon_proj_rows: Vec::new(),
-            shirou_atlas_ref_ground_light: None,
-            shirou_atlas_ref_air_combo: None,
-            shirou_atlas_ref_heavy: None,
-            shirou_atlas_ref_ultimate: None,
-            shirou_atlas_ref_mobility: None,
-            shirou_atlas_ref_ninjutsu: None,
-            shirou_atlas_ref_weapon_proj: None,
-            shirou_atlas_ref_advance: None,
             jump_sound: Handle::default(),
             land_sound: Handle::default(),
             footstep_sound: Handle::default(),
@@ -161,34 +125,21 @@ mod tests {
         let mut assets =
             create_test_game_assets(test_image_handle(0xF001), test_image_handle(0xF002));
 
-        assets.shirou_spritesheet = Some(test_image_handle(0xC001));
-        assets.shirou_spritesheet_run = Some(test_image_handle(0xC002));
-        assets.shirou_spritesheet_attack = Some(test_image_handle(0xC003));
-        assets.shirou_spritesheet_overedge_light_attack = Some(test_image_handle(0xC004));
-        assets.shirou_spritesheet_overedge_heavy_attack = Some(test_image_handle(0xC005));
-        assets.shirou_atlas = Some(test_layout_handle(0xA001));
-        assets.shirou_atlas_run = Some(test_layout_handle(0xA002));
-        assets.shirou_atlas_attack = Some(test_layout_handle(0xA003));
-        assets.shirou_atlas_overedge_light_attack = Some(test_layout_handle(0xA004));
-        assets.shirou_atlas_overedge_heavy_attack = Some(test_layout_handle(0xA005));
-
-        assets.shirou_ref_ground_light = Some(test_image_handle(0xD001));
-        assets.shirou_ref_air_combo = Some(test_image_handle(0xD002));
-        assets.shirou_ref_heavy = Some(test_image_handle(0xD003));
-        assets.shirou_ref_ultimate = Some(test_image_handle(0xD004));
-        assets.shirou_ref_mobility = Some(test_image_handle(0xD005));
-        assets.shirou_ref_ninjutsu = Some(test_image_handle(0xD006));
-        assets.shirou_ref_weapon_proj = Some(test_image_handle(0xD007));
-        assets.shirou_ref_ground_light_rows = (0..5)
+        let mut sheets = create_test_sprite_animation_sheets();
+        sheets.core_texture = test_image_handle(0xC001);
+        sheets.running_texture = test_image_handle(0xC002);
+        sheets.attacking_texture = test_image_handle(0xC003);
+        sheets.core_layout = test_layout_handle(0xA001);
+        sheets.running_layout = test_layout_handle(0xA002);
+        sheets.attacking_layout = test_layout_handle(0xA003);
+        sheets.overedge_light_attacking_texture = Some(test_image_handle(0xC004));
+        sheets.overedge_heavy_attacking_texture = Some(test_image_handle(0xC005));
+        sheets.overedge_light_attacking_layout = Some(test_layout_handle(0xA004));
+        sheets.overedge_heavy_attacking_layout = Some(test_layout_handle(0xA005));
+        sheets.reference_ground_light_row_textures = (0..5)
             .map(|index| test_image_handle(0xE100 + index))
             .collect();
-        assets.shirou_atlas_ref_ground_light = Some(test_layout_handle(0xB001));
-        assets.shirou_atlas_ref_air_combo = Some(test_layout_handle(0xB002));
-        assets.shirou_atlas_ref_heavy = Some(test_layout_handle(0xB003));
-        assets.shirou_atlas_ref_ultimate = Some(test_layout_handle(0xB004));
-        assets.shirou_atlas_ref_mobility = Some(test_layout_handle(0xB005));
-        assets.shirou_atlas_ref_ninjutsu = Some(test_layout_handle(0xB006));
-        assets.shirou_atlas_ref_weapon_proj = Some(test_layout_handle(0xB007));
+        assets.hf_shirou_animation = Some(sheets);
 
         assets
     }
@@ -481,21 +432,33 @@ mod tests {
     #[test]
     fn test_character_selection_default() {
         let selection = CharacterSelection::default();
-        assert_eq!(selection.selected_character, CharacterType::Shirou1);
+        assert_eq!(selection.selected_character, CharacterType::Shirou);
     }
 
     #[test]
     fn test_character_type_texture_paths() {
-        let shirou1 = CharacterType::Shirou1;
-        let shirou2 = CharacterType::Shirou2;
+        let shirou = CharacterType::Shirou;
+        let sakura = CharacterType::Sakura;
 
         assert_eq!(
-            shirou1.get_texture_path(),
-            "images/characters/shirou_idle1.jpg"
+            shirou.get_texture_path(),
+            crate::asset_paths::IMAGE_HF_SHIROU_IDLE
         );
         assert_eq!(
-            shirou2.get_texture_path(),
-            "images/characters/shirou_idle2.jpg"
+            sakura.get_texture_path(),
+            crate::asset_paths::IMAGE_CHAR_SAKURA_IDLE01
+        );
+    }
+
+    #[test]
+    fn test_old_character_names_remain_loadable() {
+        assert_eq!(
+            serde_json::from_str::<CharacterType>("\"Shirou1\"").expect("legacy Shirou"),
+            CharacterType::Shirou
+        );
+        assert_eq!(
+            serde_json::from_str::<CharacterType>("\"Shirou2\"").expect("legacy Sakura"),
+            CharacterType::Sakura
         );
     }
 
@@ -530,7 +493,7 @@ mod tests {
             play_time: 0.0,
             save_timestamp: chrono::Utc::now(),
             file_path: "unused.json".to_string(),
-            selected_character: CharacterType::Shirou1,
+            selected_character: CharacterType::Shirou,
         };
         let save_data = SaveFileData::new(metadata, CompleteGameState::default());
 
@@ -615,7 +578,7 @@ mod tests {
             "deprecated save schema must be rejected"
         );
         let loaded_selection = app.world().resource::<CharacterSelection>();
-        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou1);
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou);
 
         let _ = fs::remove_file(temp_path);
     }
@@ -712,36 +675,6 @@ mod tests {
         assert!(!shroud.is_released);
     }
 
-    // Test system behavior with mock data
-    #[test]
-    fn test_player_state_updates() {
-        let mut app = create_test_app();
-
-        // Spawn a test player entity
-        let player_entity = app
-            .world_mut()
-            .spawn((
-                Player,
-                Transform::from_translation(Vec3::new(0.0, GameConfig::GROUND_LEVEL, 0.0)),
-                PlayerState::default(),
-            ))
-            .id();
-
-        // Add the update system
-        app.add_systems(Update, crate::systems::player::update_player_state);
-
-        // Run one update
-        app.update();
-
-        // Check that player state was updated correctly
-        let player_state = app
-            .world()
-            .entity(player_entity)
-            .get::<PlayerState>()
-            .unwrap();
-        assert!(player_state.is_grounded);
-    }
-
     #[test]
     fn test_collision_system_keeps_grounded_when_near_ground_level() {
         let mut app = App::new();
@@ -779,7 +712,7 @@ mod tests {
             .expect("player state should exist");
         assert!(
             player_state.is_grounded,
-            "near-ground fallback should prevent false airborne state"
+            "near-ground image sequence should prevent false airborne state"
         );
     }
 
@@ -1079,7 +1012,7 @@ mod tests {
 
         app.world_mut().spawn((
             CharacterSelectButton {
-                character_type: CharacterType::Shirou2,
+                character_type: CharacterType::Sakura,
             },
             Interaction::Pressed,
             BackgroundColor(Color::NONE),
@@ -1094,7 +1027,7 @@ mod tests {
         app.update();
 
         let selection = app.world().resource::<CharacterSelection>();
-        assert_eq!(selection.selected_character, CharacterType::Shirou2);
+        assert_eq!(selection.selected_character, CharacterType::Sakura);
 
         app.update();
         let state = app.world().resource::<State<GameState>>();
@@ -1117,12 +1050,12 @@ mod tests {
             &Sprite,
             &SpriteAnimationSheets,
             &crate::systems::sprite_animation::SpriteAnimation,
-            Option<&crate::systems::frame_animation::FrameAnimation>,
+            Option<&crate::systems::image_sequence_animation::ImageSequenceAnimation>,
         ), With<Player>>();
         let players = query.iter(app.world()).collect::<Vec<_>>();
         assert_eq!(players.len(), 1);
 
-        let (sprite, sheets, animation, frame_animation) = players[0];
+        let (sprite, sheets, animation, image_sequence_animation) = players[0];
         assert_eq!(sprite.image, test_image_handle(0xC001));
         let atlas = sprite.texture_atlas.as_ref().expect("player atlas");
         assert_eq!(atlas.layout, test_layout_handle(0xA001));
@@ -1137,7 +1070,7 @@ mod tests {
         assert_eq!(sheets.reference_ground_light_row_textures.len(), 5);
         assert_eq!(animation.current_animation, AnimationType::Idle);
         assert!(
-            frame_animation.is_none(),
+            image_sequence_animation.is_none(),
             "HF Shirou atlas player must not be downgraded to legacy frame animation"
         );
     }
@@ -1362,7 +1295,7 @@ mod tests {
             music_position: 45.5,
             music_playing: true,
             audio_volume: 0.8,
-            selected_character: CharacterType::Shirou1,
+            selected_character: CharacterType::Shirou,
             player_count: PlayerCount::Single,
             save_timestamp: chrono::Utc::now(),
             entities_snapshot: vec![],
@@ -1377,13 +1310,13 @@ mod tests {
         let json = serde_json::to_string(&game_state).unwrap();
         assert!(json.contains("100"));
         assert!(json.contains("1500"));
-        assert!(json.contains("Shirou1"));
+        assert!(json.contains("Shirou"));
 
         // Test deserialization
         let deserialized: CompleteGameState = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.score, 1500);
         assert_eq!(deserialized.distance_traveled, 2500.0);
-        assert_eq!(deserialized.selected_character, CharacterType::Shirou1);
+        assert_eq!(deserialized.selected_character, CharacterType::Shirou);
     }
 
     #[test]
@@ -1401,7 +1334,7 @@ mod tests {
             play_time: 60.0,
             save_timestamp: chrono::Utc::now(),
             file_path: "test.json".to_string(),
-            selected_character: CharacterType::Shirou1,
+            selected_character: CharacterType::Shirou,
         };
 
         assert_eq!(metadata.name, "TestSave");
@@ -1485,7 +1418,7 @@ mod tests {
             music_position: 22.5,
             music_playing: true,
             audio_volume: 0.9,
-            selected_character: CharacterType::Shirou2,
+            selected_character: CharacterType::Sakura,
             player_count: PlayerCount::Double,
             save_timestamp: chrono::Utc::now(),
             entities_snapshot: vec![],
@@ -1502,7 +1435,7 @@ mod tests {
         let retrieved_state = pause_manager.preserved_state.as_ref().unwrap();
         assert_eq!(retrieved_state.score, 750);
         assert_eq!(retrieved_state.distance_traveled, 1250.0);
-        assert_eq!(retrieved_state.selected_character, CharacterType::Shirou2);
+        assert_eq!(retrieved_state.selected_character, CharacterType::Sakura);
     }
 
     #[test]
@@ -4841,7 +4774,7 @@ mod tests {
         ));
 
         let state_only_schema = CompleteGameState {
-            selected_character: CharacterType::Shirou2,
+            selected_character: CharacterType::Sakura,
             distance_traveled: 456.0,
             jump_count: 12,
             score: 987,
@@ -4867,7 +4800,7 @@ mod tests {
             "state-only schema must be rejected"
         );
         let loaded_selection = app.world().resource::<CharacterSelection>();
-        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou1);
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou);
 
         let _ = fs::remove_file(temp_path);
     }
@@ -4885,7 +4818,7 @@ mod tests {
             play_time: 3.0,
             save_timestamp: chrono::Utc::now(),
             file_path: temp_path.to_string_lossy().to_string(),
-            selected_character: CharacterType::Shirou2,
+            selected_character: CharacterType::Sakura,
         };
         let mut save_data = SaveFileData::new(metadata, CompleteGameState::default());
         save_data.checksum = "broken".to_string();
@@ -4908,7 +4841,7 @@ mod tests {
             "checksum mismatch must be rejected"
         );
         let loaded_selection = app.world().resource::<CharacterSelection>();
-        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou1);
+        assert_eq!(loaded_selection.selected_character, CharacterType::Shirou);
 
         let _ = fs::remove_file(temp_path);
     }

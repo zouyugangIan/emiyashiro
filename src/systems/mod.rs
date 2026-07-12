@@ -15,11 +15,9 @@ pub mod player;
 pub mod shirou;
 
 // 渲染和视觉系统
-pub mod animation;
 pub mod attack_modules;
-pub mod background;
 pub mod camera;
-pub mod frame_animation;
+pub mod image_sequence_animation;
 pub mod scene_decoration;
 pub mod sprite_animation;
 
@@ -37,15 +35,10 @@ pub mod audio;
 // 数据持久化系统
 pub mod async_file_ops;
 pub mod async_tasks;
-pub mod database_service;
-pub mod online_ecosystem;
 pub mod pause_save;
 pub mod save;
 pub mod server_file_ops;
 pub mod shared_utils;
-
-// 资源生成系统
-pub mod procedural_assets;
 
 // 视觉效果系统
 pub mod visual_effects;

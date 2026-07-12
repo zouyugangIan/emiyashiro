@@ -6,7 +6,9 @@ use crate::{
     },
 };
 use bevy::prelude::*;
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
+
+const HF_SHIROU_PROFILE: &str = include_str!("../../assets/animations/hf_shirou.ron");
 
 /// 动画运行时参数（可在后续做难度/手感调节）
 #[derive(Resource, Debug, Clone)]
@@ -100,6 +102,28 @@ fn validate_clip_frame_counts(
             );
         }
     }
+}
+
+fn validate_profile(character_name: &str, profile: &CharacterAnimationData) -> Result<(), String> {
+    const REQUIRED_CLIPS: [AnimationType; 6] = [
+        AnimationType::Idle,
+        AnimationType::Running,
+        AnimationType::Attacking,
+        AnimationType::Jumping,
+        AnimationType::Crouching,
+        AnimationType::Landing,
+    ];
+
+    for animation_type in REQUIRED_CLIPS {
+        let clip = profile
+            .animations
+            .get(&animation_type)
+            .ok_or_else(|| format!("{character_name} 缺少必需动画 {animation_type:?}"))?;
+        clip.validate()
+            .map_err(|reason| format!("{character_name}::{animation_type:?}: {reason}"))?;
+    }
+
+    Ok(())
 }
 
 fn resolve_target_animation(
@@ -392,7 +416,7 @@ fn resolved_animation_clip(
 }
 
 fn current_clip_is_blocking(animation: &SpriteAnimation, clip: &AnimationClipData) -> bool {
-    let is_once = clip.playback_mode() == PlaybackMode::Once;
+    let is_once = clip.playback_mode == PlaybackMode::Once;
     let not_finished = animation.current_frame + 1 < clip.frames.len();
     is_once && not_finished
 }
@@ -449,6 +473,23 @@ fn next_frame_index(
     }
 }
 
+fn advance_frame_index(
+    mut current_frame: usize,
+    frame_count: usize,
+    playback_mode: PlaybackMode,
+    direction: &mut i8,
+    completed_intervals: u32,
+) -> usize {
+    for _ in 0..completed_intervals {
+        let next_frame = next_frame_index(current_frame, frame_count, playback_mode, direction);
+        if next_frame == current_frame && playback_mode == PlaybackMode::Once {
+            break;
+        }
+        current_frame = next_frame;
+    }
+    current_frame
+}
+
 fn apply_atlas_frame(sprite: &mut Sprite, atlas_index: usize) {
     if let Some(ref mut atlas) = sprite.texture_atlas {
         atlas.index = atlas_index;
@@ -491,75 +532,26 @@ fn apply_animation_sheet(
     }
 }
 
-/// 在启动时加载所有动画配置文件
+/// 加载编译时内嵌的角色动画配置。
+///
+/// 目前只有 HF 士郎使用图集主链。显式列出配置可以避免运行时工作目录不同导致
+/// `assets/animations` 找不到，也不会把误放入目录的 RON 自动当成正式角色。
 pub fn load_animation_data() -> AnimationDataMap {
     let mut animation_map = AnimationDataMap::default();
 
-    // Check if directory exists before reading
-    if let Ok(paths) = fs::read_dir("assets/animations") {
-        for path in paths {
-            let path = match path {
-                Ok(value) => value.path(),
-                Err(error) => {
-                    warn!("Failed to read animation path entry: {}", error);
-                    continue;
-                }
-            };
-
-            if path.extension().and_then(|s| s.to_str()) == Some("ron") {
-                let character_name = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap()
-                    .to_string();
-
-                let ron_string = match fs::read_to_string(&path) {
-                    Ok(content) => content,
-                    Err(error) => {
-                        warn!(
-                            "Failed to read animation file '{}': {}",
-                            path.display(),
-                            error
-                        );
-                        continue;
-                    }
-                };
-
-                let anim_data: CharacterAnimationData = match ron::from_str(&ron_string) {
-                    Ok(data) => data,
-                    Err(error) => {
-                        warn!(
-                            "Failed to parse RON for '{}': {} (file: {})",
-                            character_name,
-                            error,
-                            path.display()
-                        );
-                        continue;
-                    }
-                };
-
-                validate_clip_frame_counts(&character_name, &anim_data.animations);
-
-                animation_map.0.insert(character_name, anim_data);
-            }
-        }
-
-        crate::debug_log!(
-            "📂 Loaded {} character animation profiles.",
-            animation_map.0.len()
-        );
-    } else {
-        crate::debug_log!(
-            "⚠️ Warning: assets/animations directory not found, using empty animation map"
-        );
-    }
+    let profile: CharacterAnimationData = ron::from_str(HF_SHIROU_PROFILE)
+        .unwrap_or_else(|error| panic!("HF 士郎动画配置无法解析: {error}"));
+    validate_profile("hf_shirou", &profile)
+        .unwrap_or_else(|error| panic!("HF 士郎动画配置无效: {error}"));
+    validate_clip_frame_counts("hf_shirou", &profile.animations);
+    animation_map.0.insert("hf_shirou".to_string(), profile);
 
     animation_map
 }
 
 /// 创建角色动画组件
 pub fn create_character_animation(
-    anim_data_map: &Res<AnimationDataMap>,
+    anim_data_map: &AnimationDataMap,
     character_name: &str,
 ) -> SpriteAnimation {
     let Some(character_data) = anim_data_map.0.get(character_name) else {
@@ -654,14 +646,15 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
         }
 
         animation.frame_timer.tick(time.delta());
-
-        if animation.frame_timer.just_finished() {
+        let completed_intervals = animation.frame_timer.times_finished_this_tick();
+        if completed_intervals > 0 {
             let frame_count = current_clip.frames.len();
-            animation.current_frame = next_frame_index(
+            animation.current_frame = advance_frame_index(
                 animation.current_frame,
                 frame_count,
-                current_clip.playback_mode(),
+                current_clip.playback_mode,
                 &mut animation.frame_direction,
+                completed_intervals,
             );
 
             if let Some(atlas_idx) = current_clip.frames.get(animation.current_frame).copied() {
@@ -751,7 +744,7 @@ pub fn update_character_animation_state(
                     "🎭 切换动画: {:?} ({}帧, 模式: {:?})",
                     new_animation,
                     new_clip.frames.len(),
-                    new_clip.playback_mode()
+                    new_clip.playback_mode
                 );
             } else {
                 warn!(
@@ -901,6 +894,27 @@ mod tests {
         assert_eq!(frame, 1);
         frame = next_frame_index(frame, 4, PlaybackMode::PingPong, &mut direction);
         assert_eq!(frame, 0);
+    }
+
+    #[test]
+    fn test_animation_catches_up_after_long_frame() {
+        let mut direction = 1;
+        assert_eq!(
+            advance_frame_index(0, 5, PlaybackMode::Loop, &mut direction, 3),
+            3
+        );
+        assert_eq!(
+            advance_frame_index(0, 3, PlaybackMode::Once, &mut direction, 8),
+            2,
+            "Once 动画应停在末帧，不应因卡顿越界"
+        );
+    }
+
+    #[test]
+    fn test_embedded_profile_is_the_only_runtime_profile() {
+        let profiles = load_animation_data();
+        assert_eq!(profiles.0.len(), 1);
+        assert!(profiles.0.contains_key("hf_shirou"));
     }
 
     #[test]

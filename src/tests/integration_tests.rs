@@ -139,11 +139,11 @@ mod tests {
     #[test]
     fn test_character_selection_persistence() {
         let mut selection = CharacterSelection::default();
-        assert_eq!(selection.selected_character, CharacterType::Shirou1);
+        assert_eq!(selection.selected_character, CharacterType::Shirou);
 
         // Change selection
-        selection.selected_character = CharacterType::Shirou2;
-        assert_eq!(selection.selected_character, CharacterType::Shirou2);
+        selection.selected_character = CharacterType::Sakura;
+        assert_eq!(selection.selected_character, CharacterType::Sakura);
     }
 
     #[test]
@@ -155,20 +155,20 @@ mod tests {
             play_time: 300.0,
             save_timestamp: chrono::Utc::now(),
             file_path: "saves/test.json".to_string(),
-            selected_character: CharacterType::Shirou2,
+            selected_character: CharacterType::Sakura,
         };
         let save_data = SaveFileData::new(metadata, CompleteGameState::default());
 
         let json = serde_json::to_string(&save_data).unwrap();
         assert!(json.contains("Test Player"));
-        assert!(json.contains("Shirou2"));
+        assert!(json.contains("Sakura"));
         assert!(json.contains("\"version\":\"2.0\""));
 
         let deserialized: SaveFileData = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.metadata.name, "Test Player");
         assert_eq!(
             deserialized.metadata.selected_character,
-            CharacterType::Shirou2
+            CharacterType::Sakura
         );
         assert!(deserialized.verify_checksum());
     }

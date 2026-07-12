@@ -45,61 +45,8 @@ pub const UI_COVER_IMAGES: &[&str] = &[
     IMAGE_UI_COVER18,
 ];
 
-// CHARACTER ASSETS - SHIROU (1P角色精灵动画)
-pub const IMAGE_CHAR_SHIROU_IDLE1: &str = "images/characters/shirou_idle1.jpg";
-pub const IMAGE_CHAR_SHIROU_IDLE2: &str = "images/characters/shirou_idle2.jpg";
-pub const IMAGE_CHAR_SHIROU_IDLE3: &str = "images/characters/shirou_idle3.jpg";
-pub const IMAGE_CHAR_SHIROU_IDLE4: &str = "images/characters/shirou_idle4.png";
-pub const IMAGE_CHAR_SHIROU_IDLE5: &str = "images/characters/shirou_idle5.png";
-pub const IMAGE_CHAR_SHIROU_IDLE6: &str = "images/characters/shirou_idle6.png";
-pub const IMAGE_CHAR_SHIROU_IDLE7: &str = "images/characters/shirou_idle7.png";
-pub const IMAGE_CHAR_SHIROU_IDLE8: &str = "images/characters/shirou_idle8.png";
-pub const IMAGE_CHAR_SHIROU_IDLE9: &str = "images/characters/shirou_idle9.png";
-pub const IMAGE_CHAR_SHIROU_IDLE10: &str = "images/characters/shirou_idle10.png";
-pub const IMAGE_CHAR_SHIROU_IDLE11: &str = "images/characters/shirou_idle11.png";
-
-// HF Shirou Assets (Timestamped from generation)
-// Note: We are replacing "Normal Shirou" with "Heaven's Feel Shirou" for this implementation
+// CHARACTER ASSETS - HEAVEN'S FEEL SHIROU
 pub const IMAGE_HF_SHIROU_IDLE: &str = "images/characters/hf_idle.png";
-pub const IMAGE_HF_SHIROU_RUN: &str = "images/characters/hf_run.png";
-pub const IMAGE_HF_SHIROU_JUMP: &str = "images/characters/hf_jump.png";
-pub const IMAGE_HF_SHIROU_CROUCH: &str = "images/characters/hf_crouch.png";
-
-// Shirou 待机动画帧
-pub const SHIROU_IDLE_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE1,
-    IMAGE_CHAR_SHIROU_IDLE2,
-    IMAGE_CHAR_SHIROU_IDLE3,
-    IMAGE_CHAR_SHIROU_IDLE2,
-];
-
-// Shirou 跑步动画帧
-pub const SHIROU_RUNNING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE4,
-    IMAGE_CHAR_SHIROU_IDLE5,
-    IMAGE_CHAR_SHIROU_IDLE6,
-    IMAGE_CHAR_SHIROU_IDLE7,
-    IMAGE_CHAR_SHIROU_IDLE6,
-    IMAGE_CHAR_SHIROU_IDLE5,
-];
-
-// Shirou 跳跃动画帧
-pub const SHIROU_JUMPING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SHIROU_IDLE8,
-    IMAGE_CHAR_SHIROU_IDLE9,
-    IMAGE_CHAR_SHIROU_IDLE10,
-];
-
-// Shirou 蹲下动画帧
-pub const SHIROU_CROUCHING_FRAMES: &[&str] = &[IMAGE_CHAR_SHIROU_IDLE11, IMAGE_CHAR_SHIROU_IDLE11];
-
-// Shirou所有动画帧的数组（向后兼容）
-pub const SHIROU_ANIMATION_FRAMES: &[&str] = &[
-    IMAGE_HF_SHIROU_IDLE,
-    IMAGE_HF_SHIROU_RUN,
-    IMAGE_HF_SHIROU_JUMP,
-    IMAGE_HF_SHIROU_CROUCH,
-];
 
 // CHARACTER ASSETS - SAKURA (2P角色精灵动画)
 pub const IMAGE_CHAR_SAKURA_IDLE01: &str = "images/characters/sakura_idle01.png";
@@ -115,8 +62,6 @@ pub const IMAGE_CHAR_SAKURA_IDLE10: &str = "images/characters/sakura_idle10.png"
 pub const IMAGE_CHAR_SAKURA_IDLE11: &str = "images/characters/sakura_idle11.png";
 pub const IMAGE_CHAR_SAKURA_IDLE13: &str = "images/characters/sakura_idle13.jpg";
 pub const IMAGE_CHAR_SAKURA_IDLE14: &str = "images/characters/sakura_idle14.png";
-pub const IMAGE_CHAR_SAKURA_IDLE15: &str = "images/characters/sakura_idle15.png";
-pub const IMAGE_CHAR_SAKURA_IDLE16: &str = "images/characters/sakura_idle16.jpg";
 
 // Sakura 待机动画帧（使用乒乓循环制造流畅效果）
 pub const SAKURA_IDLE_FRAMES: &[&str] = &[
@@ -149,32 +94,6 @@ pub const SAKURA_JUMPING_FRAMES: &[&str] = &[
 // Sakura 蹲下动画帧
 pub const SAKURA_CROUCHING_FRAMES: &[&str] = &[IMAGE_CHAR_SAKURA_IDLE13, IMAGE_CHAR_SAKURA_IDLE14];
 
-// Sakura所有动画帧的数组（向后兼容）
-pub const SAKURA_ANIMATION_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SAKURA_IDLE01,
-    IMAGE_CHAR_SAKURA_IDLE02,
-    IMAGE_CHAR_SAKURA_IDLE03,
-    IMAGE_CHAR_SAKURA_IDLE04,
-    IMAGE_CHAR_SAKURA_IDLE05,
-    IMAGE_CHAR_SAKURA_IDLE06,
-    IMAGE_CHAR_SAKURA_IDLE07,
-    IMAGE_CHAR_SAKURA_IDLE08,
-    IMAGE_CHAR_SAKURA_IDLE09,
-    IMAGE_CHAR_SAKURA_IDLE10,
-    IMAGE_CHAR_SAKURA_IDLE11,
-    IMAGE_CHAR_SAKURA_IDLE13,
-    IMAGE_CHAR_SAKURA_IDLE14,
-    IMAGE_CHAR_SAKURA_IDLE15,
-    IMAGE_CHAR_SAKURA_IDLE16,
-];
-
-// OTHER CHARACTER ASSETS
-pub const IMAGE_CHAR_TEACHER_IDLE: &str = "images/characters/teacher_idle02.jpg";
-
-pub const IMAGE_CHAR_SHIROU_SPRITESHEET: &str = "images/characters/shirou_spritesheet.png";
-pub const IMAGE_CHAR_SAKURA_SPRITESHEET: &str = "images/characters/sakura_spritesheet.png";
-pub const IMAGE_HF_SHIROU_SPRITESHEET: &str =
-    "images/characters/hf_shirou_spritesheet_final_v2_1767279221195.png";
 pub const IMAGE_HF_SHIROU_CORE_SHEET: &str = "images/characters/hf_shirou_core_sheet.png";
 pub const IMAGE_HF_SHIROU_RUN_SHEET: &str = "images/characters/hf_shirou_run_sheet.png";
 pub const IMAGE_HF_SHIROU_ATTACK_SHEET: &str = "images/characters/hf_shirou_attack_sheet.png";

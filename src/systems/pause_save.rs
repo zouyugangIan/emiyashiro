@@ -82,8 +82,8 @@ pub fn capture_game_state(
     // 捕获角色选择和玩家数量
     state.selected_character = character_selection.selected_character.clone();
     state.player_count = match character_selection.selected_character {
-        CharacterType::Shirou1 => PlayerCount::Single,
-        CharacterType::Shirou2 => PlayerCount::Double,
+        CharacterType::Shirou => PlayerCount::Single,
+        CharacterType::Sakura => PlayerCount::Double,
     };
 
     // 捕获音频状态
@@ -204,16 +204,16 @@ pub fn handle_pause_input(
                 snapshot.audio_state_manager,
             );
             pause_manager.pause_game(state);
-            next_state.set(GameState::Paused);
+            NextState::set_if_neq(&mut next_state, GameState::Paused);
             crate::debug_log!("Game paused with state snapshot");
         }
         GameState::Paused if esc_just_pressed => {
-            next_state.set(GameState::Playing);
+            NextState::set_if_neq(&mut next_state, GameState::Playing);
             crate::debug_log!("Game resumed");
         }
         GameState::Paused if q_just_pressed => {
             pause_manager.resume_game();
-            next_state.set(GameState::Menu);
+            NextState::set_if_neq(&mut next_state, GameState::Menu);
             crate::debug_log!("Back to main menu");
         }
         _ => {}
@@ -390,7 +390,10 @@ pub fn rename_save_file(
         let old_path = Path::new(&old_file_path);
 
         // 构建新文件路径
-        let save_dir = old_path.parent().unwrap();
+        let save_dir = old_path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .ok_or("Save file path has no parent directory")?;
         let new_file_name = format!("{}.json", validated_new_name);
         let new_path = save_dir.join(&new_file_name);
 

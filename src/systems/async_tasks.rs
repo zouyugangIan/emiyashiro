@@ -243,7 +243,7 @@ pub fn poll_async_tasks(
                         "Load completed, restoring scene...".to_string();
                     state.operation_progress.complete_operation();
 
-                    state.next_state.set(GameState::Playing);
+                    NextState::set_if_neq(&mut state.next_state, GameState::Playing);
                 }
                 Err(e) => {
                     state.save_load_ui_state.is_busy = false;
@@ -303,7 +303,7 @@ mod tests {
             play_time: 0.0,
             save_timestamp: chrono::Utc::now(),
             file_path: existing_path.to_string_lossy().to_string(),
-            selected_character: crate::states::CharacterType::Shirou1,
+            selected_character: crate::states::CharacterType::Shirou,
         }];
 
         let (resolved_name, resolved_path, is_overwrite) =
@@ -355,7 +355,7 @@ mod tests {
             play_time: 0.0,
             save_timestamp: chrono::Utc::now(),
             file_path: ".".to_string(),
-            selected_character: crate::states::CharacterType::Shirou1,
+            selected_character: crate::states::CharacterType::Shirou,
         }];
 
         let (resolved_name, resolved_path, is_overwrite) =

@@ -65,7 +65,7 @@ impl Plugin for UiPlugin {
                 .chain()
                 .in_set(GameSystemSet::UI)
                 .run_if(any_with_component::<crate::systems::settings_ui::SettingsOverlayRoot>)
-                .run_if(in_state(GameState::Menu).or(in_state(GameState::Paused))),
+                .run_if(in_state(GameState::Menu).or_else(in_state(GameState::Paused))),
         )
         .add_systems(
             OnEnter(GameState::Paused),

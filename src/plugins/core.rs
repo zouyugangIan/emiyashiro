@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     asset_paths,
+    components::SpriteAnimationSheets,
     events::{CameraImpulseEvent, DamageEvent},
     events::{StartLoadGame, StartSaveGame},
     resources::{
@@ -37,10 +38,6 @@ impl Plugin for CorePlugin {
             .init_resource::<SaveFileManager>()
             .init_resource::<PauseManager>()
             .init_resource::<AudioStateManager>()
-            .init_resource::<systems::database_service::DatabaseService>()
-            .init_resource::<systems::online_ecosystem::LeaderboardStore>()
-            .init_resource::<systems::online_ecosystem::ReplayStore>()
-            .init_resource::<systems::online_ecosystem::CloudSaveStore>()
             .init_resource::<systems::input::GameInput>()
             .init_resource::<systems::input::NetworkInputSyncState>()
             .init_resource::<systems::ui::SaveNameInput>()
@@ -62,7 +59,6 @@ impl Plugin for CorePlugin {
                     setup_game_resources,
                     setup_animation_data,
                     systems::save::load_game,
-                    systems::background::setup_cloud_spawner,
                 ),
             );
     }
@@ -79,62 +75,15 @@ fn setup_game_resources(
         .map(|path| asset_server.load(*path))
         .collect();
 
-    let shirou_animation_frames: Vec<Handle<Image>> = asset_paths::SHIROU_ANIMATION_FRAMES
-        .iter()
-        .map(|path| asset_server.load(*path))
-        .collect();
-
-    let sakura_animation_frames: Vec<Handle<Image>> = asset_paths::SAKURA_ANIMATION_FRAMES
-        .iter()
-        .map(|path| asset_server.load(*path))
-        .collect();
-
-    let game_assets = GameAssets {
+    let mut game_assets = GameAssets {
         cover_textures,
         current_cover_index: 0,
-        shirou_animation_frames,
-        sakura_animation_frames,
-        current_shirou_frame: 0,
-        current_sakura_frame: 0,
+        shirou_initial_image: asset_server.load(asset_paths::IMAGE_HF_SHIROU_IDLE),
+        sakura_initial_image: asset_server.load(asset_paths::IMAGE_CHAR_SAKURA_IDLE01),
+        hf_shirou_animation: None,
         font: asset_server.load(asset_paths::FONT_FIRA_SANS),
         volume_icon: asset_server.load(asset_paths::IMAGE_UI_VOLUME_ICON),
         volume_muted_icon: asset_server.load(asset_paths::IMAGE_UI_VOLUME_MUTED_ICON),
-        shirou_spritesheet: None,
-        shirou_spritesheet_run: None,
-        shirou_spritesheet_attack: None,
-        shirou_spritesheet_overedge_light_attack: None,
-        shirou_spritesheet_overedge_heavy_attack: None,
-        sakura_spritesheet: None,
-        shirou_atlas: None,
-        shirou_atlas_run: None,
-        shirou_atlas_attack: None,
-        shirou_atlas_overedge_light_attack: None,
-        shirou_atlas_overedge_heavy_attack: None,
-        sakura_atlas: None,
-        // Reference Board 精灵表
-        shirou_ref_ground_light: None,
-        shirou_ref_air_combo: None,
-        shirou_ref_heavy: None,
-        shirou_ref_ultimate: None,
-        shirou_ref_mobility: None,
-        shirou_ref_ninjutsu: None,
-        shirou_ref_weapon_proj: None,
-        shirou_ref_advance: None,
-        shirou_ref_ground_light_rows: Vec::new(),
-        shirou_ref_air_combo_rows: Vec::new(),
-        shirou_ref_heavy_rows: Vec::new(),
-        shirou_ref_ultimate_rows: Vec::new(),
-        shirou_ref_mobility_rows: Vec::new(),
-        shirou_ref_ninjutsu_rows: Vec::new(),
-        shirou_ref_weapon_proj_rows: Vec::new(),
-        shirou_atlas_ref_ground_light: None,
-        shirou_atlas_ref_air_combo: None,
-        shirou_atlas_ref_heavy: None,
-        shirou_atlas_ref_ultimate: None,
-        shirou_atlas_ref_mobility: None,
-        shirou_atlas_ref_ninjutsu: None,
-        shirou_atlas_ref_weapon_proj: None,
-        shirou_atlas_ref_advance: None,
         jump_sound: asset_server.load(asset_paths::SOUND_JUMP),
         land_sound: asset_server.load(asset_paths::SOUND_LAND),
         menu_music: asset_server.load(asset_paths::SOUND_MENU_MUSIC),
@@ -261,40 +210,69 @@ fn setup_game_resources(
         .map(|path| asset_server.load(*path))
         .collect();
 
-    let mut assets = game_assets;
-    assets.shirou_spritesheet = Some(core_texture_handle);
-    assets.shirou_spritesheet_run = Some(run_texture_handle);
-    assets.shirou_spritesheet_attack = Some(attack_texture_handle);
-    assets.shirou_spritesheet_overedge_light_attack = Some(overedge_light_attack_texture_handle);
-    assets.shirou_spritesheet_overedge_heavy_attack = Some(overedge_heavy_attack_texture_handle);
-    assets.shirou_atlas = Some(texture_atlases.add(core_layout));
-    assets.shirou_atlas_run = Some(texture_atlases.add(run_layout));
-    assets.shirou_atlas_attack = Some(texture_atlases.add(attack_layout));
-    assets.shirou_atlas_overedge_light_attack =
-        Some(texture_atlases.add(overedge_light_attack_layout));
-    assets.shirou_atlas_overedge_heavy_attack =
-        Some(texture_atlases.add(overedge_heavy_attack_layout));
+    game_assets.hf_shirou_animation = Some(SpriteAnimationSheets {
+        core_texture: core_texture_handle,
+        core_layout: texture_atlases.add(core_layout),
+        running_texture: run_texture_handle,
+        running_layout: texture_atlases.add(run_layout),
+        attacking_texture: attack_texture_handle,
+        attacking_layout: texture_atlases.add(attack_layout),
+        overedge_light_attacking_texture: Some(overedge_light_attack_texture_handle),
+        overedge_light_attacking_layout: Some(texture_atlases.add(overedge_light_attack_layout)),
+        overedge_light_attacking_frame_count:
+            asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT,
+        overedge_heavy_attacking_texture: Some(overedge_heavy_attack_texture_handle),
+        overedge_heavy_attacking_layout: Some(texture_atlases.add(overedge_heavy_attack_layout)),
+        overedge_heavy_attacking_frame_count:
+            asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT,
+        reference_ground_light_texture: Some(ref_ground_light_handle),
+        reference_ground_light_row_textures: ref_ground_light_row_handles,
+        reference_ground_light_layout: Some(texture_atlases.add(ref_ground_light_layout)),
+        reference_ground_light_frame_count: asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS as usize,
+        reference_air_combo_texture: Some(ref_air_combo_handle),
+        reference_air_combo_row_textures: Vec::new(),
+        reference_air_combo_layout: Some(texture_atlases.add(ref_air_combo_layout)),
+        reference_air_combo_frame_count: (asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS
+            * asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS)
+            as usize,
+        reference_heavy_texture: Some(ref_heavy_handle),
+        reference_heavy_row_textures: Vec::new(),
+        reference_heavy_layout: Some(texture_atlases.add(ref_heavy_layout)),
+        reference_heavy_frame_count: (asset_paths::REFERENCE_BOARD_HEAVY_COLS
+            * asset_paths::REFERENCE_BOARD_HEAVY_ROWS)
+            as usize,
+        reference_ultimate_texture: Some(ref_ultimate_handle),
+        reference_ultimate_row_textures: Vec::new(),
+        reference_ultimate_layout: Some(texture_atlases.add(ref_ultimate_layout)),
+        reference_ultimate_frame_count: (asset_paths::REFERENCE_BOARD_ULTIMATE_COLS
+            * asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS)
+            as usize,
+        reference_mobility_texture: Some(ref_mobility_handle),
+        reference_mobility_row_textures: Vec::new(),
+        reference_mobility_layout: Some(texture_atlases.add(ref_mobility_layout)),
+        reference_mobility_frame_count: (asset_paths::REFERENCE_BOARD_MOBILITY_COLS
+            * asset_paths::REFERENCE_BOARD_MOBILITY_ROWS)
+            as usize,
+        reference_ninjutsu_texture: Some(ref_ninjutsu_handle),
+        reference_ninjutsu_row_textures: Vec::new(),
+        reference_ninjutsu_layout: Some(texture_atlases.add(ref_ninjutsu_layout)),
+        reference_ninjutsu_frame_count: (asset_paths::REFERENCE_BOARD_NINJUTSU_COLS
+            * asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS)
+            as usize,
+        reference_weapon_proj_texture: Some(ref_weapon_proj_handle),
+        reference_weapon_proj_row_textures: Vec::new(),
+        reference_weapon_proj_layout: Some(texture_atlases.add(ref_weapon_proj_layout)),
+        reference_weapon_proj_frame_count: (asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS
+            * asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS)
+            as usize,
+        reference_advance_texture: Some(ref_advance_handle),
+        reference_advance_layout: Some(texture_atlases.add(ref_advance_layout)),
+        reference_advance_frame_count: (asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_COLS
+            * asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_ROWS)
+            as usize,
+    });
 
-    // Reference Board 精灵表资源
-    assets.shirou_ref_ground_light = Some(ref_ground_light_handle);
-    assets.shirou_ref_air_combo = Some(ref_air_combo_handle);
-    assets.shirou_ref_heavy = Some(ref_heavy_handle);
-    assets.shirou_ref_ultimate = Some(ref_ultimate_handle);
-    assets.shirou_ref_mobility = Some(ref_mobility_handle);
-    assets.shirou_ref_ninjutsu = Some(ref_ninjutsu_handle);
-    assets.shirou_ref_weapon_proj = Some(ref_weapon_proj_handle);
-    assets.shirou_ref_advance = Some(ref_advance_handle);
-    assets.shirou_ref_ground_light_rows = ref_ground_light_row_handles;
-    assets.shirou_atlas_ref_ground_light = Some(texture_atlases.add(ref_ground_light_layout));
-    assets.shirou_atlas_ref_air_combo = Some(texture_atlases.add(ref_air_combo_layout));
-    assets.shirou_atlas_ref_heavy = Some(texture_atlases.add(ref_heavy_layout));
-    assets.shirou_atlas_ref_ultimate = Some(texture_atlases.add(ref_ultimate_layout));
-    assets.shirou_atlas_ref_mobility = Some(texture_atlases.add(ref_mobility_layout));
-    assets.shirou_atlas_ref_ninjutsu = Some(texture_atlases.add(ref_ninjutsu_layout));
-    assets.shirou_atlas_ref_weapon_proj = Some(texture_atlases.add(ref_weapon_proj_layout));
-    assets.shirou_atlas_ref_advance = Some(texture_atlases.add(ref_advance_layout));
-
-    commands.insert_resource(assets);
+    commands.insert_resource(game_assets);
 }
 
 /// Load Animation Data.

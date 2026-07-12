@@ -5,7 +5,6 @@ pub mod ai;
 pub mod animation;
 pub mod animation_data;
 pub mod audio;
-pub mod background;
 pub mod enemy;
 pub mod health;
 pub mod network;
@@ -15,11 +14,10 @@ pub mod projectile;
 pub mod shirou;
 pub mod ui;
 
-// 重新导出所有组件，保持向后兼容性
+// 对外导出常用组件。
 pub use animation::*;
 pub use animation_data::*;
 pub use audio::*;
-pub use background::*;
 pub use enemy::*;
 pub use health::*;
 pub use physics::*;

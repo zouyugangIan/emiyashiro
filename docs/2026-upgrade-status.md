@@ -1,95 +1,48 @@
 # 2026 引擎升级状态总览
 
-> 最后更新：2026-02-24  
-> 作用：作为“升级完成状态 + 指标快照 + 文档索引”的单一事实来源（SSOT）
+> 最后更新：2026-07-12
+> 作用：技术基线、架构状态与验证记录的单一事实来源。
 
-## 1) 文档收口结果
+## 当前技术基线
 
-为避免文档分裂，已将“已完成任务板、来源清单、指标报告”归并到本文件并移除冗余文件。
+- Bevy `0.19`，仅启用项目需要的 `2d/ui/audio/jpeg` 特性集。
+- Rust stable，edition 2024，Cargo 声明 MSRV `1.95`。
+- Tokio `1.52`、SQLx `0.9`、UUID `1.23`、RON `0.12.2`。
+- 工具链由 `rust-toolchain.toml` 统一，依赖解析由 `Cargo.lock` 锁定。
 
-当前仅保留 3 份活文档：
+## 2026-07-12 复核结论
 
-- `docs/2026-upgrade-status.md`（本文件，状态 SSOT）
-- `docs/bevy-upgrade-regression-checklist.md`（升级回归入口）
-- `docs/ops-runbook.md`（运行与发布入口）
+- 已完成 Bevy 0.18 → 0.19 API 迁移：Parley 文本字体/字号、系统条件和状态转换均使用 0.19 接口。
+- 删除未注册或与实际主链重复的动画、背景、输入历史、着地判定、音频、程序化占位素材和伪服务。
+- 删除仅在测试里流转的内存排行榜/回放/云存档原型，避免将未接入能力误标为线上闭环。
+- 士郎使用精灵图集主链；樱因源素材不是等尺寸网格，正式使用逐张图片序列主链。
+- 文件存档始终使用同目录原子替换，不再在异常时降级为直接覆盖。
+- PostgreSQL 建表已转为 SQLx 版本化迁移，并补齐存档 upsert 依赖的唯一约束。
+- RabbitMQ 存档队列和消息已持久化，消费者异常会返回重连循环，不再 `expect` 崩溃。
 
-本次归并并删除：
+## 验证边界
 
-- `docs/2026-architecture-upgrade-tasks.md`
-- `docs/2026-best-practice-sources.md`
-- `docs/2026-architecture-metrics-report.md`
-- `docs/documentation-completeness-audit-2026-02-23.md`
-- `docs/2026-bevy-upgrade-assessment-zh.md`
-- `IMPLEMENTATION-SUMMARY.md`
+本次按需求不执行测试用例。2026-07-12 本地实际通过：
 
-## 2) 质量门禁状态（2026-02-24 实测）
-
-以下命令在当前基线通过：
-
-- `cargo fmt --check`
+- `cargo fmt --all -- --check`
 - `cargo check`
-- `cargo check --all-features --future-incompat-report`
-- `cargo clippy --all-features --all-targets -- -D warnings`
-- `cargo test --lib --all-features`
+- `cargo check --all-features --future-incompat-report`（`0` 个 future-incompatible 依赖警告）
+- `cargo clippy --lib --all-features -- -D warnings`
 
-结果：`119 passed, 0 failed`，且 `future-incompat` 警告为 `0`。
+2026-02-24 的 `119 passed` 和架构指标仅是 Bevy 0.18 时期的历史快照，不代表当前基线。指标可用 `cargo run --release --bin architecture_metrics` 重新生成。
 
-## 3) Jobs 完成矩阵
+## 架构与文档入口
 
-| Job                           | 状态 | 验收结论                                                   |
-| ----------------------------- | ---- | ---------------------------------------------------------- |
-| T-001 客户端预测 + 服务器校正 | 完成 | deadzone/smooth/snap 校正链路与指标已落地                  |
-| T-002 断线恢复会话            | 完成 | `ResumeSession` + 身份映射恢复 + 生命周期顺序校验已落地    |
-| T-003 输入协议分层            | 完成 | `InputState`（状态流）+ `InputEvent`（事件流）已替换旧链路 |
-| T-004 快照差量同步            | 完成 | `WorldSnapshotDelta` 已接入，客户端支持更新/移除           |
-| T-005 存档 SSOT               | 完成 | 仅 `SaveFileData v2`，旧 schema 直接拒绝                   |
-| T-006 Redis 后台写队列        | 完成 | 主循环无直接 I/O，失败重试可配置且可观测                   |
-| T-007 性能预算守护            | 完成 | 1080p 场景预算基线已给出（低/中/高）                       |
-| T-008 在线生态最小闭环        | 完成 | 排行榜/回放/云存档闭环与跨设备验证通过                     |
+- `docs/animation-system.md`：精灵图集与图片序列动画主链。
+- `docs/G-ENGINE-SETUP.md`：联机、PostgreSQL、Redis 和 RabbitMQ 环境。
+- `docs/SCENE_ENHANCEMENT.md`：视差背景与场景装饰。
+- `docs/ubuntu-dev-workflow.md`：开发与构建流程。
+- `docs/hf-shirou-attack-module-design.md`：HF 士郎攻击模组和动作资源映射。
 
-## 4) 关键指标快照（2026-02-24）
+## 官方基线来源
 
-指标由 `cargo run --release --bin architecture_metrics` 生成（工具：`src/bin/architecture_metrics.rs`）。
-
-### 4.1 T-001 体验指标
-
-- 首次纠偏延迟 p50：`30.82 ms`
-- 首次纠偏延迟 p95：`36.46 ms`
-- 快照抖动（stddev）：`3.28 ms`
-- 纠偏触发率：`39.17%`
-- Snap 触发率：`1.67%`
-
-### 4.2 T-003 输入协议带宽
-
-- 10s@60Hz 包数：`612 -> 112`（`-81.70%`）
-- 10s@60Hz payload：`7248 -> 1744 bytes`（`-75.94%`）
-
-### 4.3 T-004 快照同步带宽
-
-- 10s@60Hz payload：`3388800 -> 435520 bytes`（`-87.15%`）
-
-### 4.4 T-007 场景预算基线（Headless ECS）
-
-- Low（1000 装饰）：`0.0306ms avg / 0.0344ms p95`
-- Medium（5000 装饰）：`0.0353ms avg / 0.0420ms p95`
-- High（10000 装饰）：`0.0432ms avg / 0.0468ms p95`
-
-## 5) 2026 最佳实践来源（归并）
-
-- Cargo `check` / `test` / future incompat report：
-  - https://doc.rust-lang.org/cargo/commands/cargo-check.html
-  - https://doc.rust-lang.org/cargo/commands/cargo-test.html
-  - https://doc.rust-lang.org/cargo/reference/future-incompat-report.html
-- Clippy：
-  - https://doc.rust-lang.org/clippy/
-- GitHub Actions：
-  - https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs
-  - https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
-- Rust cache action：
-  - https://github.com/Swatinem/rust-cache
-- Bevy 迁移与 API：
-  - https://bevy.org/learn/migration-guides/0-17-to-0-18/
-  - https://docs.rs/bevy/latest/bevy/app/struct.FixedUpdate.html
-  - https://docs.rs/bevy/latest/bevy/prelude/struct.App.html#method.add_plugins
-- Tokio mpsc：
-  - https://docs.rs/tokio/latest/tokio/sync/mpsc/
+- Bevy 0.19 发布与快速入门：<https://bevy.org/news/>、<https://bevy.org/learn/quick-start/getting-started/>
+- Bevy 0.18 → 0.19 迁移指南：<https://bevy.org/learn/migration-guides/0-18-to-0-19/>
+- Rust 2024 Cargo resolver：<https://doc.rust-lang.org/stable/edition-guide/rust-2024/cargo-resolver.html>
+- Cargo 检查与 future incompat report：<https://doc.rust-lang.org/cargo/commands/cargo-check.html>、<https://doc.rust-lang.org/cargo/reference/future-incompat-report.html>
+- Clippy：<https://doc.rust-lang.org/clippy/>

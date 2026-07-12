@@ -4,6 +4,7 @@ use emiyashiro::plugins::server::{NetworkChannels, ServerRuntimePlugin};
 use emiyashiro::protocol::{GamePacket, PlayerAction};
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
@@ -16,7 +17,7 @@ type ClientSenderMap = HashMap<u64, ClientMessageSender>;
 type SharedClients = Arc<Mutex<ClientSenderMap>>;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     info!("Starting G-Engine Server...");
 
     let (action_tx, action_rx) = mpsc::unbounded_channel::<(u64, PlayerAction)>();
@@ -24,9 +25,7 @@ async fn main() {
 
     #[cfg(feature = "server")]
     {
-        let database = emiyashiro::database::Database::new()
-            .await
-            .expect("Failed to connect to database");
+        let database = emiyashiro::database::Database::new().await?;
         let pool = database.pool.clone();
 
         tokio::spawn(async move {
@@ -36,22 +35,32 @@ async fn main() {
 
     let clients: SharedClients = Arc::new(Mutex::new(HashMap::new()));
     let clients_clone = clients.clone();
+    let addr = "127.0.0.1:8080";
+    let listener = TcpListener::bind(addr).await?;
+    info!("WebSocket server listening on: {}", addr);
 
     tokio::spawn(async move {
-        let addr = "127.0.0.1:8080";
-        let listener = TcpListener::bind(addr).await.expect("Failed to bind");
-        info!("WebSocket server listening on: {}", addr);
-
         let mut client_id_counter: u64 = 0;
 
-        while let Ok((stream, _)) = listener.accept().await {
+        loop {
+            let (stream, _) = match listener.accept().await {
+                Ok(connection) => connection,
+                Err(error) => {
+                    error!("WebSocket accept failed: {error}");
+                    continue;
+                }
+            };
             client_id_counter = client_id_counter.wrapping_add(1);
             let client_id = client_id_counter;
             let clients_inner = clients_clone.clone();
             let action_tx_inner = action_tx.clone();
 
             tokio::spawn(async move {
-                handle_connection(stream, client_id, clients_inner, action_tx_inner).await;
+                if let Err(error) =
+                    handle_connection(stream, client_id, clients_inner, action_tx_inner).await
+                {
+                    warn!("Client {client_id} connection failed: {error}");
+                }
             });
         }
     });
@@ -112,6 +121,7 @@ async fn main() {
     });
 
     app.run();
+    Ok(())
 }
 
 async fn handle_connection(
@@ -119,8 +129,8 @@ async fn handle_connection(
     client_id: u64,
     clients: SharedClients,
     action_tx: mpsc::UnboundedSender<(u64, PlayerAction)>,
-) {
-    let ws_stream = accept_async(stream).await.expect("Error during handshake");
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let ws_stream = accept_async(stream).await?;
     info!("New client connected: {}", client_id);
 
     let (mut write, mut read) = ws_stream.split();
@@ -173,4 +183,5 @@ async fn handle_connection(
 
     drop(out_tx);
     let _ = writer_handle.await;
+    Ok(())
 }

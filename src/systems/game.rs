@@ -61,8 +61,8 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
     }
 
     let texture = match params.character_selection.selected_character {
-        CharacterType::Shirou1 => params.game_assets.get_current_shirou_frame(),
-        CharacterType::Shirou2 => params.game_assets.get_current_sakura_frame(),
+        CharacterType::Shirou => params.game_assets.shirou_initial_image.clone(),
+        CharacterType::Sakura => params.game_assets.sakura_initial_image.clone(),
     };
 
     crate::debug_log!(
@@ -71,8 +71,8 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
     );
 
     let character_name = match params.character_selection.selected_character {
-        CharacterType::Shirou1 => "hf_shirou",
-        CharacterType::Shirou2 => "sakura",
+        CharacterType::Shirou => "hf_shirou",
+        CharacterType::Sakura => "sakura",
     };
 
     let player_common = (
@@ -90,7 +90,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         ShroudState::default(),
     );
 
-    if params.character_selection.selected_character == CharacterType::Shirou1
+    if params.character_selection.selected_character == CharacterType::Shirou
         && let Some(sprite_sheets) = params.game_assets.hf_shirou_sprite_animation_sheets()
     {
         let anim_component = crate::systems::sprite_animation::create_character_animation(
@@ -128,7 +128,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         player_common,
     ));
 
-    crate::debug_log!("Character spawned in frame fallback mode");
+    crate::debug_log!("Character spawned in image sequence mode");
 }
 /// 鎭㈠锷犺浇镄勬父鎴忕姸镐佷腑镄勫疄浣扑綅缃?
 pub fn restore_loaded_game_entities(

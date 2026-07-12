@@ -130,7 +130,7 @@ impl RedisManager {
         match client.get_connection() {
             Ok(connection) => Some(connection),
             Err(error) => {
-                eprintln!("Redis worker failed to connect: {}", error);
+                bevy::log::error!("Redis worker failed to connect: {error}");
                 None
             }
         }

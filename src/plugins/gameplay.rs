@@ -48,7 +48,7 @@ impl Plugin for GameplayPlugin {
                 Update,
                 (
                     systems::player::update_game_stats,
-                    systems::enemy::spawn_mushroom_enemies,
+                    systems::enemy::spawn_enemies,
                     systems::enemy::cleanup_dead_enemies,
                     systems::enemy::cleanup_offscreen_enemies,
                     systems::combat::cleanup_expired_projectiles,

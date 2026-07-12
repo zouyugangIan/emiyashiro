@@ -60,32 +60,19 @@ pub fn calculate_checksum(data: &[u8]) -> String {
 
 /// Atomically writes file bytes to target path.
 pub fn atomic_write_file(path: &Path, data: &[u8]) -> Result<(), std::io::Error> {
-    if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty()
-    {
+    let target = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map(|_| path.to_path_buf())
+        .unwrap_or(std::env::current_dir()?.join(path));
+
+    if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)?;
     }
 
-    // `atomicwrites` may panic for paths without a stable parent directory.
-    // For such paths we fallback to direct write to keep runtime robust.
-    let no_stable_parent = path
-        .parent()
-        .map(|parent| parent.as_os_str().is_empty())
-        .unwrap_or(true);
-    if no_stable_parent {
-        return fs::write(path, data);
-    }
-
-    let write_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let atomic_file = AtomicFile::new(path, OverwriteBehavior::AllowOverwrite);
-        atomic_file.write(|file| file.write_all(data))
-    }));
-
-    match write_result {
-        Ok(Ok(())) => Ok(()),
-        Ok(Err(error)) => Err(io::Error::other(error.to_string())),
-        Err(_) => fs::write(path, data),
-    }
+    AtomicFile::new(&target, OverwriteBehavior::AllowOverwrite)
+        .write(|file| file.write_all(data))
+        .map_err(|error| io::Error::other(error.to_string()))
 }
 
 #[cfg(test)]

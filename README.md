@@ -2,12 +2,12 @@
 
 基于 Rust + Bevy 的 2D 横版动作跑酷原型，主角为卫宫士郎（1P）与樱（2P）。
 
-> 文档状态：2026-02-24 已完成门禁复验与架构升级对齐。
+> 文档状态：2026-07-12 已对齐 Bevy 0.19 与 Rust 2024 基线。
 
 ## 当前技术基线
 
-- 引擎: `Bevy 0.18`
-- 语言: `Rust (edition 2024)`
+- 引擎: `Bevy 0.19`（按需启用 `2d/ui/audio/jpeg`，不携带 3D 默认特性）
+- 语言: `Rust stable`（edition 2024，MSRV `1.95`）
 - 架构: ECS + 状态机 + 领域插件化（`core/gameplay/netcode/persistence/presentation/ui/server`）
 
 ## 快速启动
@@ -69,13 +69,12 @@ src/
 
 ## 文档索引
 
-- `G-ENGINE-SETUP.md`: 联机与基础设施部署指南
-- `SCENE_ENHANCEMENT.md`: 场景视差与装饰系统说明
+- `docs/animation-system.md`: HF 士郎精灵图集主链、RON 配置和樱的逐帧图片动画
+- `docs/G-ENGINE-SETUP.md`: 联机与基础设施部署指南
+- `docs/SCENE_ENHANCEMENT.md`: 场景视差与装饰系统说明
 - `docs/2026-upgrade-status.md`: 2026 升级状态总览（文档完成状态 SSOT）
 - `docs/ubuntu-dev-workflow.md`: Ubuntu 开发期构建与调试基线
-- `docs/bevy-upgrade-regression-checklist.md`: 引擎升级回归清单
-- `docs/ops-runbook.md`: 运维与发布 runbook
-- `CHANGELOG.md`: 版本化变更记录
+- `docs/hf-shirou-attack-module-design.md`: HF 士郎攻击模组与资源对应
 
 ## CI 门禁
 
@@ -89,5 +88,5 @@ src/
 
 ## 架构升级状态（2026）
 
-- 2026 架构升级 jobs（T-001 ~ T-008）已完成。
-- 最新完成状态、指标快照与最佳实践来源统一收口在 `docs/2026-upgrade-status.md`。
+当前技术基线、已接入的运行链和验证边界统一记录在
+`docs/2026-upgrade-status.md`。仅在测试中运行的原型不再标记为已完成能力。

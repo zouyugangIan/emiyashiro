@@ -150,7 +150,7 @@ mod tests {
             play_time: 6.0,
             save_timestamp: chrono::Utc::now(),
             file_path: "stale/path.json".to_string(),
-            selected_character: crate::states::CharacterType::Shirou1,
+            selected_character: crate::states::CharacterType::Shirou,
         };
 
         let mut save_data = SaveFileData::new(metadata, CompleteGameState::default());

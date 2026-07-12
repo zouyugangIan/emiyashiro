@@ -24,15 +24,17 @@ pub struct CharacterSelection {
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum CharacterType {
     #[default]
-    Shirou1, // 士郎角色1
-    Shirou2, // 士郎角色2
+    #[serde(alias = "Shirou1")]
+    Shirou,
+    #[serde(alias = "Shirou2")]
+    Sakura,
 }
 
 impl CharacterType {
     pub fn get_texture_path(&self) -> &'static str {
         match self {
-            CharacterType::Shirou1 => "images/characters/shirou_idle1.jpg",
-            CharacterType::Shirou2 => "images/characters/shirou_idle2.jpg",
+            CharacterType::Shirou => crate::asset_paths::IMAGE_HF_SHIROU_IDLE,
+            CharacterType::Sakura => crate::asset_paths::IMAGE_CHAR_SAKURA_IDLE01,
         }
     }
 }

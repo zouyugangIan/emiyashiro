@@ -12,11 +12,7 @@ impl Plugin for PersistencePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (
-                systems::save::auto_save_system,
-                systems::database_service::database_stats_system,
-                systems::database_service::cleanup_old_sessions,
-            )
+            systems::save::auto_save_system
                 .in_set(GameSystemSet::Persistence)
                 .run_if(in_state(GameState::Playing)),
         )
@@ -30,9 +26,9 @@ impl Plugin for PersistencePlugin {
                 .in_set(GameSystemSet::Persistence)
                 .run_if(
                     in_state(GameState::Playing)
-                        .or(in_state(GameState::Paused))
-                        .or(in_state(GameState::SaveDialog))
-                        .or(in_state(GameState::LoadTable)),
+                        .or_else(in_state(GameState::Paused))
+                        .or_else(in_state(GameState::SaveDialog))
+                        .or_else(in_state(GameState::LoadTable)),
                 ),
         )
         .add_systems(
@@ -48,7 +44,7 @@ impl Plugin for PersistencePlugin {
             Update,
             systems::pause_save::handle_pause_input
                 .in_set(GameSystemSet::Input)
-                .run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::Paused))),
         )
         .add_systems(
             Update,

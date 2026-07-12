@@ -3,6 +3,7 @@
 use crate::asset_paths;
 use crate::components::*;
 use crate::resources::{EnemyArchetypeTuning, EnemyDirectorTuning, GameConfig, GameplayTuning};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use rand::rngs::StdRng;
@@ -255,40 +256,44 @@ fn spawn_enemy_heroic_spirit(
         });
 }
 
-/// 生成敌人（保留原系统名以兼容已有调度）
-#[allow(clippy::too_many_arguments)]
-pub fn spawn_mushroom_enemies(
-    mut commands: Commands,
-    window_query: Query<&Window, With<PrimaryWindow>>,
-    asset_server: Res<AssetServer>,
-    player_query: Query<&Transform, With<Player>>,
-    enemy_query: Query<Entity, With<Enemy>>,
-    tuning: Option<Res<GameplayTuning>>,
-    time: Res<Time>,
-    mut spawn_cooldown: Local<f32>,
-    mut rng_state: Local<Option<StdRng>>,
-) {
+/// 根据导演配置生成敌人。
+#[derive(SystemParam)]
+pub struct EnemySpawnParams<'w, 's> {
+    window_query: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
+    asset_server: Res<'w, AssetServer>,
+    player_query: Query<'w, 's, &'static Transform, With<Player>>,
+    enemy_query: Query<'w, 's, Entity, With<Enemy>>,
+    tuning: Option<Res<'w, GameplayTuning>>,
+    time: Res<'w, Time>,
+    spawn_cooldown: Local<'s, f32>,
+    rng_state: Local<'s, Option<StdRng>>,
+}
+
+pub fn spawn_enemies(mut commands: Commands, mut params: EnemySpawnParams) {
     let default_tuning = GameplayTuning::default();
-    let enemy_tuning = &tuning.as_deref().unwrap_or(&default_tuning).enemies;
+    let enemy_tuning = &params.tuning.as_deref().unwrap_or(&default_tuning).enemies;
 
-    if rng_state.is_none() {
-        *rng_state = Some(StdRng::seed_from_u64(0x2026_5EED_A11E));
-        *spawn_cooldown = enemy_tuning.spawn_interval_min_secs.max(0.2);
+    if params.rng_state.is_none() {
+        *params.rng_state = Some(StdRng::seed_from_u64(0x2026_5EED_A11E));
+        *params.spawn_cooldown = enemy_tuning.spawn_interval_min_secs.max(0.2);
     }
 
-    *spawn_cooldown -= time.delta_secs();
-    if *spawn_cooldown > 0.0 || enemy_query.iter().count() >= enemy_tuning.max_active_enemies {
+    *params.spawn_cooldown -= params.time.delta_secs();
+    if *params.spawn_cooldown > 0.0
+        || params.enemy_query.iter().count() >= enemy_tuning.max_active_enemies
+    {
         return;
     }
 
-    let Some(window) = window_query.iter().next() else {
+    let Some(window) = params.window_query.iter().next() else {
         return;
     };
-    let Some(rng) = rng_state.as_mut() else {
+    let Some(rng) = params.rng_state.as_mut() else {
         return;
     };
 
-    let player_x = player_query
+    let player_x = params
+        .player_query
         .iter()
         .next()
         .map(|transform| transform.translation.x)
@@ -307,11 +312,23 @@ pub fn spawn_mushroom_enemies(
 
     match archetype.enemy_type {
         EnemyType::Slime => {
-            spawn_slime(&mut commands, &asset_server, spawn_x, spawn_y, enemy_state);
+            spawn_slime(
+                &mut commands,
+                &params.asset_server,
+                spawn_x,
+                spawn_y,
+                enemy_state,
+            );
             crate::debug_log!("🟢 生成史莱姆敌人 at x={:.1}", spawn_x);
         }
         EnemyType::Familiar => {
-            spawn_familiar(&mut commands, &asset_server, spawn_x, spawn_y, enemy_state);
+            spawn_familiar(
+                &mut commands,
+                &params.asset_server,
+                spawn_x,
+                spawn_y,
+                enemy_state,
+            );
             crate::debug_log!("🟣 生成使魔敌人 at x={:.1}", spawn_x);
         }
         EnemyType::EnemyHeroicSpirit => {
@@ -324,7 +341,7 @@ pub fn spawn_mushroom_enemies(
     let max_spawn_interval = enemy_tuning
         .spawn_interval_max_secs
         .max(min_spawn_interval + 0.05);
-    *spawn_cooldown = rng.random_range(min_spawn_interval..max_spawn_interval);
+    *params.spawn_cooldown = rng.random_range(min_spawn_interval..max_spawn_interval);
 }
 
 /// 敌人 AI - 巡逻与战斗行为。

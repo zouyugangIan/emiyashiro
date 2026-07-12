@@ -2,7 +2,7 @@
 //!
 //! 包含背景音乐、音效播放和音频状态管理。
 
-use crate::resources::*;
+use crate::{components::*, resources::*};
 use bevy::audio::{AudioSink, AudioSinkPlayback, Volume};
 use bevy::prelude::*;
 
@@ -31,6 +31,31 @@ fn music_volume(audio_settings: &AudioSettings) -> Volume {
 
 fn sfx_volume(audio_settings: &AudioSettings) -> Volume {
     Volume::Linear(audio_settings.sfx_volume * audio_settings.master_volume)
+}
+
+/// 消费角色音效请求并生成一次性音频实体。
+pub fn trigger_audio_effects(
+    mut commands: Commands,
+    audio_query: Query<(Entity, &AudioTrigger)>,
+    audio_settings: Res<AudioSettings>,
+    game_assets: Res<GameAssets>,
+) {
+    for (entity, trigger) in audio_query.iter() {
+        if !trigger.should_play {
+            continue;
+        }
+
+        let audio_source = match trigger.sound_type {
+            SoundType::Jump => game_assets.jump_sound.clone(),
+            SoundType::Land => game_assets.land_sound.clone(),
+            SoundType::Footstep => game_assets.footstep_sound.clone(),
+        };
+        commands.spawn((
+            AudioPlayer::new(audio_source),
+            PlaybackSettings::DESPAWN.with_volume(sfx_volume(&audio_settings)),
+        ));
+        commands.entity(entity).despawn();
+    }
 }
 
 /// 播放菜单音乐

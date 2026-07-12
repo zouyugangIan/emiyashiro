@@ -1,4 +1,4 @@
-use crate::{asset_paths, components::SpriteAnimationSheets};
+use crate::components::SpriteAnimationSheets;
 use bevy::prelude::*;
 use std::io::ErrorKind;
 
@@ -299,253 +299,41 @@ impl Default for CameraFeedbackTuning {
     }
 }
 
-/// 游戏资源句柄
+/// 全局资源句柄。
+///
+/// 角色动画的纹理、图集布局和帧数必须成套使用，因此 HF 士郎只保存一个
+/// `SpriteAnimationSheets`，不再在这里拆成几十个可以彼此失配的字段。
 #[derive(Resource)]
 pub struct GameAssets {
-    // UI封面图片集合（用于轮换显示）
     pub cover_textures: Vec<Handle<Image>>,
     pub current_cover_index: usize,
-
-    // 角色动画帧集合
-    pub shirou_animation_frames: Vec<Handle<Image>>,
-    pub sakura_animation_frames: Vec<Handle<Image>>,
-    pub current_shirou_frame: usize,
-    pub current_sakura_frame: usize,
-
+    pub shirou_initial_image: Handle<Image>,
+    pub sakura_initial_image: Handle<Image>,
+    pub hf_shirou_animation: Option<SpriteAnimationSheets>,
     pub font: Handle<Font>,
     pub volume_icon: Handle<Image>,
     pub volume_muted_icon: Handle<Image>,
-    // 精灵表资源
-    pub shirou_spritesheet: Option<Handle<Image>>,
-    pub shirou_spritesheet_run: Option<Handle<Image>>,
-    pub shirou_spritesheet_attack: Option<Handle<Image>>,
-    pub shirou_spritesheet_overedge_light_attack: Option<Handle<Image>>,
-    pub shirou_spritesheet_overedge_heavy_attack: Option<Handle<Image>>,
-    pub sakura_spritesheet: Option<Handle<Image>>,
-    pub shirou_atlas: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_run: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_attack: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_overedge_light_attack: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_overedge_heavy_attack: Option<Handle<TextureAtlasLayout>>,
-    pub sakura_atlas: Option<Handle<TextureAtlasLayout>>,
-    // Reference Board 精灵表（Shift+V 未激活时使用）
-    pub shirou_ref_ground_light: Option<Handle<Image>>,
-    pub shirou_ref_air_combo: Option<Handle<Image>>,
-    pub shirou_ref_heavy: Option<Handle<Image>>,
-    pub shirou_ref_ultimate: Option<Handle<Image>>,
-    pub shirou_ref_mobility: Option<Handle<Image>>,
-    pub shirou_ref_ninjutsu: Option<Handle<Image>>,
-    pub shirou_ref_weapon_proj: Option<Handle<Image>>,
-    pub shirou_ref_advance: Option<Handle<Image>>,
-    pub shirou_ref_ground_light_rows: Vec<Handle<Image>>,
-    pub shirou_ref_air_combo_rows: Vec<Handle<Image>>,
-    pub shirou_ref_heavy_rows: Vec<Handle<Image>>,
-    pub shirou_ref_ultimate_rows: Vec<Handle<Image>>,
-    pub shirou_ref_mobility_rows: Vec<Handle<Image>>,
-    pub shirou_ref_ninjutsu_rows: Vec<Handle<Image>>,
-    pub shirou_ref_weapon_proj_rows: Vec<Handle<Image>>,
-    pub shirou_atlas_ref_ground_light: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_ref_air_combo: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_ref_heavy: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_ref_ultimate: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_ref_mobility: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_ref_ninjutsu: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_ref_weapon_proj: Option<Handle<TextureAtlasLayout>>,
-    pub shirou_atlas_ref_advance: Option<Handle<TextureAtlasLayout>>,
-    // 音效资源
     pub jump_sound: Handle<AudioSource>,
     pub land_sound: Handle<AudioSource>,
     pub footstep_sound: Handle<AudioSource>,
-    // 背景音乐
     pub menu_music: Handle<AudioSource>,
     pub game_music: Handle<AudioSource>,
-    pub game_whyifight_music: Handle<AudioSource>, // 第一首游戏音乐
+    pub game_whyifight_music: Handle<AudioSource>,
     pub background_music: Handle<AudioSource>,
 }
 
 impl GameAssets {
-    fn reference_row_frame_count(
-        row_textures: &[Handle<Image>],
-        source_board: &Option<Handle<Image>>,
-        layout: &Option<Handle<TextureAtlasLayout>>,
-        columns: u32,
-        rows: u32,
-    ) -> usize {
-        if layout.is_none() {
-            return 0;
-        }
-
-        if !row_textures.is_empty() {
-            columns as usize
-        } else if source_board.is_some() {
-            (columns * rows) as usize
-        } else {
-            0
-        }
-    }
-
-    /// 获取当前封面图片
     pub fn get_current_cover(&self) -> Handle<Image> {
         self.cover_textures[self.current_cover_index].clone()
     }
 
-    /// 切换到下一张封面
     pub fn next_cover(&mut self) -> Handle<Image> {
         self.current_cover_index = (self.current_cover_index + 1) % self.cover_textures.len();
         self.get_current_cover()
     }
 
-    /// 获取当前 Shirou 动画帧
-    pub fn get_current_shirou_frame(&self) -> Handle<Image> {
-        self.shirou_animation_frames[self.current_shirou_frame].clone()
-    }
-
-    /// 切换到下一个 Shirou 动画帧
-    pub fn next_shirou_frame(&mut self) -> Handle<Image> {
-        self.current_shirou_frame =
-            (self.current_shirou_frame + 1) % self.shirou_animation_frames.len();
-        self.get_current_shirou_frame()
-    }
-
-    /// 获取当前 Sakura 动画帧
-    pub fn get_current_sakura_frame(&self) -> Handle<Image> {
-        self.sakura_animation_frames[self.current_sakura_frame].clone()
-    }
-
-    /// 切换到下一个 Sakura 动画帧
-    pub fn next_sakura_frame(&mut self) -> Handle<Image> {
-        self.current_sakura_frame =
-            (self.current_sakura_frame + 1) % self.sakura_animation_frames.len();
-        self.get_current_sakura_frame()
-    }
-
     pub fn hf_shirou_sprite_animation_sheets(&self) -> Option<SpriteAnimationSheets> {
-        let core_texture = self.shirou_spritesheet.clone()?;
-        let core_layout = self.shirou_atlas.clone()?;
-
-        Some(SpriteAnimationSheets {
-            core_texture: core_texture.clone(),
-            core_layout: core_layout.clone(),
-            running_texture: self
-                .shirou_spritesheet_run
-                .clone()
-                .unwrap_or_else(|| core_texture.clone()),
-            running_layout: self
-                .shirou_atlas_run
-                .clone()
-                .unwrap_or_else(|| core_layout.clone()),
-            attacking_texture: self
-                .shirou_spritesheet_attack
-                .clone()
-                .unwrap_or_else(|| core_texture.clone()),
-            attacking_layout: self
-                .shirou_atlas_attack
-                .clone()
-                .unwrap_or_else(|| core_layout.clone()),
-            overedge_light_attacking_texture: self.shirou_spritesheet_overedge_light_attack.clone(),
-            overedge_light_attacking_layout: self.shirou_atlas_overedge_light_attack.clone(),
-            overedge_light_attacking_frame_count: if self
-                .shirou_spritesheet_overedge_light_attack
-                .is_some()
-                && self.shirou_atlas_overedge_light_attack.is_some()
-            {
-                asset_paths::HF_SHIROU_OVEREDGE_LIGHT_ATTACK_FRAME_COUNT
-            } else {
-                0
-            },
-            overedge_heavy_attacking_texture: self.shirou_spritesheet_overedge_heavy_attack.clone(),
-            overedge_heavy_attacking_layout: self.shirou_atlas_overedge_heavy_attack.clone(),
-            overedge_heavy_attacking_frame_count: if self
-                .shirou_spritesheet_overedge_heavy_attack
-                .is_some()
-                && self.shirou_atlas_overedge_heavy_attack.is_some()
-            {
-                asset_paths::HF_SHIROU_OVEREDGE_HEAVY_ATTACK_FRAME_COUNT
-            } else {
-                0
-            },
-            // Reference Board 精灵表
-            reference_ground_light_texture: self.shirou_ref_ground_light.clone(),
-            reference_ground_light_row_textures: self.shirou_ref_ground_light_rows.clone(),
-            reference_ground_light_layout: self.shirou_atlas_ref_ground_light.clone(),
-            reference_ground_light_frame_count: Self::reference_row_frame_count(
-                &self.shirou_ref_ground_light_rows,
-                &self.shirou_ref_ground_light,
-                &self.shirou_atlas_ref_ground_light,
-                asset_paths::REFERENCE_BOARD_GROUND_LIGHT_COLS,
-                asset_paths::REFERENCE_BOARD_GROUND_LIGHT_ROWS,
-            ),
-            reference_air_combo_texture: self.shirou_ref_air_combo.clone(),
-            reference_air_combo_row_textures: self.shirou_ref_air_combo_rows.clone(),
-            reference_air_combo_layout: self.shirou_atlas_ref_air_combo.clone(),
-            reference_air_combo_frame_count: Self::reference_row_frame_count(
-                &self.shirou_ref_air_combo_rows,
-                &self.shirou_ref_air_combo,
-                &self.shirou_atlas_ref_air_combo,
-                asset_paths::REFERENCE_BOARD_AIR_COMBO_COLS,
-                asset_paths::REFERENCE_BOARD_AIR_COMBO_ROWS,
-            ),
-            reference_heavy_texture: self.shirou_ref_heavy.clone(),
-            reference_heavy_row_textures: self.shirou_ref_heavy_rows.clone(),
-            reference_heavy_layout: self.shirou_atlas_ref_heavy.clone(),
-            reference_heavy_frame_count: Self::reference_row_frame_count(
-                &self.shirou_ref_heavy_rows,
-                &self.shirou_ref_heavy,
-                &self.shirou_atlas_ref_heavy,
-                asset_paths::REFERENCE_BOARD_HEAVY_COLS,
-                asset_paths::REFERENCE_BOARD_HEAVY_ROWS,
-            ),
-            reference_ultimate_texture: self.shirou_ref_ultimate.clone(),
-            reference_ultimate_row_textures: self.shirou_ref_ultimate_rows.clone(),
-            reference_ultimate_layout: self.shirou_atlas_ref_ultimate.clone(),
-            reference_ultimate_frame_count: Self::reference_row_frame_count(
-                &self.shirou_ref_ultimate_rows,
-                &self.shirou_ref_ultimate,
-                &self.shirou_atlas_ref_ultimate,
-                asset_paths::REFERENCE_BOARD_ULTIMATE_COLS,
-                asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS,
-            ),
-            reference_mobility_texture: self.shirou_ref_mobility.clone(),
-            reference_mobility_row_textures: self.shirou_ref_mobility_rows.clone(),
-            reference_mobility_layout: self.shirou_atlas_ref_mobility.clone(),
-            reference_mobility_frame_count: Self::reference_row_frame_count(
-                &self.shirou_ref_mobility_rows,
-                &self.shirou_ref_mobility,
-                &self.shirou_atlas_ref_mobility,
-                asset_paths::REFERENCE_BOARD_MOBILITY_COLS,
-                asset_paths::REFERENCE_BOARD_MOBILITY_ROWS,
-            ),
-            reference_ninjutsu_texture: self.shirou_ref_ninjutsu.clone(),
-            reference_ninjutsu_row_textures: self.shirou_ref_ninjutsu_rows.clone(),
-            reference_ninjutsu_layout: self.shirou_atlas_ref_ninjutsu.clone(),
-            reference_ninjutsu_frame_count: Self::reference_row_frame_count(
-                &self.shirou_ref_ninjutsu_rows,
-                &self.shirou_ref_ninjutsu,
-                &self.shirou_atlas_ref_ninjutsu,
-                asset_paths::REFERENCE_BOARD_NINJUTSU_COLS,
-                asset_paths::REFERENCE_BOARD_NINJUTSU_ROWS,
-            ),
-            reference_weapon_proj_texture: self.shirou_ref_weapon_proj.clone(),
-            reference_weapon_proj_row_textures: self.shirou_ref_weapon_proj_rows.clone(),
-            reference_weapon_proj_layout: self.shirou_atlas_ref_weapon_proj.clone(),
-            reference_weapon_proj_frame_count: Self::reference_row_frame_count(
-                &self.shirou_ref_weapon_proj_rows,
-                &self.shirou_ref_weapon_proj,
-                &self.shirou_atlas_ref_weapon_proj,
-                asset_paths::REFERENCE_BOARD_WEAPON_PROJ_COLS,
-                asset_paths::REFERENCE_BOARD_WEAPON_PROJ_ROWS,
-            ),
-            reference_advance_texture: self.shirou_ref_advance.clone(),
-            reference_advance_layout: self.shirou_atlas_ref_advance.clone(),
-            reference_advance_frame_count: if self.shirou_ref_advance.is_some()
-                && self.shirou_atlas_ref_advance.is_some()
-            {
-                (asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_COLS
-                    * asset_paths::REFERENCE_BOARD_ADVANCED_OVERVIEW_ROWS) as usize
-            } else {
-                0
-            },
-        })
+        self.hf_shirou_animation.clone()
     }
 }
 
@@ -575,19 +363,6 @@ pub struct GameStats {
     pub distance_traveled: f32,
     pub jump_count: u32,
     pub play_time: f32,
-}
-
-/// 数据库资源
-#[derive(Resource, Default)]
-pub struct DatabaseResource {
-    pub database: Option<crate::database::Database>,
-}
-
-/// 当前游戏会话资源
-#[derive(Resource, Default)]
-pub struct CurrentSession {
-    pub session_id: Option<uuid::Uuid>,
-    pub player_id: Option<uuid::Uuid>,
 }
 
 fn default_save_file_version() -> String {
@@ -741,7 +516,7 @@ impl Default for CompleteGameState {
             distance_traveled: 0.0,
             jump_count: 0,
             play_time: 0.0,
-            selected_character: crate::states::CharacterType::Shirou1,
+            selected_character: crate::states::CharacterType::Shirou,
             player_count: PlayerCount::Single,
             music_position: 0.0,
             music_playing: false,

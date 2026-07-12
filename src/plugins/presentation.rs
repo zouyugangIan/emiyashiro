@@ -34,16 +34,23 @@ impl Plugin for PresentationPlugin {
             (
                 systems::player::sync_player_sprite_facing,
                 systems::enemy::update_enemy_telegraph_visuals,
-                systems::animation::trigger_audio_effects,
+                systems::audio::trigger_audio_effects,
                 systems::combat::animate_projectile_visuals,
                 systems::combat::animate_attack_reference_action_vfx,
                 systems::attack_modules::update_reference_attack_module_previews,
-                systems::frame_animation::update_frame_animations,
-                systems::frame_animation::update_character_animations,
-                systems::frame_animation::setup_player_animation,
-                systems::frame_animation::debug_animations,
                 systems::audio::handle_music_transitions,
             )
+                .in_set(GameSystemSet::Animation)
+                .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            Update,
+            (
+                systems::image_sequence_animation::setup_sakura_image_sequence_animation,
+                systems::image_sequence_animation::update_image_sequence_animation_state,
+                systems::image_sequence_animation::advance_image_sequence_animations,
+            )
+                .chain()
                 .in_set(GameSystemSet::Animation)
                 .run_if(in_state(GameState::Playing)),
         )

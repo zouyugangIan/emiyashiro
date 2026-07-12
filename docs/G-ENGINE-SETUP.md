@@ -1,11 +1,11 @@
 # G-Engine 设置指南
 
-> 文档状态：2026-02-24 已按当前代码对齐。  
+> 文档状态：2026-07-12 已按当前代码对齐。
 > 作用：说明联机与基础设施能力的“已实现范围 + 启动方式 + 验证方法”。
 
 ## 概述
 
-G-Engine 基于 `Bevy 0.18`，当前提供：
+G-Engine 基于 `Bevy 0.19`，当前提供：
 
 - Native 客户端 + Native 权威服务端
 - WebSocket 实时同步（`PlayerAction` / `WorldSnapshot`）
@@ -26,12 +26,12 @@ G-Engine 基于 `Bevy 0.18`，当前提供：
 
 - 已实现队列：`q_save_game`（存档任务）
 - 代码位置：`src/systems/save_worker.rs`
-- 当前未实现：`q_ai_inference`（保留为未来扩展）
 
 ### PostgreSQL（数据持久化）
 
 - 用途：存档与游戏数据
 - 代码位置：`src/database/mod.rs`、`src/systems/save_worker.rs`
+- 迁移位置：`migrations/`，服务端启动时由 SQLx 自动执行
 
 ## 快速启动
 
@@ -94,32 +94,25 @@ cargo build --bin client --target wasm32-unknown-unknown --features client
 
 说明：WASM 路径可编译目标已配置，运行时链路仍需按部署环境单独验证。
 
-## 功能状态（2026-02-24）
+## 功能状态（2026-07-12）
 
 ### 已完成
 
 - Redis 状态同步（节流 + 批量写入）
 - RabbitMQ/Postgres 存档链路（`q_save_game`）
-- 基础输入上报与快照同步
+- 状态流/事件流输入上报与全量/差量快照同步
 - Bot 控制基础行为
-- 自动重连与心跳保活
-
-### 计划中
-
-- 客户端预测与服务器校正
-- 会话恢复（重连后状态续接）
-- 差量快照/压缩同步
-- AI 推理任务队列（`q_ai_inference`）
+- 自动重连、会话恢复、心跳保活与服务器校正
 
 ## 网络协议
 
 ### Client -> Server
 
 ```rust
-PlayerAction::Move { x: f32, y: f32 }
-PlayerAction::Jump
-PlayerAction::Attack
 PlayerAction::Ping(u64)
+PlayerAction::ResumeSession { previous_id: u64 }
+PlayerAction::InputState { sequence: u32, x: f32, y: f32 }
+PlayerAction::InputEvent { sequence: u32, kind: InputEventKind }
 ```
 
 ### Server -> Client
@@ -127,6 +120,7 @@ PlayerAction::Ping(u64)
 ```rust
 GamePacket::Welcome { id: u64, message: String }
 GamePacket::WorldSnapshot { tick: u64, players: Vec<PlayerState> }
+GamePacket::WorldSnapshotDelta { tick: u64, changed_players: Vec<PlayerState>, removed_player_ids: Vec<u64> }
 GamePacket::Pong(u64)
 ```
 

@@ -231,7 +231,7 @@ Ground:         100% (50 px/s)
 - [x] 远景循环与离屏清理策略存在且已分层处理
 - [x] `dynamic_lighting` 仅作用于 FarBackground 层
 - [x] 返回 `GameState::Menu` 时会清理场景装饰实体
-- [ ] 效能压测基准（不同机型 FPS 影响）尚未文档化
+- [x] Headless ECS CPU 基线已记录在 `docs/2026-upgrade-status.md`；GPU/FPS 属于发布设备验证，不作为源码待办
 
 ## 📝 总结
 

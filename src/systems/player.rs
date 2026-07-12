@@ -8,6 +8,22 @@ use bevy::prelude::*;
 const PLAYER_STAND_COLLISION_OFFSET_Y: f32 = 0.0;
 const PLAYER_CROUCH_COLLISION_OFFSET_Y: f32 = -15.0;
 
+type PlayerMovementItem<'a> = (
+    Entity,
+    &'a mut Transform,
+    &'a mut Velocity,
+    &'a PlayerState,
+    Option<&'a mut AttackMomentum>,
+);
+
+type PlayerJumpItem<'a> = (
+    &'a mut Transform,
+    &'a mut Velocity,
+    &'a mut PlayerState,
+    Option<&'a mut crate::systems::collision::CollisionBox>,
+    Option<&'a AttackMomentum>,
+);
+
 /// 玩家移动系统
 ///
 /// 处理玩家的水平移动，根据输入更新玩家的速度和位置。
@@ -21,16 +37,7 @@ const PLAYER_CROUCH_COLLISION_OFFSET_Y: f32 = -15.0;
 pub fn player_movement(
     mut commands: Commands,
     game_input: Res<crate::systems::input::GameInput>,
-    mut player_query: Query<
-        (
-            Entity,
-            &mut Transform,
-            &mut Velocity,
-            &PlayerState,
-            Option<&mut AttackMomentum>,
-        ),
-        With<Player>,
-    >,
+    mut player_query: Query<PlayerMovementItem, With<Player>>,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
@@ -160,16 +167,7 @@ pub fn player_jump(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut game_input: ResMut<crate::systems::input::GameInput>,
-    mut player_query: Query<
-        (
-            &mut Transform,
-            &mut Velocity,
-            &mut PlayerState,
-            Option<&mut crate::systems::collision::CollisionBox>,
-            Option<&AttackMomentum>,
-        ),
-        With<Player>,
-    >,
+    mut player_query: Query<PlayerJumpItem, With<Player>>,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
 ) {
@@ -444,30 +442,6 @@ pub fn player_crouch(
 
         if let Some(collision_box) = collision_box.as_deref_mut() {
             apply_crouch_collision_shape(player_state.is_crouching, collision_box);
-        }
-    }
-}
-
-/// 更新玩家状态
-///
-/// 更新玩家的各种状态，如是否在地面上等。
-/// 现在主要由碰撞检测系统处理，这里保留作为备用。
-pub fn update_player_state(mut player_query: Query<(&Transform, &mut PlayerState), With<Player>>) {
-    if let Ok((transform, mut player_state)) = player_query.single_mut() {
-        // 基本的地面检测（作为碰撞系统的备用）
-        let ground_threshold = 2.0; // 允许的地面检测阈值
-        let distance_to_ground = transform.translation.y - GameConfig::GROUND_LEVEL;
-
-        // 如果玩家非常接近地面，认为在地面上
-        if distance_to_ground <= ground_threshold && distance_to_ground >= -1.0 {
-            player_state.is_grounded = true;
-        } else if distance_to_ground > ground_threshold {
-            player_state.is_grounded = false;
-        }
-
-        // 边界检查 - 如果玩家超出游戏边界，调整状态
-        if transform.translation.y < GameConfig::GROUND_LEVEL - 50.0 {
-            player_state.is_grounded = false;
         }
     }
 }

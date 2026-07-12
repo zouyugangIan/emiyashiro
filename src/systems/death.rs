@@ -72,8 +72,8 @@ pub fn setup_game_over_ui(
             parent.spawn((
                 Text::new("GAME OVER"),
                 TextFont {
-                    font: font.clone(),
-                    font_size: 56.0,
+                    font: font.clone().into(),
+                    font_size: FontSize::Px(56.0),
                     ..default()
                 },
                 TextColor(Color::srgb(0.95, 0.2, 0.2)),
@@ -81,8 +81,8 @@ pub fn setup_game_over_ui(
             parent.spawn((
                 Text::new("Press R to Revive"),
                 TextFont {
-                    font: font.clone(),
-                    font_size: 28.0,
+                    font: font.clone().into(),
+                    font_size: FontSize::Px(28.0),
                     ..default()
                 },
                 TextColor(Color::WHITE),
@@ -90,8 +90,8 @@ pub fn setup_game_over_ui(
             parent.spawn((
                 Text::new("Press M for Menu"),
                 TextFont {
-                    font,
-                    font_size: 24.0,
+                    font: font.into(),
+                    font_size: FontSize::Px(24.0),
                     ..default()
                 },
                 TextColor(Color::srgb(0.85, 0.85, 0.85)),
@@ -105,9 +105,9 @@ pub fn handle_game_over_input(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if keyboard.just_pressed(KeyCode::KeyR) {
-        next_state.set(GameState::Reviving);
+        NextState::set_if_neq(&mut next_state, GameState::Reviving);
     } else if keyboard.just_pressed(KeyCode::KeyM) {
-        next_state.set(GameState::Menu);
+        NextState::set_if_neq(&mut next_state, GameState::Menu);
     }
 }
 
@@ -149,7 +149,7 @@ pub fn revive_player(
         game_stats.jump_count = 0;
         game_stats.play_time = 0.0;
 
-        next_state.set(GameState::Playing);
+        NextState::set_if_neq(&mut next_state, GameState::Playing);
     }
 }
 

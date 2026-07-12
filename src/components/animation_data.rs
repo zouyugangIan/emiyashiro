@@ -16,6 +16,14 @@ fn default_min_frame_duration() -> f32 {
     0.05
 }
 
+fn positive_or(value: f32, fallback: f32) -> f32 {
+    if value.is_finite() && value > 0.0 {
+        value
+    } else {
+        fallback
+    }
+}
+
 /// 播放模式（2026最佳实践：显式声明循环语义，避免靠布尔字段猜测）
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum PlaybackMode {
@@ -46,17 +54,39 @@ pub struct AnimationClipData {
 }
 
 impl AnimationClipData {
-    pub fn playback_mode(&self) -> PlaybackMode {
-        self.playback_mode
-    }
-
     pub fn frame_duration_for_speed(&self, horizontal_speed_abs: f32) -> f32 {
+        let frame_duration = positive_or(self.frame_duration, default_frame_duration());
+        let minimum = positive_or(self.min_frame_duration, default_min_frame_duration());
         if !self.speed_scale_by_velocity {
-            return self.frame_duration.max(self.min_frame_duration);
+            return frame_duration.max(minimum);
         }
 
-        let normalized = (horizontal_speed_abs / self.speed_reference.max(1.0)).clamp(0.35, 2.5);
-        (self.frame_duration / normalized).max(self.min_frame_duration)
+        let speed = if horizontal_speed_abs.is_finite() {
+            horizontal_speed_abs.abs()
+        } else {
+            0.0
+        };
+        let reference = positive_or(self.speed_reference, default_speed_reference());
+        let normalized = (speed / reference).clamp(0.35, 2.5);
+        (frame_duration / normalized).max(minimum)
+    }
+
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.frames.is_empty() {
+            return Err("帧列表不能为空");
+        }
+        if !self.frame_duration.is_finite() || self.frame_duration <= 0.0 {
+            return Err("frame_duration 必须是正的有限数");
+        }
+        if !self.min_frame_duration.is_finite() || self.min_frame_duration <= 0.0 {
+            return Err("min_frame_duration 必须是正的有限数");
+        }
+        if self.speed_scale_by_velocity
+            && (!self.speed_reference.is_finite() || self.speed_reference <= 0.0)
+        {
+            return Err("速度联动开启时 speed_reference 必须是正的有限数");
+        }
+        Ok(())
     }
 }
 

@@ -527,6 +527,8 @@ fn bind_local_player_id(
     }
 }
 
+type RemotePlayerQueryItem<'a> = (&'a mut Transform, Option<&'a mut InterpolationState>);
+
 #[derive(SystemParam)]
 pub struct NetworkEventParams<'w, 's> {
     net: ResMut<'w, NetworkResource>,
@@ -534,15 +536,8 @@ pub struct NetworkEventParams<'w, 's> {
     my_id: ResMut<'w, MyNetworkId>,
     prediction_config: Res<'w, ClientPredictionConfig>,
     snapshot_state: ResMut<'w, NetworkSnapshotState>,
-    remote_query: Query<
-        'w,
-        's,
-        (
-            &'static mut Transform,
-            Option<&'static mut InterpolationState>,
-        ),
-        (With<RemotePlayer>, Without<LocalPlayer>),
-    >,
+    remote_query:
+        Query<'w, 's, RemotePlayerQueryItem<'static>, (With<RemotePlayer>, Without<LocalPlayer>)>,
     local_player_query: Query<
         'w,
         's,

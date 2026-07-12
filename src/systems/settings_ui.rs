@@ -171,8 +171,8 @@ pub fn open_settings_overlay(
                 panel.spawn((
                     Text::new(crate::systems::text_constants::SettingsMenuText::TITLE),
                     TextFont {
-                        font: font.clone(),
-                        font_size: 30.0,
+                        font: font.clone().into(),
+                        font_size: FontSize::Px(30.0),
                         ..default()
                     },
                     TextColor(palette::TITLE),
@@ -182,8 +182,8 @@ pub fn open_settings_overlay(
                 panel.spawn((
                     Text::new(crate::systems::text_constants::SettingsMenuText::AUDIO_SECTION),
                     TextFont {
-                        font: font.clone(),
-                        font_size: 14.0,
+                        font: font.clone().into(),
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
                     TextColor(palette::MUTED_LABEL),
@@ -217,8 +217,8 @@ pub fn open_settings_overlay(
                         btn.spawn((
                             Text::new(crate::systems::text_constants::SettingsMenuText::BACK),
                             TextFont {
-                                font,
-                                font_size: 18.0,
+                                font: font.into(),
+                                font_size: FontSize::Px(18.0),
                                 ..default()
                             },
                             TextColor(palette::TITLE),
@@ -386,8 +386,8 @@ fn spawn_master_volume_control(
             section.spawn((
                 Text::new(SettingsMenuText::MASTER_VOLUME),
                 TextFont {
-                    font: font.clone(),
-                    font_size: 17.0,
+                    font: font.clone().into(),
+                    font_size: FontSize::Px(17.0),
                     ..default()
                 },
                 TextColor(palette::LABEL),
@@ -455,8 +455,8 @@ fn spawn_master_volume_control(
                     row.spawn((
                         Text::new(format!("{:.0}%", initial_volume * 100.0)),
                         TextFont {
-                            font: font.clone(),
-                            font_size: 16.0,
+                            font: font.clone().into(),
+                            font_size: FontSize::Px(16.0),
                             ..default()
                         },
                         TextColor(palette::PERCENT),
@@ -485,8 +485,8 @@ fn spawn_master_volume_control(
                         btn.spawn((
                             Text::new(SettingsMenuText::VOLUME_DOWN),
                             TextFont {
-                                font: font.clone(),
-                                font_size: 24.0,
+                                font: font.clone().into(),
+                                font_size: FontSize::Px(24.0),
                                 ..default()
                             },
                             TextColor(palette::TITLE),
@@ -511,8 +511,8 @@ fn spawn_master_volume_control(
                         btn.spawn((
                             Text::new(SettingsMenuText::VOLUME_UP),
                             TextFont {
-                                font: font.clone(),
-                                font_size: 24.0,
+                                font: font.clone().into(),
+                                font_size: FontSize::Px(24.0),
                                 ..default()
                             },
                             TextColor(palette::TITLE),
@@ -523,8 +523,8 @@ fn spawn_master_volume_control(
             section.spawn((
                 Text::new(SettingsMenuText::VOLUME_HINT),
                 TextFont {
-                    font,
-                    font_size: 12.0,
+                    font: font.into(),
+                    font_size: FontSize::Px(12.0),
                     ..default()
                 },
                 TextColor(palette::MUTED_LABEL),

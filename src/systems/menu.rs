@@ -128,8 +128,8 @@ pub fn setup_menu(
                 parent.spawn((
                     Text::new(crate::systems::text_constants::MainMenuText::TITLE),
                     TextFont {
-                        font: assets.font.clone(),
-                        font_size: 48.0,
+                        font: assets.font.clone().into(),
+                        font_size: FontSize::Px(48.0),
                         ..default()
                     },
                     TextColor(Color::WHITE),
@@ -142,7 +142,7 @@ pub fn setup_menu(
                 parent.spawn((
                     Text::new(crate::systems::text_constants::MainMenuText::TITLE),
                     TextFont {
-                        font_size: 48.0,
+                        font_size: FontSize::Px(48.0),
                         ..default()
                     },
                     TextColor(Color::WHITE),
@@ -185,8 +185,8 @@ pub fn setup_menu(
                                         crate::systems::text_constants::MainMenuText::START_GAME,
                                     ),
                                     TextFont {
-                                        font: assets.font.clone(),
-                                        font_size: 24.0,
+                                        font: assets.font.clone().into(),
+                                        font_size: FontSize::Px(24.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -197,7 +197,7 @@ pub fn setup_menu(
                                         crate::systems::text_constants::MainMenuText::START_GAME,
                                     ),
                                     TextFont {
-                                        font_size: 24.0,
+                                        font_size: FontSize::Px(24.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -229,8 +229,8 @@ pub fn setup_menu(
                                         crate::systems::text_constants::MainMenuText::LOAD_GAME,
                                     ),
                                     TextFont {
-                                        font: assets.font.clone(),
-                                        font_size: 18.0,
+                                        font: assets.font.clone().into(),
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -241,7 +241,7 @@ pub fn setup_menu(
                                         crate::systems::text_constants::MainMenuText::LOAD_GAME,
                                     ),
                                     TextFont {
-                                        font_size: 18.0,
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -272,8 +272,8 @@ pub fn setup_menu(
                                         crate::systems::text_constants::MainMenuText::SETTINGS,
                                     ),
                                     TextFont {
-                                        font: assets.font.clone(),
-                                        font_size: 18.0,
+                                        font: assets.font.clone().into(),
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::srgba(0.92, 0.88, 0.82, 1.0)),
@@ -284,7 +284,7 @@ pub fn setup_menu(
                                         crate::systems::text_constants::MainMenuText::SETTINGS,
                                     ),
                                     TextFont {
-                                        font_size: 18.0,
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::srgba(0.92, 0.88, 0.82, 1.0)),
@@ -317,7 +317,7 @@ pub fn setup_menu(
                             BorderColor::all(Color::WHITE),
                             BackgroundColor(Color::srgba(0.3, 0.1, 0.1, 0.8)),
                             CharacterSelectButton {
-                                character_type: CharacterType::Shirou1,
+                                character_type: CharacterType::Shirou,
                             },
                         ))
                         .with_children(|parent| {
@@ -325,8 +325,8 @@ pub fn setup_menu(
                                 parent.spawn((
                                     Text::new("Shirou 1P"),
                                     TextFont {
-                                        font: assets.font.clone(),
-                                        font_size: 18.0,
+                                        font: assets.font.clone().into(),
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -335,7 +335,7 @@ pub fn setup_menu(
                                 parent.spawn((
                                     Text::new("Shirou 1P"),
                                     TextFont {
-                                        font_size: 18.0,
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -359,7 +359,7 @@ pub fn setup_menu(
                             BorderColor::all(Color::WHITE),
                             BackgroundColor(Color::srgba(0.1, 0.1, 0.3, 0.8)),
                             CharacterSelectButton {
-                                character_type: CharacterType::Shirou2,
+                                character_type: CharacterType::Sakura,
                             },
                         ))
                         .with_children(|parent| {
@@ -367,8 +367,8 @@ pub fn setup_menu(
                                 parent.spawn((
                                     Text::new("Sakura 2P"),
                                     TextFont {
-                                        font: assets.font.clone(),
-                                        font_size: 18.0,
+                                        font: assets.font.clone().into(),
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -377,7 +377,7 @@ pub fn setup_menu(
                                 parent.spawn((
                                     Text::new("Sakura 2P"),
                                     TextFont {
-                                        font_size: 18.0,
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
                                     TextColor(Color::WHITE),
@@ -426,7 +426,7 @@ pub fn handle_start_button(
                     save_ui.error_message.clear();
                 }
 
-                next_state.set(GameState::Playing);
+                NextState::set_if_neq(&mut next_state, GameState::Playing);
                 crate::debug_log!("🎮 Starting NEW game! (All states reset)");
             }
             Interaction::Hovered => {
@@ -493,7 +493,7 @@ pub fn handle_load_button(
                         save_ui.status_message.clear();
                     }
                 }
-                next_state.set(GameState::LoadTable);
+                NextState::set_if_neq(&mut next_state, GameState::LoadTable);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.3, 0.2, 0.8));
@@ -521,27 +521,27 @@ pub fn handle_character_select(
 
                 // 更新按钮颜色表示选中状态
                 match button.character_type {
-                    CharacterType::Shirou1 => {
+                    CharacterType::Shirou => {
                         *color = BackgroundColor(Color::srgba(0.5, 0.2, 0.2, 0.8));
                     }
-                    CharacterType::Shirou2 => {
+                    CharacterType::Sakura => {
                         *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.5, 0.8));
                     }
                 }
             }
             Interaction::Hovered => match button.character_type {
-                CharacterType::Shirou1 => {
+                CharacterType::Shirou => {
                     *color = BackgroundColor(Color::srgba(0.4, 0.15, 0.15, 0.8));
                 }
-                CharacterType::Shirou2 => {
+                CharacterType::Sakura => {
                     *color = BackgroundColor(Color::srgba(0.15, 0.15, 0.4, 0.8));
                 }
             },
             Interaction::None => match button.character_type {
-                CharacterType::Shirou1 => {
+                CharacterType::Shirou => {
                     *color = BackgroundColor(Color::srgba(0.3, 0.1, 0.1, 0.8));
                 }
-                CharacterType::Shirou2 => {
+                CharacterType::Sakura => {
                     *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.3, 0.8));
                 }
             },
