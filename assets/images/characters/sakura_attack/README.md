@@ -1,10 +1,18 @@
-# Sakura 2P Attack Atlases
+# Sakura 2P Attack Image Sequences
 
-These are the production attack atlases used by Sakura's image-sequence player.
-They preserve the existing movement-image workflow and switch only attacks to a
-fixed `256x256` Bevy texture atlas.
+Sakura uses standalone images for both movement and attacks. The current JK
+redesign has a white pleated skirt, opaque black tights, long violet hair and a
+red side ribbon. Seven generated module sheets under `../sakura_jk/modules/`
+are split into the 224 `256x256` PNG files under `frames/`. Sakura never receives
+a Bevy `TextureAtlas` component.
 
-## Runtime sheets
+Base movement is independent from combat: `../sakura_jk/base_movement_v3.png`
+builds eight dedicated idle/run/jump/crouch images under
+`../sakura_jk/base_frames/`. The build records each sheet's source direction,
+normalizes it once into the runtime's canonical right-facing orientation, and
+locks every base pose to the same foot baseline so state changes do not jump.
+
+## Legacy source sheets and runtime groups
 
 - `sakura_attack_ground_light.png`: 8x5 ground-light rows.
 - `sakura_attack_heavy.png`: 8x5 heavy rows.
@@ -17,13 +25,13 @@ fixed `256x256` Bevy texture atlas.
 All frames have transparent gutters and exactly one solid Sakura body. Motion
 streaks and petals are effects, not duplicate player entities.
 
+The active runtime groups are `frames/ground_light`, `frames/heavy`,
+`frames/air_combo`, `frames/mobility`, `frames/ninjutsu_projectiles`,
+`frames/ultimate`, and `frames/weapon_projection`.
+
 ## Validation
 
 ```bash
-python3 scripts/split_hf_shirou_attack_atlases.py \
-  --spec assets/images/characters/sakura_attack_rows.json \
-  --dry-run --fail-on-edge-contact
-python3 scripts/audit_hf_shirou_attack_atlases.py \
-  --spec assets/images/characters/sakura_attack_rows.json \
-  --out tmp/sakura_attack_audit --fail-on-issues
+python3 scripts/build_sakura_jk_attack_frames.py
+cargo test --lib sakura_attack_plan_has_all_standalone_runtime_images
 ```

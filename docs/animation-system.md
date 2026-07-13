@@ -42,5 +42,6 @@ RON 中的 `current_frame` 不是图片序号。运行时的 `current_frame` 先
 
 ## 樱的逐帧图片链
 
-`systems/image_sequence_animation.rs` 只处理樱，不会接管 HF 士郎。该链同样使用确定的
-状态切换、首帧立即应用和卡顿补帧语义，只是图像存储形式与 TextureAtlas 不同。
+`systems/image_sequence_animation.rs` 只处理樱，不会接管 HF 士郎。基础动作和 7 组攻击
+都只切换独立图片；攻击源图会预切为 224 张 `256x256` PNG，运行时不会给樱附加
+`TextureAtlas`。该链使用确定的状态切换、首帧立即应用和卡顿补帧语义。

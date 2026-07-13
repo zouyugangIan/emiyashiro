@@ -114,7 +114,7 @@ pub fn load_game(
         }
     };
 
-    if !v2_save.verify_checksum() {
+    if !v2_save.verify_serialized_checksum(&json_data) {
         crate::debug_log!("Checksum verification failed for {}", save_path.display());
         return;
     }

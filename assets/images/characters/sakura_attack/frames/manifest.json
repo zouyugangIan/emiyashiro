@@ -1,0 +1,3120 @@
+{
+  "character": "Sakura 2P JK redesign",
+  "cell_size": [
+    256,
+    256
+  ],
+  "generation": "standalone-image-sequence",
+  "runtime_facing": "right",
+  "base_source": "assets/images/characters/sakura_jk/base_movement_v3.png",
+  "base_frames": [
+    {
+      "frame": 1,
+      "file": "assets/images/characters/sakura_jk/base_frames/f01.png",
+      "bbox": [
+        95,
+        25,
+        160,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    },
+    {
+      "frame": 2,
+      "file": "assets/images/characters/sakura_jk/base_frames/f02.png",
+      "bbox": [
+        102,
+        25,
+        171,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    },
+    {
+      "frame": 3,
+      "file": "assets/images/characters/sakura_jk/base_frames/f03.png",
+      "bbox": [
+        88,
+        44,
+        190,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    },
+    {
+      "frame": 4,
+      "file": "assets/images/characters/sakura_jk/base_frames/f04.png",
+      "bbox": [
+        98,
+        45,
+        186,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    },
+    {
+      "frame": 5,
+      "file": "assets/images/characters/sakura_jk/base_frames/f05.png",
+      "bbox": [
+        73,
+        77,
+        164,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    },
+    {
+      "frame": 6,
+      "file": "assets/images/characters/sakura_jk/base_frames/f06.png",
+      "bbox": [
+        84,
+        55,
+        167,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    },
+    {
+      "frame": 7,
+      "file": "assets/images/characters/sakura_jk/base_frames/f07.png",
+      "bbox": [
+        111,
+        122,
+        181,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    },
+    {
+      "frame": 8,
+      "file": "assets/images/characters/sakura_jk/base_frames/f08.png",
+      "bbox": [
+        109,
+        125,
+        179,
+        232
+      ],
+      "border_alpha_pixels": 0,
+      "chroma_green_pixels": 0
+    }
+  ],
+  "sheets": [
+    {
+      "id": "ground_light",
+      "source": "assets/images/characters/sakura_jk/modules/ground_light.png",
+      "source_facing": "left",
+      "runtime_facing": "right",
+      "columns": 8,
+      "rows": 5,
+      "cell_size": [
+        256,
+        256
+      ],
+      "frames": [
+        {
+          "row": 1,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f01.png",
+          "bbox": [
+            87,
+            19,
+            181,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f02.png",
+          "bbox": [
+            82,
+            37,
+            230,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f03.png",
+          "bbox": [
+            75,
+            41,
+            251,
+            224
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f04.png",
+          "bbox": [
+            52,
+            35,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f05.png",
+          "bbox": [
+            38,
+            20,
+            222,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f06.png",
+          "bbox": [
+            43,
+            44,
+            252,
+            210
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f07.png",
+          "bbox": [
+            37,
+            11,
+            247,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r01_f08.png",
+          "bbox": [
+            109,
+            14,
+            201,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f01.png",
+          "bbox": [
+            87,
+            19,
+            181,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f02.png",
+          "bbox": [
+            82,
+            37,
+            230,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f03.png",
+          "bbox": [
+            75,
+            41,
+            251,
+            224
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f04.png",
+          "bbox": [
+            52,
+            35,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f05.png",
+          "bbox": [
+            38,
+            20,
+            222,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f06.png",
+          "bbox": [
+            43,
+            44,
+            252,
+            210
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f07.png",
+          "bbox": [
+            37,
+            11,
+            247,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r02_f08.png",
+          "bbox": [
+            109,
+            14,
+            201,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f01.png",
+          "bbox": [
+            87,
+            19,
+            181,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f02.png",
+          "bbox": [
+            82,
+            37,
+            230,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f03.png",
+          "bbox": [
+            75,
+            41,
+            251,
+            224
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f04.png",
+          "bbox": [
+            52,
+            35,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f05.png",
+          "bbox": [
+            38,
+            20,
+            222,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f06.png",
+          "bbox": [
+            43,
+            44,
+            252,
+            210
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f07.png",
+          "bbox": [
+            37,
+            11,
+            247,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r03_f08.png",
+          "bbox": [
+            109,
+            14,
+            201,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f01.png",
+          "bbox": [
+            87,
+            19,
+            181,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f02.png",
+          "bbox": [
+            82,
+            37,
+            230,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f03.png",
+          "bbox": [
+            75,
+            41,
+            251,
+            224
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f04.png",
+          "bbox": [
+            52,
+            35,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f05.png",
+          "bbox": [
+            38,
+            20,
+            222,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f06.png",
+          "bbox": [
+            43,
+            44,
+            252,
+            210
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f07.png",
+          "bbox": [
+            37,
+            11,
+            247,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r04_f08.png",
+          "bbox": [
+            109,
+            14,
+            201,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f01.png",
+          "bbox": [
+            87,
+            19,
+            181,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f02.png",
+          "bbox": [
+            82,
+            37,
+            230,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f03.png",
+          "bbox": [
+            75,
+            41,
+            251,
+            224
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f04.png",
+          "bbox": [
+            52,
+            35,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f05.png",
+          "bbox": [
+            38,
+            20,
+            222,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f06.png",
+          "bbox": [
+            43,
+            44,
+            252,
+            210
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f07.png",
+          "bbox": [
+            37,
+            11,
+            247,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ground_light/r05_f08.png",
+          "bbox": [
+            109,
+            14,
+            201,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        }
+      ]
+    },
+    {
+      "id": "heavy",
+      "source": "assets/images/characters/sakura_jk/modules/heavy.png",
+      "source_facing": "right",
+      "runtime_facing": "right",
+      "columns": 8,
+      "rows": 5,
+      "cell_size": [
+        256,
+        256
+      ],
+      "frames": [
+        {
+          "row": 1,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f01.png",
+          "bbox": [
+            68,
+            35,
+            205,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f02.png",
+          "bbox": [
+            38,
+            58,
+            214,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f03.png",
+          "bbox": [
+            38,
+            8,
+            205,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f04.png",
+          "bbox": [
+            8,
+            37,
+            212,
+            235
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f05.png",
+          "bbox": [
+            36,
+            81,
+            226,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f06.png",
+          "bbox": [
+            21,
+            15,
+            203,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f07.png",
+          "bbox": [
+            4,
+            14,
+            242,
+            231
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r01_f08.png",
+          "bbox": [
+            51,
+            34,
+            190,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f01.png",
+          "bbox": [
+            68,
+            35,
+            205,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f02.png",
+          "bbox": [
+            38,
+            58,
+            214,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f03.png",
+          "bbox": [
+            38,
+            8,
+            205,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f04.png",
+          "bbox": [
+            8,
+            37,
+            212,
+            235
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f05.png",
+          "bbox": [
+            36,
+            81,
+            226,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f06.png",
+          "bbox": [
+            21,
+            15,
+            203,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f07.png",
+          "bbox": [
+            4,
+            14,
+            242,
+            231
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r02_f08.png",
+          "bbox": [
+            51,
+            34,
+            190,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f01.png",
+          "bbox": [
+            68,
+            35,
+            205,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f02.png",
+          "bbox": [
+            38,
+            58,
+            214,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f03.png",
+          "bbox": [
+            38,
+            8,
+            205,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f04.png",
+          "bbox": [
+            8,
+            37,
+            212,
+            235
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f05.png",
+          "bbox": [
+            36,
+            81,
+            226,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f06.png",
+          "bbox": [
+            21,
+            15,
+            203,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f07.png",
+          "bbox": [
+            4,
+            14,
+            242,
+            231
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r03_f08.png",
+          "bbox": [
+            51,
+            34,
+            190,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f01.png",
+          "bbox": [
+            68,
+            35,
+            205,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f02.png",
+          "bbox": [
+            38,
+            58,
+            214,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f03.png",
+          "bbox": [
+            38,
+            8,
+            205,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f04.png",
+          "bbox": [
+            8,
+            37,
+            212,
+            235
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f05.png",
+          "bbox": [
+            36,
+            81,
+            226,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f06.png",
+          "bbox": [
+            21,
+            15,
+            203,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f07.png",
+          "bbox": [
+            4,
+            14,
+            242,
+            231
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r04_f08.png",
+          "bbox": [
+            51,
+            34,
+            190,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f01.png",
+          "bbox": [
+            68,
+            35,
+            205,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f02.png",
+          "bbox": [
+            38,
+            58,
+            214,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f03.png",
+          "bbox": [
+            38,
+            8,
+            205,
+            228
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f04.png",
+          "bbox": [
+            8,
+            37,
+            212,
+            235
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f05.png",
+          "bbox": [
+            36,
+            81,
+            226,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f06.png",
+          "bbox": [
+            21,
+            15,
+            203,
+            220
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f07.png",
+          "bbox": [
+            4,
+            14,
+            242,
+            231
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/heavy/r05_f08.png",
+          "bbox": [
+            51,
+            34,
+            190,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        }
+      ]
+    },
+    {
+      "id": "air_combo",
+      "source": "assets/images/characters/sakura_jk/modules/air_combo.png",
+      "source_facing": "right",
+      "runtime_facing": "right",
+      "columns": 8,
+      "rows": 5,
+      "cell_size": [
+        256,
+        256
+      ],
+      "frames": [
+        {
+          "row": 1,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f01.png",
+          "bbox": [
+            39,
+            26,
+            185,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f02.png",
+          "bbox": [
+            22,
+            17,
+            203,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f03.png",
+          "bbox": [
+            19,
+            22,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f04.png",
+          "bbox": [
+            4,
+            25,
+            237,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f05.png",
+          "bbox": [
+            26,
+            27,
+            238,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f06.png",
+          "bbox": [
+            15,
+            11,
+            218,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f07.png",
+          "bbox": [
+            10,
+            58,
+            192,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r01_f08.png",
+          "bbox": [
+            40,
+            11,
+            164,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f01.png",
+          "bbox": [
+            39,
+            26,
+            185,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f02.png",
+          "bbox": [
+            22,
+            17,
+            203,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f03.png",
+          "bbox": [
+            19,
+            22,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f04.png",
+          "bbox": [
+            4,
+            25,
+            237,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f05.png",
+          "bbox": [
+            26,
+            27,
+            238,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f06.png",
+          "bbox": [
+            15,
+            11,
+            218,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f07.png",
+          "bbox": [
+            10,
+            58,
+            192,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r02_f08.png",
+          "bbox": [
+            40,
+            11,
+            164,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f01.png",
+          "bbox": [
+            39,
+            26,
+            185,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f02.png",
+          "bbox": [
+            22,
+            17,
+            203,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f03.png",
+          "bbox": [
+            19,
+            22,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f04.png",
+          "bbox": [
+            4,
+            25,
+            237,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f05.png",
+          "bbox": [
+            26,
+            27,
+            238,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f06.png",
+          "bbox": [
+            15,
+            11,
+            218,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f07.png",
+          "bbox": [
+            10,
+            58,
+            192,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r03_f08.png",
+          "bbox": [
+            40,
+            11,
+            164,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f01.png",
+          "bbox": [
+            39,
+            26,
+            185,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f02.png",
+          "bbox": [
+            22,
+            17,
+            203,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f03.png",
+          "bbox": [
+            19,
+            22,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f04.png",
+          "bbox": [
+            4,
+            25,
+            237,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f05.png",
+          "bbox": [
+            26,
+            27,
+            238,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f06.png",
+          "bbox": [
+            15,
+            11,
+            218,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f07.png",
+          "bbox": [
+            10,
+            58,
+            192,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r04_f08.png",
+          "bbox": [
+            40,
+            11,
+            164,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f01.png",
+          "bbox": [
+            39,
+            26,
+            185,
+            221
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f02.png",
+          "bbox": [
+            22,
+            17,
+            203,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f03.png",
+          "bbox": [
+            19,
+            22,
+            252,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f04.png",
+          "bbox": [
+            4,
+            25,
+            237,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f05.png",
+          "bbox": [
+            26,
+            27,
+            238,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f06.png",
+          "bbox": [
+            15,
+            11,
+            218,
+            223
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f07.png",
+          "bbox": [
+            10,
+            58,
+            192,
+            207
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 5,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/air_combo/r05_f08.png",
+          "bbox": [
+            40,
+            11,
+            164,
+            218
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        }
+      ]
+    },
+    {
+      "id": "mobility",
+      "source": "assets/images/characters/sakura_jk/modules/mobility.png",
+      "source_facing": "right",
+      "runtime_facing": "right",
+      "columns": 6,
+      "rows": 4,
+      "cell_size": [
+        256,
+        256
+      ],
+      "frames": [
+        {
+          "row": 1,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r01_f01.png",
+          "bbox": [
+            38,
+            45,
+            206,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r01_f02.png",
+          "bbox": [
+            7,
+            24,
+            252,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r01_f03.png",
+          "bbox": [
+            4,
+            72,
+            237,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r01_f04.png",
+          "bbox": [
+            18,
+            4,
+            252,
+            211
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r01_f05.png",
+          "bbox": [
+            4,
+            4,
+            188,
+            215
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r01_f06.png",
+          "bbox": [
+            39,
+            4,
+            193,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r02_f01.png",
+          "bbox": [
+            38,
+            45,
+            206,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r02_f02.png",
+          "bbox": [
+            7,
+            24,
+            252,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r02_f03.png",
+          "bbox": [
+            4,
+            72,
+            237,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r02_f04.png",
+          "bbox": [
+            18,
+            4,
+            252,
+            211
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r02_f05.png",
+          "bbox": [
+            4,
+            4,
+            188,
+            215
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r02_f06.png",
+          "bbox": [
+            39,
+            4,
+            193,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r03_f01.png",
+          "bbox": [
+            38,
+            45,
+            206,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r03_f02.png",
+          "bbox": [
+            7,
+            24,
+            252,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r03_f03.png",
+          "bbox": [
+            4,
+            72,
+            237,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r03_f04.png",
+          "bbox": [
+            18,
+            4,
+            252,
+            211
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r03_f05.png",
+          "bbox": [
+            4,
+            4,
+            188,
+            215
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r03_f06.png",
+          "bbox": [
+            39,
+            4,
+            193,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r04_f01.png",
+          "bbox": [
+            38,
+            45,
+            206,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r04_f02.png",
+          "bbox": [
+            7,
+            24,
+            252,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r04_f03.png",
+          "bbox": [
+            4,
+            72,
+            237,
+            252
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r04_f04.png",
+          "bbox": [
+            18,
+            4,
+            252,
+            211
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r04_f05.png",
+          "bbox": [
+            4,
+            4,
+            188,
+            215
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/mobility/r04_f06.png",
+          "bbox": [
+            39,
+            4,
+            193,
+            214
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        }
+      ]
+    },
+    {
+      "id": "ninjutsu_projectiles",
+      "source": "assets/images/characters/sakura_jk/modules/ninjutsu_projectiles.png",
+      "source_facing": "right",
+      "runtime_facing": "right",
+      "columns": 8,
+      "rows": 4,
+      "cell_size": [
+        256,
+        256
+      ],
+      "frames": [
+        {
+          "row": 1,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f01.png",
+          "bbox": [
+            48,
+            14,
+            130,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f02.png",
+          "bbox": [
+            29,
+            14,
+            146,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f03.png",
+          "bbox": [
+            20,
+            14,
+            252,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f04.png",
+          "bbox": [
+            4,
+            18,
+            223,
+            229
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f05.png",
+          "bbox": [
+            13,
+            18,
+            252,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f06.png",
+          "bbox": [
+            4,
+            18,
+            240,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f07.png",
+          "bbox": [
+            4,
+            17,
+            226,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r01_f08.png",
+          "bbox": [
+            19,
+            14,
+            101,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f01.png",
+          "bbox": [
+            48,
+            14,
+            130,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f02.png",
+          "bbox": [
+            29,
+            14,
+            146,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f03.png",
+          "bbox": [
+            20,
+            14,
+            252,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f04.png",
+          "bbox": [
+            4,
+            18,
+            223,
+            229
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f05.png",
+          "bbox": [
+            13,
+            18,
+            252,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f06.png",
+          "bbox": [
+            4,
+            18,
+            240,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f07.png",
+          "bbox": [
+            4,
+            17,
+            226,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r02_f08.png",
+          "bbox": [
+            19,
+            14,
+            101,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f01.png",
+          "bbox": [
+            48,
+            14,
+            130,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f02.png",
+          "bbox": [
+            29,
+            14,
+            146,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f03.png",
+          "bbox": [
+            20,
+            14,
+            252,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f04.png",
+          "bbox": [
+            4,
+            18,
+            223,
+            229
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f05.png",
+          "bbox": [
+            13,
+            18,
+            252,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f06.png",
+          "bbox": [
+            4,
+            18,
+            240,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f07.png",
+          "bbox": [
+            4,
+            17,
+            226,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r03_f08.png",
+          "bbox": [
+            19,
+            14,
+            101,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f01.png",
+          "bbox": [
+            48,
+            14,
+            130,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f02.png",
+          "bbox": [
+            29,
+            14,
+            146,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f03.png",
+          "bbox": [
+            20,
+            14,
+            252,
+            234
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f04.png",
+          "bbox": [
+            4,
+            18,
+            223,
+            229
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f05.png",
+          "bbox": [
+            13,
+            18,
+            252,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f06.png",
+          "bbox": [
+            4,
+            18,
+            240,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f07.png",
+          "bbox": [
+            4,
+            17,
+            226,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ninjutsu_projectiles/r04_f08.png",
+          "bbox": [
+            19,
+            14,
+            101,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        }
+      ]
+    },
+    {
+      "id": "ultimate",
+      "source": "assets/images/characters/sakura_jk/modules/ultimate.png",
+      "source_facing": "left",
+      "runtime_facing": "right",
+      "columns": 8,
+      "rows": 3,
+      "cell_size": [
+        256,
+        256
+      ],
+      "frames": [
+        {
+          "row": 1,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f01.png",
+          "bbox": [
+            100,
+            17,
+            180,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f02.png",
+          "bbox": [
+            90,
+            18,
+            191,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f03.png",
+          "bbox": [
+            67,
+            22,
+            225,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f04.png",
+          "bbox": [
+            58,
+            22,
+            239,
+            242
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f05.png",
+          "bbox": [
+            16,
+            14,
+            247,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f06.png",
+          "bbox": [
+            23,
+            5,
+            251,
+            237
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f07.png",
+          "bbox": [
+            12,
+            4,
+            251,
+            244
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r01_f08.png",
+          "bbox": [
+            81,
+            22,
+            202,
+            230
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f01.png",
+          "bbox": [
+            100,
+            17,
+            180,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f02.png",
+          "bbox": [
+            90,
+            18,
+            191,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f03.png",
+          "bbox": [
+            67,
+            22,
+            225,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f04.png",
+          "bbox": [
+            58,
+            22,
+            239,
+            242
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f05.png",
+          "bbox": [
+            16,
+            14,
+            247,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f06.png",
+          "bbox": [
+            23,
+            5,
+            251,
+            237
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f07.png",
+          "bbox": [
+            12,
+            4,
+            251,
+            244
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r02_f08.png",
+          "bbox": [
+            81,
+            22,
+            202,
+            230
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f01.png",
+          "bbox": [
+            100,
+            17,
+            180,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f02.png",
+          "bbox": [
+            90,
+            18,
+            191,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f03.png",
+          "bbox": [
+            67,
+            22,
+            225,
+            240
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f04.png",
+          "bbox": [
+            58,
+            22,
+            239,
+            242
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f05.png",
+          "bbox": [
+            16,
+            14,
+            247,
+            232
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f06.png",
+          "bbox": [
+            23,
+            5,
+            251,
+            237
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 7,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f07.png",
+          "bbox": [
+            12,
+            4,
+            251,
+            244
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 8,
+          "file": "assets/images/characters/sakura_attack/frames/ultimate/r03_f08.png",
+          "bbox": [
+            81,
+            22,
+            202,
+            230
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        }
+      ]
+    },
+    {
+      "id": "weapon_projection",
+      "source": "assets/images/characters/sakura_jk/modules/weapon_projection.png",
+      "source_facing": "left",
+      "runtime_facing": "right",
+      "columns": 6,
+      "rows": 4,
+      "cell_size": [
+        256,
+        256
+      ],
+      "frames": [
+        {
+          "row": 1,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r01_f01.png",
+          "bbox": [
+            62,
+            23,
+            177,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r01_f02.png",
+          "bbox": [
+            74,
+            25,
+            193,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r01_f03.png",
+          "bbox": [
+            85,
+            23,
+            232,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r01_f04.png",
+          "bbox": [
+            69,
+            15,
+            205,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r01_f05.png",
+          "bbox": [
+            18,
+            17,
+            252,
+            216
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 1,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r01_f06.png",
+          "bbox": [
+            87,
+            17,
+            202,
+            226
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r02_f01.png",
+          "bbox": [
+            62,
+            23,
+            177,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r02_f02.png",
+          "bbox": [
+            74,
+            25,
+            193,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r02_f03.png",
+          "bbox": [
+            85,
+            23,
+            232,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r02_f04.png",
+          "bbox": [
+            69,
+            15,
+            205,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r02_f05.png",
+          "bbox": [
+            18,
+            17,
+            252,
+            216
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 2,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r02_f06.png",
+          "bbox": [
+            87,
+            17,
+            202,
+            226
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r03_f01.png",
+          "bbox": [
+            62,
+            23,
+            177,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r03_f02.png",
+          "bbox": [
+            74,
+            25,
+            193,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r03_f03.png",
+          "bbox": [
+            85,
+            23,
+            232,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r03_f04.png",
+          "bbox": [
+            69,
+            15,
+            205,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r03_f05.png",
+          "bbox": [
+            18,
+            17,
+            252,
+            216
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 3,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r03_f06.png",
+          "bbox": [
+            87,
+            17,
+            202,
+            226
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 1,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r04_f01.png",
+          "bbox": [
+            62,
+            23,
+            177,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 2,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r04_f02.png",
+          "bbox": [
+            74,
+            25,
+            193,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 3,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r04_f03.png",
+          "bbox": [
+            85,
+            23,
+            232,
+            233
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 4,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r04_f04.png",
+          "bbox": [
+            69,
+            15,
+            205,
+            222
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 5,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r04_f05.png",
+          "bbox": [
+            18,
+            17,
+            252,
+            216
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        },
+        {
+          "row": 4,
+          "frame": 6,
+          "file": "assets/images/characters/sakura_attack/frames/weapon_projection/r04_f06.png",
+          "bbox": [
+            87,
+            17,
+            202,
+            226
+          ],
+          "border_alpha_pixels": 0,
+          "chroma_green_pixels": 0
+        }
+      ]
+    }
+  ]
+}

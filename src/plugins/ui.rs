@@ -34,6 +34,7 @@ impl Plugin for UiPlugin {
                 systems::menu::handle_menu_settings_button,
                 systems::save::handle_save_button_click,
                 systems::menu::cover_fade_animation,
+                systems::menu::update_menu_cover_layout.after(systems::menu::cover_fade_animation),
                 systems::visual_effects::button_hover_effect,
             )
                 .in_set(GameSystemSet::UI)

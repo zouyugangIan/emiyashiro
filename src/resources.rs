@@ -408,6 +408,42 @@ impl SaveFileData {
         let calculated = Self::calculate_checksum_for(self);
         calculated == self.checksum
     }
+
+    /// Verifies a decoded on-disk payload without normalizing legacy enum names.
+    ///
+    /// Older saves serialized the current `Shirou`/`Sakura` variants as
+    /// `Shirou1`/`Shirou2`. Deserializing and serializing those files again
+    /// changes the bytes, so a semantic-only checksum check rejects valid old
+    /// saves. The fallback blanks the checksum value in the original JSON and
+    /// hashes the exact payload shape that was originally signed.
+    pub fn verify_serialized_checksum(&self, serialized: &str) -> bool {
+        if self.verify_checksum() {
+            return true;
+        }
+
+        let Some(payload) = serialized_with_blank_checksum(serialized, &self.checksum) else {
+            return false;
+        };
+        crate::systems::shared_utils::calculate_checksum(payload.as_bytes()) == self.checksum
+    }
+}
+
+fn serialized_with_blank_checksum(serialized: &str, expected: &str) -> Option<String> {
+    let key_start = serialized.rfind("\"checksum\"")?;
+    let after_key = &serialized[key_start + "\"checksum\"".len()..];
+    let colon_offset = after_key.find(':')?;
+    let after_colon = key_start + "\"checksum\"".len() + colon_offset + 1;
+    let value_start = serialized[after_colon..].find('"')? + after_colon;
+    let value_end = serialized[value_start + 1..].find('"')? + value_start + 1;
+
+    if &serialized[value_start + 1..value_end] != expected {
+        return None;
+    }
+
+    let mut payload = String::with_capacity(serialized.len() - expected.len());
+    payload.push_str(&serialized[..value_start + 1]);
+    payload.push_str(&serialized[value_end..]);
+    Some(payload)
 }
 
 /// 存档管理资源

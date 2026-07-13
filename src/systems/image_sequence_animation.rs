@@ -71,32 +71,33 @@ fn load_frames(asset_server: &AssetServer, paths: &[&'static str]) -> Vec<Handle
 }
 
 #[derive(Clone, Debug)]
-struct SakuraAttackAtlas {
-    texture: Handle<Image>,
-    layout: Handle<TextureAtlasLayout>,
-    columns: usize,
-    rows: u8,
+struct SakuraAttackSequence {
+    rows: Vec<Vec<Handle<Image>>>,
+}
+
+impl SakuraAttackSequence {
+    fn row(&self, row: u8) -> &[Handle<Image>] {
+        let row_index = row.clamp(1, self.rows.len() as u8) as usize - 1;
+        &self.rows[row_index]
+    }
 }
 
 #[derive(Component, Clone, Debug)]
-pub struct SakuraAttackAtlases {
-    ground_light: SakuraAttackAtlas,
-    heavy: SakuraAttackAtlas,
-    air_combo: SakuraAttackAtlas,
-    mobility: SakuraAttackAtlas,
-    ninjutsu: SakuraAttackAtlas,
-    ultimate: SakuraAttackAtlas,
-    weapon_projection: SakuraAttackAtlas,
+pub struct SakuraAttackImageSequences {
+    ground_light: SakuraAttackSequence,
+    heavy: SakuraAttackSequence,
+    air_combo: SakuraAttackSequence,
+    mobility: SakuraAttackSequence,
+    ninjutsu: SakuraAttackSequence,
+    ultimate: SakuraAttackSequence,
+    weapon_projection: SakuraAttackSequence,
 }
 
-impl SakuraAttackAtlases {
-    fn select(
-        &self,
-        style: AttackAnimationStyle,
-    ) -> (Handle<Image>, Handle<TextureAtlasLayout>, usize, usize) {
+impl SakuraAttackImageSequences {
+    fn select(&self, style: AttackAnimationStyle) -> &[Handle<Image>] {
         use AttackAnimationStyle::*;
 
-        let (atlas, row) = match style {
+        let (sequence, row) = match style {
             GroundLight => (&self.ground_light, 1),
             GroundLightRow(row) => (&self.ground_light, row),
             AirCombo => (&self.air_combo, 1),
@@ -117,32 +118,34 @@ impl SakuraAttackAtlases {
             OveredgeHeavy => (&self.heavy, 5),
             AdvanceRef => (&self.ultimate, 3),
         };
-        let row = row.clamp(1, atlas.rows) as usize;
-        let first_frame = (row - 1) * atlas.columns;
-        (
-            atlas.texture.clone(),
-            atlas.layout.clone(),
-            first_frame,
-            atlas.columns,
-        )
+        sequence.row(row)
     }
 }
 
 #[derive(Component, Debug)]
-pub struct SakuraAttackAtlasPlayback {
+pub struct SakuraAttackImagePlayback {
     trigger_serial: u32,
-    first_frame: usize,
-    frame_count: usize,
+    frames: Vec<Handle<Image>>,
     current_frame: usize,
     timer: Timer,
 }
 
-impl Default for SakuraAttackAtlasPlayback {
+type SakuraAnimationStateItem<'a> = (
+    &'a PlayerState,
+    &'a Velocity,
+    Option<&'a AttackAnimationState>,
+    Option<&'a SakuraAttackImageSequences>,
+    Option<&'a mut SakuraAttackImagePlayback>,
+    &'a mut ImageSequenceAnimationState,
+    &'a mut ImageSequenceAnimation,
+    &'a mut Sprite,
+);
+
+impl Default for SakuraAttackImagePlayback {
     fn default() -> Self {
         Self {
             trigger_serial: u32::MAX,
-            first_frame: 0,
-            frame_count: 1,
+            frames: Vec::new(),
             current_frame: 0,
             timer: Timer::from_seconds(0.07, TimerMode::Repeating),
         }
@@ -154,19 +157,13 @@ fn attack_frame_duration(attack_duration: f32, frame_count: usize) -> f32 {
     (attack_duration.max(0.0) / transitions).clamp(1.0 / 120.0, 0.09)
 }
 
-impl SakuraAttackAtlasPlayback {
-    fn restart(
-        &mut self,
-        trigger_serial: u32,
-        first_frame: usize,
-        frame_count: usize,
-        attack_duration: f32,
-    ) {
+impl SakuraAttackImagePlayback {
+    fn restart(&mut self, trigger_serial: u32, frames: &[Handle<Image>], attack_duration: f32) {
         self.trigger_serial = trigger_serial;
-        self.first_frame = first_frame;
-        self.frame_count = frame_count.max(1);
+        self.frames.clear();
+        self.frames.extend_from_slice(frames);
         self.current_frame = 0;
-        let frame_duration = attack_frame_duration(attack_duration, self.frame_count);
+        let frame_duration = attack_frame_duration(attack_duration, self.frames.len());
         self.timer
             .set_duration(std::time::Duration::from_secs_f32(frame_duration));
         self.timer.reset();
@@ -174,35 +171,66 @@ impl SakuraAttackAtlasPlayback {
     }
 }
 
-fn attack_layout(
-    texture_atlases: &mut Assets<TextureAtlasLayout>,
+fn load_attack_sequence(
+    asset_server: &AssetServer,
+    group: &str,
     grid: (u32, u32),
-) -> Handle<TextureAtlasLayout> {
-    texture_atlases.add(TextureAtlasLayout::from_grid(
-        UVec2::from(asset_paths::SAKURA_ATTACK_CELL),
-        grid.0,
-        grid.1,
-        None,
-        None,
-    ))
+) -> SakuraAttackSequence {
+    let rows = (1..=grid.1 as u8)
+        .map(|row| {
+            (1..=grid.0 as usize)
+                .map(|frame| {
+                    asset_server
+                        .load_builder()
+                        .with_settings(|settings: &mut ImageLoaderSettings| {
+                            settings.sampler = ImageSampler::nearest();
+                        })
+                        .load(asset_paths::sakura_attack_frame_path(group, row, frame))
+                })
+                .collect()
+        })
+        .collect();
+
+    SakuraAttackSequence { rows }
 }
 
-fn attack_atlas(
-    asset_server: &AssetServer,
-    path: &'static str,
-    layout: Handle<TextureAtlasLayout>,
-    grid: (u32, u32),
-) -> SakuraAttackAtlas {
-    SakuraAttackAtlas {
-        texture: asset_server
-            .load_builder()
-            .with_settings(|settings: &mut ImageLoaderSettings| {
-                settings.sampler = ImageSampler::nearest();
-            })
-            .load(path),
-        layout,
-        columns: grid.0 as usize,
-        rows: grid.1 as u8,
+fn load_sakura_attack_sequences(asset_server: &AssetServer) -> SakuraAttackImageSequences {
+    SakuraAttackImageSequences {
+        ground_light: load_attack_sequence(
+            asset_server,
+            asset_paths::SAKURA_ATTACK_GROUND_LIGHT_GROUP,
+            asset_paths::SAKURA_ATTACK_GROUND_LIGHT_GRID,
+        ),
+        heavy: load_attack_sequence(
+            asset_server,
+            asset_paths::SAKURA_ATTACK_HEAVY_GROUP,
+            asset_paths::SAKURA_ATTACK_HEAVY_GRID,
+        ),
+        air_combo: load_attack_sequence(
+            asset_server,
+            asset_paths::SAKURA_ATTACK_AIR_COMBO_GROUP,
+            asset_paths::SAKURA_ATTACK_AIR_COMBO_GRID,
+        ),
+        mobility: load_attack_sequence(
+            asset_server,
+            asset_paths::SAKURA_ATTACK_MOBILITY_GROUP,
+            asset_paths::SAKURA_ATTACK_MOBILITY_GRID,
+        ),
+        ninjutsu: load_attack_sequence(
+            asset_server,
+            asset_paths::SAKURA_ATTACK_NINJUTSU_GROUP,
+            asset_paths::SAKURA_ATTACK_NINJUTSU_GRID,
+        ),
+        ultimate: load_attack_sequence(
+            asset_server,
+            asset_paths::SAKURA_ATTACK_ULTIMATE_GROUP,
+            asset_paths::SAKURA_ATTACK_ULTIMATE_GRID,
+        ),
+        weapon_projection: load_attack_sequence(
+            asset_server,
+            asset_paths::SAKURA_ATTACK_WEAPON_PROJECTION_GROUP,
+            asset_paths::SAKURA_ATTACK_WEAPON_PROJECTION_GRID,
+        ),
     }
 }
 
@@ -210,7 +238,6 @@ fn attack_atlas(
 pub fn setup_sakura_image_sequence_animation(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     player_query: Query<
         Entity,
         (
@@ -229,66 +256,7 @@ pub fn setup_sakura_image_sequence_animation(
         let running_frames = load_frames(&asset_server, asset_paths::SAKURA_RUNNING_FRAMES);
         let jumping_frames = load_frames(&asset_server, asset_paths::SAKURA_JUMPING_FRAMES);
         let crouching_frames = load_frames(&asset_server, asset_paths::SAKURA_CROUCHING_FRAMES);
-        let layout_8x5 = attack_layout(
-            &mut texture_atlases,
-            asset_paths::SAKURA_ATTACK_GROUND_LIGHT_GRID,
-        );
-        let layout_8x4 = attack_layout(
-            &mut texture_atlases,
-            asset_paths::SAKURA_ATTACK_NINJUTSU_GRID,
-        );
-        let layout_6x4 = attack_layout(
-            &mut texture_atlases,
-            asset_paths::SAKURA_ATTACK_MOBILITY_GRID,
-        );
-        let layout_8x3 = attack_layout(
-            &mut texture_atlases,
-            asset_paths::SAKURA_ATTACK_ULTIMATE_GRID,
-        );
-        let attack_atlases = SakuraAttackAtlases {
-            ground_light: attack_atlas(
-                &asset_server,
-                asset_paths::IMAGE_SAKURA_ATTACK_GROUND_LIGHT,
-                layout_8x5.clone(),
-                asset_paths::SAKURA_ATTACK_GROUND_LIGHT_GRID,
-            ),
-            heavy: attack_atlas(
-                &asset_server,
-                asset_paths::IMAGE_SAKURA_ATTACK_HEAVY,
-                layout_8x5.clone(),
-                asset_paths::SAKURA_ATTACK_HEAVY_GRID,
-            ),
-            air_combo: attack_atlas(
-                &asset_server,
-                asset_paths::IMAGE_SAKURA_ATTACK_AIR_COMBO,
-                layout_8x5,
-                asset_paths::SAKURA_ATTACK_AIR_COMBO_GRID,
-            ),
-            mobility: attack_atlas(
-                &asset_server,
-                asset_paths::IMAGE_SAKURA_ATTACK_MOBILITY,
-                layout_6x4.clone(),
-                asset_paths::SAKURA_ATTACK_MOBILITY_GRID,
-            ),
-            ninjutsu: attack_atlas(
-                &asset_server,
-                asset_paths::IMAGE_SAKURA_ATTACK_NINJUTSU,
-                layout_8x4,
-                asset_paths::SAKURA_ATTACK_NINJUTSU_GRID,
-            ),
-            ultimate: attack_atlas(
-                &asset_server,
-                asset_paths::IMAGE_SAKURA_ATTACK_ULTIMATE,
-                layout_8x3,
-                asset_paths::SAKURA_ATTACK_ULTIMATE_GRID,
-            ),
-            weapon_projection: attack_atlas(
-                &asset_server,
-                asset_paths::IMAGE_SAKURA_ATTACK_WEAPON_PROJECTION,
-                layout_6x4,
-                asset_paths::SAKURA_ATTACK_WEAPON_PROJECTION_GRID,
-            ),
-        };
+        let attack_sequences = load_sakura_attack_sequences(&asset_server);
 
         commands.entity(entity).insert((
             ImageSequenceAnimation::new(idle_frames.clone(), 0.15, true),
@@ -299,57 +267,40 @@ pub fn setup_sakura_image_sequence_animation(
                 jumping_frames,
                 crouching_frames,
             },
-            attack_atlases,
-            SakuraAttackAtlasPlayback::default(),
+            attack_sequences,
+            SakuraAttackImagePlayback::default(),
         ));
     }
 }
 
 /// 将玩家状态映射到樱的逐帧图片动画，切换时立即显示第一帧。
 pub fn update_image_sequence_animation_state(
-    mut query: Query<
-        (
-            &PlayerState,
-            &Velocity,
-            Option<&AttackAnimationState>,
-            Option<&SakuraAttackAtlases>,
-            Option<&mut SakuraAttackAtlasPlayback>,
-            &mut ImageSequenceAnimationState,
-            &mut ImageSequenceAnimation,
-            &mut Sprite,
-        ),
-        With<Player>,
-    >,
+    mut query: Query<SakuraAnimationStateItem, With<Player>>,
 ) {
     for (
         player_state,
         velocity,
         attack_state,
-        attack_atlases,
+        attack_sequences,
         attack_playback,
         mut state,
         mut animation,
         mut sprite,
     ) in query.iter_mut()
     {
-        if let (Some(attack_state), Some(attack_atlases), Some(mut attack_playback)) =
-            (attack_state, attack_atlases, attack_playback)
+        if let (Some(attack_state), Some(attack_sequences), Some(mut attack_playback)) =
+            (attack_state, attack_sequences, attack_playback)
             && attack_state.is_active()
         {
             if state.current != ImageSequenceAnimationType::Attacking
                 || attack_playback.trigger_serial != attack_state.trigger_serial
             {
-                let (texture, layout, first_frame, frame_count) =
-                    attack_atlases.select(attack_state.style);
-                sprite.image = texture;
-                sprite.texture_atlas = Some(TextureAtlas {
-                    layout,
-                    index: first_frame,
-                });
+                let frames = attack_sequences.select(attack_state.style);
+                sprite.image = frames[0].clone();
+                sprite.texture_atlas = None;
                 attack_playback.restart(
                     attack_state.trigger_serial,
-                    first_frame,
-                    frame_count,
+                    frames,
                     attack_state.remaining,
                 );
                 animation.timer.pause();
@@ -383,20 +334,20 @@ pub fn update_image_sequence_animation_state(
     }
 }
 
-/// Advances Sakura's current attack row without allowing movement clips to overwrite it.
-pub fn advance_sakura_attack_atlas_animations(
+/// Advances Sakura's standalone attack images without ever attaching a texture atlas.
+pub fn advance_sakura_attack_image_sequences(
     time: Res<Time>,
     mut query: Query<
         (
             &AttackAnimationState,
-            &mut SakuraAttackAtlasPlayback,
+            &mut SakuraAttackImagePlayback,
             &mut Sprite,
         ),
         With<Player>,
     >,
 ) {
     for (attack_state, mut playback, mut sprite) in query.iter_mut() {
-        if !attack_state.is_active() || playback.frame_count <= 1 {
+        if !attack_state.is_active() || playback.frames.len() <= 1 {
             continue;
         }
 
@@ -407,10 +358,9 @@ pub fn advance_sakura_attack_atlas_animations(
         }
 
         playback.current_frame =
-            (playback.current_frame + completed_intervals).min(playback.frame_count - 1);
-        if let Some(atlas) = sprite.texture_atlas.as_mut() {
-            atlas.index = playback.first_frame + playback.current_frame;
-        }
+            (playback.current_frame + completed_intervals).min(playback.frames.len() - 1);
+        sprite.image = playback.frames[playback.current_frame].clone();
+        sprite.texture_atlas = None;
     }
 }
 
@@ -494,11 +444,88 @@ mod tests {
     }
 
     #[test]
-    fn short_attacks_can_reach_the_last_atlas_frame() {
+    fn short_attacks_can_reach_the_last_image() {
         let attack_duration = 0.18;
         let frame_count = 8;
         let transition_duration = attack_frame_duration(attack_duration, frame_count);
 
         assert!(transition_duration * (frame_count - 1) as f32 <= attack_duration + f32::EPSILON);
+    }
+
+    fn attack_sequence(
+        start_id: u128,
+        row_count: usize,
+        frame_count: usize,
+    ) -> SakuraAttackSequence {
+        let rows = (0..row_count)
+            .map(|row| {
+                (0..frame_count)
+                    .map(|frame| image_handle(start_id + (row * frame_count + frame) as u128))
+                    .collect()
+            })
+            .collect();
+        SakuraAttackSequence { rows }
+    }
+
+    #[test]
+    fn attacks_switch_standalone_images_and_remove_any_atlas() {
+        let idle = image_handle(1);
+        let ground_light = attack_sequence(100, 5, 8);
+        let expected_first_attack_image = ground_light.rows[1][0].clone();
+        let fallback = attack_sequence(1_000, 5, 8);
+        let short_fallback = attack_sequence(2_000, 4, 6);
+        let sequences = SakuraAttackImageSequences {
+            ground_light,
+            heavy: fallback.clone(),
+            air_combo: fallback.clone(),
+            mobility: short_fallback.clone(),
+            ninjutsu: fallback.clone(),
+            ultimate: attack_sequence(3_000, 3, 8),
+            weapon_projection: short_fallback,
+        };
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, update_image_sequence_animation_state);
+        app.world_mut().spawn((
+            Player,
+            PlayerState::default(),
+            Velocity::zero(),
+            AttackAnimationState {
+                remaining: 0.5,
+                trigger_serial: 7,
+                style: AttackAnimationStyle::GroundLightRow(2),
+            },
+            Sprite {
+                image: idle.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: Handle::default(),
+                    index: 31,
+                }),
+                ..default()
+            },
+            ImageSequenceAnimation::new(vec![idle.clone()], 0.15, true),
+            ImageSequenceAnimationState {
+                current: ImageSequenceAnimationType::Idle,
+                idle_frames: vec![idle.clone()],
+                running_frames: vec![idle.clone()],
+                jumping_frames: vec![idle.clone()],
+                crouching_frames: vec![idle],
+            },
+            sequences,
+            SakuraAttackImagePlayback::default(),
+        ));
+
+        app.update();
+
+        let mut query = app.world_mut().query::<(
+            &Sprite,
+            &ImageSequenceAnimationState,
+            &SakuraAttackImagePlayback,
+        )>();
+        let (sprite, state, playback) = query.single(app.world()).expect("Sakura player");
+        assert_eq!(sprite.image, expected_first_attack_image);
+        assert!(sprite.texture_atlas.is_none());
+        assert_eq!(state.current, ImageSequenceAnimationType::Attacking);
+        assert_eq!(playback.frames.len(), 8);
     }
 }

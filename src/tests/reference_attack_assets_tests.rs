@@ -86,6 +86,47 @@ fn nonempty_field<'a>(row: &'a Value, name: &str) -> &'a str {
         .unwrap_or_else(|| panic!("row is missing non-empty {name}: {row:?}"))
 }
 
+fn expected_sakura_sheet(id: &str) -> (&'static str, &'static str, (u32, u32)) {
+    match id {
+        "ground_light" => (
+            asset_paths::IMAGE_SAKURA_ATTACK_GROUND_LIGHT,
+            asset_paths::SAKURA_ATTACK_GROUND_LIGHT_GROUP,
+            asset_paths::SAKURA_ATTACK_GROUND_LIGHT_GRID,
+        ),
+        "heavy" => (
+            asset_paths::IMAGE_SAKURA_ATTACK_HEAVY,
+            asset_paths::SAKURA_ATTACK_HEAVY_GROUP,
+            asset_paths::SAKURA_ATTACK_HEAVY_GRID,
+        ),
+        "air_combo" => (
+            asset_paths::IMAGE_SAKURA_ATTACK_AIR_COMBO,
+            asset_paths::SAKURA_ATTACK_AIR_COMBO_GROUP,
+            asset_paths::SAKURA_ATTACK_AIR_COMBO_GRID,
+        ),
+        "mobility" => (
+            asset_paths::IMAGE_SAKURA_ATTACK_MOBILITY,
+            asset_paths::SAKURA_ATTACK_MOBILITY_GROUP,
+            asset_paths::SAKURA_ATTACK_MOBILITY_GRID,
+        ),
+        "ninjutsu_projectiles" => (
+            asset_paths::IMAGE_SAKURA_ATTACK_NINJUTSU,
+            asset_paths::SAKURA_ATTACK_NINJUTSU_GROUP,
+            asset_paths::SAKURA_ATTACK_NINJUTSU_GRID,
+        ),
+        "ultimate" => (
+            asset_paths::IMAGE_SAKURA_ATTACK_ULTIMATE,
+            asset_paths::SAKURA_ATTACK_ULTIMATE_GROUP,
+            asset_paths::SAKURA_ATTACK_ULTIMATE_GRID,
+        ),
+        "weapon_projection" => (
+            asset_paths::IMAGE_SAKURA_ATTACK_WEAPON_PROJECTION,
+            asset_paths::SAKURA_ATTACK_WEAPON_PROJECTION_GROUP,
+            asset_paths::SAKURA_ATTACK_WEAPON_PROJECTION_GRID,
+        ),
+        other => panic!("unexpected Sakura attack sheet id: {other}"),
+    }
+}
+
 #[test]
 fn hf_shirou_attack_row_plan_matches_runtime_atlases() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -185,4 +226,97 @@ fn hf_shirou_attack_row_plan_matches_runtime_atlases() {
 
     assert_eq!(planned_rows, 30);
     assert_eq!(planned_frames, 224);
+}
+
+#[test]
+fn sakura_attack_plan_has_all_standalone_runtime_images() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let plan_path = root.join("assets/images/characters/sakura_attack_rows.json");
+    let plan: Value = serde_json::from_str(
+        &fs::read_to_string(&plan_path)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", plan_path.display())),
+    )
+    .expect("valid Sakura attack row plan json");
+    let sheets = plan["sheets"].as_array().expect("Sakura sheets array");
+    assert_eq!(sheets.len(), 7);
+
+    let mut frame_total = 0;
+    for sheet in sheets {
+        let id = sheet["id"].as_str().expect("Sakura sheet id");
+        let (source_asset, frame_group, grid) = expected_sakura_sheet(id);
+        assert_eq!(sheet["asset_path"].as_str(), Some(source_asset));
+        assert_eq!(sheet["columns"].as_u64(), Some(grid.0 as u64));
+        let rows = sheet["rows"].as_array().expect("Sakura rows array");
+        assert_eq!(rows.len(), grid.1 as usize);
+
+        for row in 1..=grid.1 as u8 {
+            for frame in 1..=grid.0 as usize {
+                let asset_path = asset_paths::sakura_attack_frame_path(frame_group, row, frame);
+                let file_path = root.join("assets").join(&asset_path);
+                assert_eq!(
+                    png_dimensions(&file_path),
+                    asset_paths::SAKURA_ATTACK_CELL,
+                    "standalone Sakura frame {asset_path} must keep its source cell size"
+                );
+                frame_total += 1;
+            }
+        }
+    }
+
+    assert_eq!(frame_total, 224);
+
+    let manifest_path = root.join("assets/images/characters/sakura_attack/frames/manifest.json");
+    let manifest: Value = serde_json::from_str(
+        &fs::read_to_string(&manifest_path)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", manifest_path.display())),
+    )
+    .expect("valid Sakura standalone frame manifest");
+
+    assert_eq!(manifest["runtime_facing"].as_str(), Some("right"));
+    let base_frames = manifest["base_frames"]
+        .as_array()
+        .expect("dedicated Sakura base frames");
+    assert_eq!(base_frames.len(), 8);
+    for frame in base_frames {
+        let asset_path = frame["file"].as_str().expect("base frame file");
+        assert_eq!(
+            png_dimensions(&root.join(asset_path)),
+            asset_paths::SAKURA_ATTACK_CELL,
+            "base frame {asset_path} must use the same square render cell"
+        );
+        assert_eq!(frame["border_alpha_pixels"].as_u64(), Some(0));
+        assert_eq!(frame["chroma_green_pixels"].as_u64(), Some(0));
+        let bbox = frame["bbox"].as_array().expect("non-empty base alpha bbox");
+        let visible_height =
+            bbox[3].as_u64().expect("bbox bottom") - bbox[1].as_u64().expect("bbox top");
+        assert!(
+            visible_height >= 100,
+            "Sakura should stay large in every base frame: {frame:?}"
+        );
+        assert_eq!(
+            bbox[3].as_u64(),
+            Some(232),
+            "base-state images must share a stable foot baseline: {frame:?}"
+        );
+    }
+
+    let runtime_frames = manifest["sheets"]
+        .as_array()
+        .expect("runtime sheets")
+        .iter()
+        .flat_map(|sheet| sheet["frames"].as_array().expect("runtime frames"));
+    let mut manifest_frame_total = 0;
+    for frame in runtime_frames {
+        assert_eq!(frame["border_alpha_pixels"].as_u64(), Some(0));
+        assert_eq!(frame["chroma_green_pixels"].as_u64(), Some(0));
+        let bbox = frame["bbox"].as_array().expect("non-empty alpha bbox");
+        let visible_height =
+            bbox[3].as_u64().expect("bbox bottom") - bbox[1].as_u64().expect("bbox top");
+        assert!(
+            visible_height >= 120,
+            "Sakura should occupy a large portion of every runtime frame: {frame:?}"
+        );
+        manifest_frame_total += 1;
+    }
+    assert_eq!(manifest_frame_total, 224);
 }

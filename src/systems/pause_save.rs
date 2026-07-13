@@ -313,7 +313,7 @@ fn process_save_file(
         }
     };
 
-    if !save_file_data.verify_checksum() {
+    if !save_file_data.verify_serialized_checksum(&json_data) {
         crate::debug_log!("Checksum mismatch: {}", entry.path().display());
         return Ok(false);
     }
@@ -397,14 +397,36 @@ pub fn rename_save_file(
         let new_file_name = format!("{}.json", validated_new_name);
         let new_path = save_dir.join(&new_file_name);
 
-        // 重命名文件
-        fs::rename(old_path, &new_path)
-            .map_err(|e| format!("Failed to rename save file: {}", e))?;
+        if new_path != old_path && new_path.exists() {
+            return Err(format!("Save file already exists: {}", new_path.display()).into());
+        }
 
-        // 更新元数据
-        let metadata = &mut save_file_manager.save_files[index];
-        metadata.name = validated_new_name.clone();
-        metadata.file_path = new_path.to_string_lossy().to_string();
+        // Rename is a content operation as well: metadata participates in the
+        // checksum, so update and re-sign the file instead of only moving it.
+        let old_file_data = fs::read(old_path)?;
+        let was_compressed = crate::systems::shared_utils::is_compressed(&old_file_data);
+        let json_data = crate::systems::shared_utils::decode_file_payload(&old_file_data)?;
+        let save_file_data: SaveFileData = serde_json::from_str(&json_data)?;
+        if !save_file_data.verify_serialized_checksum(&json_data) {
+            return Err("Cannot rename a save with an invalid checksum".into());
+        }
+
+        let mut updated_metadata = save_file_data.metadata;
+        updated_metadata.name = validated_new_name.clone();
+        updated_metadata.file_path = new_path.to_string_lossy().to_string();
+        let updated_save = SaveFileData::new(updated_metadata.clone(), save_file_data.game_state);
+        let updated_json = serde_json::to_string_pretty(&updated_save)?;
+        let updated_file_data = if was_compressed {
+            crate::systems::shared_utils::compress_data(updated_json.as_bytes(), 3)?
+        } else {
+            updated_json.into_bytes()
+        };
+        crate::systems::shared_utils::atomic_write_file(&new_path, &updated_file_data)?;
+        if new_path != old_path {
+            fs::remove_file(old_path)?;
+        }
+
+        save_file_manager.save_files[index] = updated_metadata;
 
         crate::debug_log!(
             "Save file renamed successfully: {} -> {}",
@@ -417,5 +439,65 @@ pub fn rename_save_file(
         Ok(())
     } else {
         Err(format!("Save file '{}' not found", old_name).into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rename_persists_metadata_and_a_fresh_checksum() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "emiyashiro-rename-save-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        fs::create_dir_all(&temp_dir).expect("create save directory");
+        let old_path = temp_dir.join("old-slot.json");
+        let metadata = SaveFileMetadata {
+            name: "old-slot".to_string(),
+            score: 42,
+            distance: 12.0,
+            play_time: 3.0,
+            save_timestamp: chrono::Utc::now(),
+            file_path: old_path.to_string_lossy().to_string(),
+            selected_character: CharacterType::Sakura,
+        };
+        let save_data = SaveFileData::new(metadata.clone(), CompleteGameState::default());
+        fs::write(
+            &old_path,
+            serde_json::to_string_pretty(&save_data).expect("serialize save"),
+        )
+        .expect("write save");
+        let mut manager = SaveFileManager {
+            save_directory: temp_dir.to_string_lossy().to_string(),
+            save_files: vec![metadata],
+            current_save_name: None,
+            selected_save_index: None,
+        };
+
+        rename_save_file("old-slot", "new-slot", &mut manager).expect("rename save");
+
+        let new_path = temp_dir.join("new-slot.json");
+        assert!(!old_path.exists());
+        assert!(new_path.exists());
+        let json = fs::read_to_string(&new_path).expect("read renamed save");
+        let renamed: SaveFileData = serde_json::from_str(&json).expect("parse renamed save");
+        assert!(renamed.verify_serialized_checksum(&json));
+        assert_eq!(renamed.metadata.name, "new-slot");
+        assert_eq!(
+            renamed.metadata.file_path,
+            new_path.to_string_lossy().as_ref()
+        );
+
+        let mut app = App::new();
+        app.insert_resource(manager)
+            .add_systems(Update, scan_save_files);
+        app.update();
+        let scanned = app.world().resource::<SaveFileManager>();
+        assert_eq!(scanned.save_files.len(), 1);
+        assert_eq!(scanned.save_files[0].name, "new-slot");
+
+        let _ = fs::remove_dir_all(temp_dir);
     }
 }

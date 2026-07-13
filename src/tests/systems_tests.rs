@@ -1076,6 +1076,62 @@ mod tests {
     }
 
     #[test]
+    fn test_setup_game_spawns_sakura_with_large_square_image_frame() {
+        let sakura_image = test_image_handle(0x5A6A);
+        let mut assets =
+            create_test_game_assets(test_image_handle(0xF001), test_image_handle(0xF002));
+        assets.sakura_initial_image = sakura_image.clone();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(CharacterSelection {
+                selected_character: CharacterType::Sakura,
+            })
+            .insert_resource(assets)
+            .insert_resource(crate::components::animation_data::AnimationDataMap::default())
+            .init_resource::<crate::systems::ui::LoadedGameState>()
+            .add_systems(Update, game::setup_game);
+
+        app.update();
+
+        let mut query = app
+            .world_mut()
+            .query_filtered::<&Sprite, (With<Player>, Without<SpriteAnimationSheets>)>();
+        let sprite = query.single(app.world()).expect("Sakura image player");
+        assert_eq!(sprite.image, sakura_image);
+        assert_eq!(sprite.custom_size, Some(game::SAKURA_RENDER_SIZE));
+        assert!(sprite.texture_atlas.is_none());
+    }
+
+    #[test]
+    fn test_new_game_snaps_existing_camera_to_spawn_view() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<CharacterSelection>()
+            .insert_resource(create_test_game_assets(
+                test_image_handle(0xF001),
+                test_image_handle(0xF002),
+            ))
+            .insert_resource(crate::components::animation_data::AnimationDataMap::default())
+            .init_resource::<crate::systems::ui::LoadedGameState>()
+            .add_systems(Update, game::setup_game);
+        app.world_mut()
+            .spawn((Camera::default(), Transform::from_xyz(900.0, 120.0, 0.0)));
+
+        app.update();
+
+        let mut camera_query = app
+            .world_mut()
+            .query_filtered::<&Transform, (With<Camera>, Without<Player>)>();
+        let camera_transform = camera_query
+            .single(app.world())
+            .expect("single gameplay camera");
+        assert_eq!(
+            camera_transform.translation,
+            game::initial_gameplay_camera_position(GameConfig::PLAYER_START_POS)
+        );
+    }
+
+    #[test]
     fn test_escape_pause_toggle_is_edge_triggered() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)

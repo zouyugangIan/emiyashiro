@@ -7,6 +7,8 @@ use crate::{
     systems::ui::LoadButton,
 };
 use bevy::prelude::*;
+use bevy::ui::widget::NodeImageMode;
+use bevy::window::PrimaryWindow;
 
 type StartButtonInteractionQuery<'w, 's> = Query<
     'w,
@@ -40,6 +42,54 @@ type CoverFadeQuery<'w, 's> = Query<
     Or<(With<CoverImage1>, With<CoverImage2>)>,
 >;
 
+type CoverLayoutQuery<'w, 's> =
+    Query<'w, 's, &'static mut ImageNode, Or<(With<CoverImage1>, With<CoverImage2>)>>;
+
+fn fullscreen_cover_image(image: Handle<Image>) -> ImageNode {
+    ImageNode {
+        image,
+        image_mode: NodeImageMode::Stretch,
+        ..default()
+    }
+}
+
+/// Returns the centered source rectangle that fills `viewport_size` without
+/// distorting the image. Excess pixels are cropped like CSS `object-fit: cover`.
+pub fn cover_source_rect(source_size: Vec2, viewport_size: Vec2) -> Option<Rect> {
+    if source_size.min_element() <= 0.0 || viewport_size.min_element() <= 0.0 {
+        return None;
+    }
+
+    let source_aspect = source_size.x / source_size.y;
+    let viewport_aspect = viewport_size.x / viewport_size.y;
+    let crop_size = if source_aspect > viewport_aspect {
+        Vec2::new(source_size.y * viewport_aspect, source_size.y)
+    } else {
+        Vec2::new(source_size.x, source_size.x / viewport_aspect)
+    };
+    let crop_min = (source_size - crop_size) * 0.5;
+    Some(Rect::from_corners(crop_min, crop_min + crop_size))
+}
+
+/// Keeps both fading menu covers flush with the current window on resize.
+pub fn update_menu_cover_layout(
+    primary_window: Query<&Window, With<PrimaryWindow>>,
+    images: Res<Assets<Image>>,
+    mut cover_query: CoverLayoutQuery,
+) {
+    let Ok(window) = primary_window.single() else {
+        return;
+    };
+    let viewport_size = Vec2::new(window.width(), window.height());
+
+    for mut image_node in &mut cover_query {
+        image_node.image_mode = NodeImageMode::Stretch;
+        if let Some(image) = images.get(&image_node.image) {
+            image_node.rect = cover_source_rect(image.size_f32(), viewport_size);
+        }
+    }
+}
+
 /// 设置主菜单界面
 ///
 /// 创建主菜单的UI元素，包括标题、按钮、背景图片等。
@@ -71,9 +121,11 @@ pub fn setup_menu(
             position_type: PositionType::Absolute,
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
+            top: Val::Px(0.0),
+            left: Val::Px(0.0),
             ..default()
         },
-        ImageNode::new(cover1_image),
+        fullscreen_cover_image(cover1_image),
         BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
         ZIndex(0),
         MenuUI,
@@ -94,9 +146,11 @@ pub fn setup_menu(
             position_type: PositionType::Absolute,
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
+            top: Val::Px(0.0),
+            left: Val::Px(0.0),
             ..default()
         },
-        ImageNode::new(cover2_image),
+        fullscreen_cover_image(cover2_image),
         BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.0)), // 从透明开始
         ZIndex(1),
         MenuUI,

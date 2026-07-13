@@ -7,26 +7,31 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
 pub const PLAYER_RENDER_SIZE: Vec2 = Vec2::new(96.0, 144.0);
+pub const SAKURA_RENDER_SIZE: Vec2 = Vec2::splat(192.0);
 pub const PLAYER_VISUAL_BASELINE_ANCHOR_Y: f32 = -0.22;
+
+/// The camera's exact first-frame position for a newly spawned player.
+pub fn initial_gameplay_camera_position(player_position: Vec3) -> Vec3 {
+    Vec3::new(
+        player_position.x + GameConfig::CAMERA_OFFSET,
+        (player_position.y * 0.2).clamp(-80.0, 80.0),
+        0.0,
+    )
+}
 
 #[derive(SystemParam)]
 pub struct SetupGameParams<'w, 's> {
     pub character_selection: ResMut<'w, CharacterSelection>,
     pub game_assets: Res<'w, GameAssets>,
     pub anim_data_map: Res<'w, crate::components::animation_data::AnimationDataMap>,
-    pub camera_query: Query<'w, 's, Entity, With<Camera>>,
-    pub player_query: Query<'w, 's, Entity, With<Player>>,
+    pub camera_query: Query<'w, 's, &'static mut Transform, (With<Camera>, Without<Player>)>,
+    pub player_query: Query<'w, 's, (Entity, &'static Transform), With<Player>>,
     pub ground_query: Query<'w, 's, Entity, With<Ground>>,
     pub loaded_game_state: Res<'w, crate::systems::ui::LoadedGameState>,
 }
 
 /// Sets up gameplay entities for a fresh start or loaded run.
 pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
-    if params.camera_query.is_empty() {
-        commands.spawn(Camera2d);
-        crate::debug_log!("Created gameplay camera");
-    }
-
     if params.ground_query.is_empty() {
         commands.spawn((
             Sprite {
@@ -50,19 +55,52 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
 
     if !params.player_query.is_empty() {
         if should_rebuild_player {
-            for entity in params.player_query.iter() {
+            for (entity, _) in params.player_query.iter() {
                 commands.entity(entity).despawn();
             }
             crate::debug_log!("Rebuilding player entity from loaded save");
         } else {
+            if params.camera_query.is_empty()
+                && let Some((_, player_transform)) = params.player_query.iter().next()
+            {
+                commands.spawn((
+                    Camera2d,
+                    Transform::from_translation(initial_gameplay_camera_position(
+                        player_transform.translation,
+                    )),
+                ));
+                crate::debug_log!("Recreated gameplay camera at the current player");
+            }
             crate::debug_log!("Player already exists, continuing game");
             return;
         }
     }
 
+    let camera_position = params
+        .loaded_game_state
+        .state
+        .as_ref()
+        .filter(|_| params.loaded_game_state.should_restore)
+        .map(|state| state.camera_position)
+        .unwrap_or_else(|| initial_gameplay_camera_position(GameConfig::PLAYER_START_POS));
+
+    if params.camera_query.is_empty() {
+        commands.spawn((Camera2d, Transform::from_translation(camera_position)));
+        crate::debug_log!("Created gameplay camera at the starting position");
+    } else {
+        for mut camera_transform in params.camera_query.iter_mut() {
+            camera_transform.translation = camera_position;
+        }
+        crate::debug_log!("Snapped gameplay camera to the starting position");
+    }
+
     let texture = match params.character_selection.selected_character {
         CharacterType::Shirou => params.game_assets.shirou_initial_image.clone(),
         CharacterType::Sakura => params.game_assets.sakura_initial_image.clone(),
+    };
+    let render_size = match params.character_selection.selected_character {
+        CharacterType::Shirou => PLAYER_RENDER_SIZE,
+        CharacterType::Sakura => SAKURA_RENDER_SIZE,
     };
 
     crate::debug_log!(
@@ -121,7 +159,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
     commands.spawn((
         Sprite {
             image: texture,
-            custom_size: Some(PLAYER_RENDER_SIZE),
+            custom_size: Some(render_size),
             ..default()
         },
         Anchor(Vec2::new(0.0, PLAYER_VISUAL_BASELINE_ANCHOR_Y)),

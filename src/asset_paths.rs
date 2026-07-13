@@ -49,7 +49,7 @@ pub const UI_COVER_IMAGES: &[&str] = &[
 pub const IMAGE_HF_SHIROU_IDLE: &str = "images/characters/hf_idle.png";
 
 // CHARACTER ASSETS - SAKURA (2P角色精灵动画)
-pub const IMAGE_CHAR_SAKURA_IDLE01: &str = "images/characters/sakura_idle01.png";
+pub const IMAGE_CHAR_SAKURA_IDLE01: &str = "images/characters/sakura_jk/base_frames/f01.png";
 pub const IMAGE_CHAR_SAKURA_IDLE02: &str = "images/characters/sakura_idle02.png";
 pub const IMAGE_CHAR_SAKURA_IDLE03: &str = "images/characters/sakura_idle03.png";
 pub const IMAGE_CHAR_SAKURA_IDLE04: &str = "images/characters/sakura_idle04.png";
@@ -63,39 +63,33 @@ pub const IMAGE_CHAR_SAKURA_IDLE11: &str = "images/characters/sakura_idle11.png"
 pub const IMAGE_CHAR_SAKURA_IDLE13: &str = "images/characters/sakura_idle13.jpg";
 pub const IMAGE_CHAR_SAKURA_IDLE14: &str = "images/characters/sakura_idle14.png";
 
-// Sakura 待机动画帧（使用乒乓循环制造流畅效果）
+// Sakura JK redesign: every gameplay state switches standalone 256x256 images.
 pub const SAKURA_IDLE_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SAKURA_IDLE01,
-    IMAGE_CHAR_SAKURA_IDLE02,
-    IMAGE_CHAR_SAKURA_IDLE03,
-    IMAGE_CHAR_SAKURA_IDLE04,
-    IMAGE_CHAR_SAKURA_IDLE03, // 反向
-    IMAGE_CHAR_SAKURA_IDLE02,
-    IMAGE_CHAR_SAKURA_IDLE01,
+    "images/characters/sakura_jk/base_frames/f01.png",
+    "images/characters/sakura_jk/base_frames/f02.png",
+    "images/characters/sakura_jk/base_frames/f01.png",
 ];
 
 // Sakura 跑步动画帧
 pub const SAKURA_RUNNING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SAKURA_IDLE05,
-    IMAGE_CHAR_SAKURA_IDLE06,
-    IMAGE_CHAR_SAKURA_IDLE07,
-    IMAGE_CHAR_SAKURA_IDLE08,
-    IMAGE_CHAR_SAKURA_IDLE07, // 重复关键帧
-    IMAGE_CHAR_SAKURA_IDLE06,
+    "images/characters/sakura_jk/base_frames/f03.png",
+    "images/characters/sakura_jk/base_frames/f04.png",
 ];
 
 // Sakura 跳跃动画帧
 pub const SAKURA_JUMPING_FRAMES: &[&str] = &[
-    IMAGE_CHAR_SAKURA_IDLE09,
-    IMAGE_CHAR_SAKURA_IDLE10,
-    IMAGE_CHAR_SAKURA_IDLE11,
+    "images/characters/sakura_jk/base_frames/f05.png",
+    "images/characters/sakura_jk/base_frames/f06.png",
 ];
 
 // Sakura 蹲下动画帧
-pub const SAKURA_CROUCHING_FRAMES: &[&str] = &[IMAGE_CHAR_SAKURA_IDLE13, IMAGE_CHAR_SAKURA_IDLE14];
+pub const SAKURA_CROUCHING_FRAMES: &[&str] = &[
+    "images/characters/sakura_jk/base_frames/f07.png",
+    "images/characters/sakura_jk/base_frames/f08.png",
+];
 
-// Sakura 2P production attack atlases. All sheets use transparent 256x256 cells
-// and are indexed left-to-right, top-to-bottom.
+// Sakura 2P attack source atlases. Runtime playback uses the standalone images
+// generated under `SAKURA_ATTACK_FRAME_ROOT`, never a TextureAtlas.
 pub const IMAGE_SAKURA_ATTACK_GROUND_LIGHT: &str =
     "images/characters/sakura_attack/sakura_attack_ground_light.png";
 pub const IMAGE_SAKURA_ATTACK_HEAVY: &str =
@@ -118,6 +112,18 @@ pub const SAKURA_ATTACK_MOBILITY_GRID: (u32, u32) = (6, 4);
 pub const SAKURA_ATTACK_NINJUTSU_GRID: (u32, u32) = (8, 4);
 pub const SAKURA_ATTACK_ULTIMATE_GRID: (u32, u32) = (8, 3);
 pub const SAKURA_ATTACK_WEAPON_PROJECTION_GRID: (u32, u32) = (6, 4);
+pub const SAKURA_ATTACK_FRAME_ROOT: &str = "images/characters/sakura_attack/frames";
+pub const SAKURA_ATTACK_GROUND_LIGHT_GROUP: &str = "ground_light";
+pub const SAKURA_ATTACK_HEAVY_GROUP: &str = "heavy";
+pub const SAKURA_ATTACK_AIR_COMBO_GROUP: &str = "air_combo";
+pub const SAKURA_ATTACK_MOBILITY_GROUP: &str = "mobility";
+pub const SAKURA_ATTACK_NINJUTSU_GROUP: &str = "ninjutsu_projectiles";
+pub const SAKURA_ATTACK_ULTIMATE_GROUP: &str = "ultimate";
+pub const SAKURA_ATTACK_WEAPON_PROJECTION_GROUP: &str = "weapon_projection";
+
+pub fn sakura_attack_frame_path(group: &str, row: u8, frame: usize) -> String {
+    format!("{SAKURA_ATTACK_FRAME_ROOT}/{group}/r{row:02}_f{frame:02}.png")
+}
 
 pub const IMAGE_HF_SHIROU_CORE_SHEET: &str = "images/characters/hf_shirou_core_sheet.png";
 pub const IMAGE_HF_SHIROU_RUN_SHEET: &str = "images/characters/hf_shirou_run_sheet.png";

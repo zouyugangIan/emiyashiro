@@ -63,7 +63,7 @@ pub async fn load_game_state_internal(
         SaveSystemError::DeserializationFailed(format!("Unsupported save file format: {}", e))
     })?;
 
-    if !save_data.verify_checksum() {
+    if !save_data.verify_serialized_checksum(&json_data) {
         return Err(SaveSystemError::ChecksumMismatch);
     }
 
@@ -123,7 +123,7 @@ async fn load_save_metadata_internal(
         SaveSystemError::DeserializationFailed(format!("Unsupported save metadata format: {}", e))
     })?;
 
-    if !save_data.verify_checksum() {
+    if !save_data.verify_serialized_checksum(&json_data) {
         return Err(SaveSystemError::ChecksumMismatch);
     }
 
@@ -135,6 +135,26 @@ async fn load_save_metadata_internal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn legacy_character_save_json() -> String {
+        let metadata = SaveFileMetadata {
+            name: "legacy-character-name".to_string(),
+            score: 123,
+            distance: 45.0,
+            play_time: 6.0,
+            save_timestamp: chrono::Utc::now(),
+            file_path: "saves/legacy-character-name.json".to_string(),
+            selected_character: crate::states::CharacterType::Shirou,
+        };
+        let save_data = SaveFileData::new(metadata, CompleteGameState::default());
+        let mut document = serde_json::to_value(save_data).expect("serialize save value");
+        document["metadata"]["selected_character"] = serde_json::json!("Shirou1");
+        document["game_state"]["selected_character"] = serde_json::json!("Shirou1");
+        document["checksum"] = serde_json::json!("");
+        let unsigned = serde_json::to_string_pretty(&document).expect("serialize unsigned save");
+        document["checksum"] = serde_json::json!(calculate_checksum(unsigned.as_bytes()));
+        serde_json::to_string_pretty(&document).expect("serialize signed legacy save")
+    }
 
     #[test]
     fn load_rejects_checksum_mismatch() {
@@ -164,6 +184,29 @@ mod tests {
         assert!(
             matches!(result, Err(SaveSystemError::ChecksumMismatch)),
             "load should fail on checksum mismatch"
+        );
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn load_accepts_valid_checksum_with_legacy_character_names() {
+        let temp_path = std::env::temp_dir().join(format!(
+            "emiyashiro-legacy-save-test-{}.json",
+            uuid::Uuid::new_v4()
+        ));
+        fs::write(&temp_path, legacy_character_save_json()).expect("write legacy save");
+
+        let result =
+            futures_lite::future::block_on(load_game_state_internal(temp_path.clone(), false));
+        let (state, metadata) = result.expect("legacy save should remain loadable");
+        assert_eq!(
+            state.selected_character,
+            crate::states::CharacterType::Shirou
+        );
+        assert_eq!(
+            metadata.selected_character,
+            crate::states::CharacterType::Shirou
         );
 
         let _ = fs::remove_file(temp_path);

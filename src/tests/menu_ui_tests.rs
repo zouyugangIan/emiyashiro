@@ -376,6 +376,42 @@ mod property_tests {
         }
     }
 
+    #[test]
+    fn test_cover_images_stretch_the_center_crop_to_the_full_node() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.init_resource::<CharacterSelection>();
+        app.init_state::<GameState>();
+        app.insert_resource(create_mock_game_assets());
+        app.add_systems(Startup, setup_menu);
+        app.update();
+
+        let mut cover_query = app
+            .world_mut()
+            .query_filtered::<&ImageNode, Or<(With<CoverImage1>, With<CoverImage2>)>>();
+        for image in cover_query.iter(app.world()) {
+            assert_eq!(
+                image.image_mode,
+                bevy::ui::widget::NodeImageMode::Stretch,
+                "the cropped source must stretch exactly to the responsive cover node"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cover_crop_preserves_aspect_ratio_for_wide_and_tall_windows() {
+        let source = Vec2::new(1000.0, 800.0);
+        let wide = cover_source_rect(source, Vec2::new(1600.0, 900.0)).expect("wide crop");
+        assert_eq!(wide.width(), 1000.0);
+        assert!((wide.height() - 562.5).abs() < 0.01);
+        assert!((wide.center().y - 400.0).abs() < 0.01);
+
+        let tall = cover_source_rect(source, Vec2::new(900.0, 1600.0)).expect("tall crop");
+        assert!((tall.width() - 450.0).abs() < 0.01);
+        assert_eq!(tall.height(), 800.0);
+        assert!((tall.center().x - 500.0).abs() < 0.01);
+    }
+
     /// Feature: menu-ui-refactor, Property 6: Z-axis layering maintained
     /// Validates: Requirements 2.4
     ///
