@@ -7,6 +7,12 @@ use bevy::prelude::*;
 
 const PLAYER_STAND_COLLISION_OFFSET_Y: f32 = 0.0;
 const PLAYER_CROUCH_COLLISION_OFFSET_Y: f32 = -15.0;
+const LEDGE_GRAB_HORIZONTAL_RANGE: f32 = 38.0;
+const LEDGE_GRAB_VERTICAL_RANGE: f32 = 46.0;
+const LEDGE_HANG_COMMIT_SECS: f32 = 0.08;
+const LEDGE_CLIMB_DURATION_SECS: f32 = 0.24;
+const LEDGE_CLIMB_HORIZONTAL_DISTANCE: f32 = 42.0;
+const LEDGE_CLIMB_VERTICAL_DISTANCE: f32 = 46.0;
 
 type PlayerMovementItem<'a> = (
     Entity,
@@ -14,6 +20,7 @@ type PlayerMovementItem<'a> = (
     &'a mut Velocity,
     &'a PlayerState,
     Option<&'a mut AttackMomentum>,
+    Option<&'a LedgeTraversal>,
 );
 
 type PlayerJumpItem<'a> = (
@@ -22,6 +29,16 @@ type PlayerJumpItem<'a> = (
     &'a mut PlayerState,
     Option<&'a mut crate::systems::collision::CollisionBox>,
     Option<&'a AttackMomentum>,
+    Option<&'a LedgeTraversal>,
+);
+
+type PlayerLedgeTraversalItem<'a> = (
+    &'a mut Transform,
+    &'a mut Velocity,
+    &'a mut PlayerState,
+    &'a mut LedgeTraversal,
+    &'a mut AttackAnimationState,
+    &'a mut FacingDirection,
 );
 
 /// 玩家移动系统
@@ -49,7 +66,7 @@ pub fn player_movement(
         return;
     }
 
-    if let Ok((entity, mut transform, mut velocity, player_state, attack_momentum)) =
+    if let Ok((entity, mut transform, mut velocity, player_state, attack_momentum, traversal)) =
         player_query.single_mut()
     {
         let delta_time = time.delta_secs();
@@ -80,6 +97,12 @@ pub fn player_movement(
             } else {
                 commands.entity(entity).remove::<AttackMomentum>();
             }
+        }
+
+        if traversal.is_some_and(LedgeTraversal::is_active) {
+            velocity.x = 0.0;
+            velocity.y = 0.0;
+            return;
         }
 
         // 获取水平输入方向
@@ -194,9 +217,21 @@ pub fn player_jump(
         return;
     }
 
-    if let Ok((mut transform, mut velocity, mut player_state, mut collision_box, attack_momentum)) =
-        player_query.single_mut()
+    if let Ok((
+        mut transform,
+        mut velocity,
+        mut player_state,
+        mut collision_box,
+        attack_momentum,
+        traversal,
+    )) = player_query.single_mut()
     {
+        if traversal.is_some_and(LedgeTraversal::is_active) {
+            velocity.x = 0.0;
+            velocity.y = 0.0;
+            return;
+        }
+        let traversal_jump_locked = traversal.is_some_and(|state| state.regrab_cooldown_secs > 0.0);
         let was_grounded = player_state.is_grounded;
         let delta_time = time.delta_secs();
         let sky_level_active = sky_level.as_deref().is_some_and(|level| level.active);
@@ -226,7 +261,9 @@ pub fn player_jump(
             }
         }
 
-        let can_jump_now = (player_state.is_grounded || near_ground) && !player_state.is_crouching;
+        let can_jump_now = (player_state.is_grounded || near_ground)
+            && !player_state.is_crouching
+            && !traversal_jump_locked;
         if wants_jump && can_jump_now {
             velocity.y = GameConfig::JUMP_VELOCITY;
             player_state.is_grounded = false;
@@ -283,6 +320,171 @@ pub fn player_jump(
         );
         player_state.is_grounded = now_grounded;
     }
+}
+
+/// Handles authored catch points as a short hang -> mantle sequence.
+///
+/// Catching is automatic only while descending near a marked anchor. Jump/up
+/// mantles onto the platform and down releases, keeping the interaction fast
+/// enough for an action-game route without turning every wall into a ladder.
+pub fn player_ledge_traversal(
+    time: Res<Time<Fixed>>,
+    mut game_input: ResMut<crate::systems::input::GameInput>,
+    anchors: Query<(&SkyClimbAnchor, &bevy_ecs_ldtk::prelude::GridCoords)>,
+    mut player_query: Query<PlayerLedgeTraversalItem, With<Player>>,
+) {
+    let Ok((
+        mut transform,
+        mut velocity,
+        mut player_state,
+        mut traversal,
+        mut attack_state,
+        mut facing,
+    )) = player_query.single_mut()
+    else {
+        return;
+    };
+
+    let delta_secs = time.delta_secs();
+    traversal.regrab_cooldown_secs = (traversal.regrab_cooldown_secs - delta_secs).max(0.0);
+
+    match traversal.phase {
+        LedgeTraversalPhase::Hanging {
+            anchor,
+            direction,
+            mut elapsed_secs,
+        } => {
+            elapsed_secs += delta_secs;
+            transform.translation.x = anchor.x;
+            transform.translation.y = anchor.y;
+            velocity.x = 0.0;
+            velocity.y = 0.0;
+            player_state.is_grounded = false;
+            player_state.is_crouching = false;
+            *facing = if direction < 0.0 {
+                FacingDirection::Left
+            } else {
+                FacingDirection::Right
+            };
+
+            if game_input.crouch {
+                traversal.phase = LedgeTraversalPhase::Inactive;
+                traversal.regrab_cooldown_secs = 0.24;
+                transform.translation.y -= 8.0;
+                velocity.y = -90.0;
+                return;
+            }
+
+            if elapsed_secs >= LEDGE_HANG_COMMIT_SECS
+                && (game_input.jump || game_input.jump_pressed_this_frame)
+            {
+                let target = anchor
+                    + Vec2::new(
+                        direction * LEDGE_CLIMB_HORIZONTAL_DISTANCE,
+                        LEDGE_CLIMB_VERTICAL_DISTANCE,
+                    );
+                traversal.phase = LedgeTraversalPhase::Climbing {
+                    start: anchor,
+                    target,
+                    direction,
+                    elapsed_secs: 0.0,
+                    duration_secs: LEDGE_CLIMB_DURATION_SECS,
+                };
+                game_input.jump_pressed_this_frame = false;
+                game_input.jump_buffer_seconds = 0.0;
+            } else {
+                traversal.phase = LedgeTraversalPhase::Hanging {
+                    anchor,
+                    direction,
+                    elapsed_secs,
+                };
+            }
+            return;
+        }
+        LedgeTraversalPhase::Climbing {
+            start,
+            target,
+            direction,
+            mut elapsed_secs,
+            duration_secs,
+        } => {
+            elapsed_secs += delta_secs;
+            let progress = (elapsed_secs / duration_secs.max(f32::EPSILON)).clamp(0.0, 1.0);
+            let eased = progress * progress * (3.0 - 2.0 * progress);
+            let mut position = start.lerp(target, eased);
+            position.y += (std::f32::consts::PI * progress).sin() * 7.0;
+            transform.translation.x = position.x;
+            transform.translation.y = position.y;
+            velocity.x = 0.0;
+            velocity.y = 0.0;
+            player_state.is_grounded = false;
+            player_state.is_crouching = false;
+            *facing = if direction < 0.0 {
+                FacingDirection::Left
+            } else {
+                FacingDirection::Right
+            };
+
+            if progress >= 1.0 {
+                transform.translation.x = target.x;
+                transform.translation.y = target.y;
+                traversal.phase = LedgeTraversalPhase::Inactive;
+                traversal.regrab_cooldown_secs = 0.18;
+                player_state.is_grounded = true;
+            } else {
+                traversal.phase = LedgeTraversalPhase::Climbing {
+                    start,
+                    target,
+                    direction,
+                    elapsed_secs,
+                    duration_secs,
+                };
+            }
+            return;
+        }
+        LedgeTraversalPhase::Inactive => {}
+    }
+
+    if traversal.regrab_cooldown_secs > 0.0 || player_state.is_grounded || velocity.y > 80.0 {
+        return;
+    }
+
+    let player_position = transform.translation.truncate();
+    let catch = anchors
+        .iter()
+        .filter_map(|(anchor, coords)| {
+            let position = bevy_ecs_ldtk::utils::grid_coords_to_translation(
+                *coords,
+                IVec2::splat(SKY_LEVEL_GRID),
+            );
+            let delta = position - player_position;
+            (delta.x.abs() <= LEDGE_GRAB_HORIZONTAL_RANGE
+                && delta.y.abs() <= LEDGE_GRAB_VERTICAL_RANGE)
+                .then_some((delta.length_squared(), position, anchor.direction))
+        })
+        .min_by(|left, right| left.0.total_cmp(&right.0));
+
+    let Some((_, anchor, direction)) = catch else {
+        return;
+    };
+
+    transform.translation.x = anchor.x;
+    transform.translation.y = anchor.y;
+    velocity.x = 0.0;
+    velocity.y = 0.0;
+    player_state.is_grounded = false;
+    player_state.is_crouching = false;
+    attack_state.remaining = 0.0;
+    *facing = if direction < 0.0 {
+        FacingDirection::Left
+    } else {
+        FacingDirection::Right
+    };
+    traversal.phase = LedgeTraversalPhase::Hanging {
+        anchor,
+        direction,
+        elapsed_secs: 0.0,
+    };
 }
 
 /// 应用重力效果

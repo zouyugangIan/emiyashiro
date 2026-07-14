@@ -492,6 +492,7 @@ mod tests {
             Velocity::zero(),
             AttackAnimationState {
                 remaining: 0.5,
+                duration: 0.5,
                 trigger_serial: 7,
                 style: AttackAnimationStyle::GroundLightRow(2),
             },

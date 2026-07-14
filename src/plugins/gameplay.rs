@@ -79,6 +79,7 @@ impl Plugin for GameplayPlugin {
                     (
                         systems::player::player_movement,
                         systems::player::player_jump,
+                        systems::player::player_ledge_traversal,
                         systems::player::player_crouch,
                         systems::player::update_player_damage_invulnerability,
                         systems::player::physics_update_system,

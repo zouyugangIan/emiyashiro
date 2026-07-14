@@ -25,6 +25,61 @@ use bevy::prelude::*;
 #[derive(Component, Debug)]
 pub struct Player;
 
+/// High-speed ledge traversal state used by authored recovery routes.
+///
+/// During a hang or climb the traversal controller temporarily owns the body
+/// position; normal collision takes over again as soon as the climb finishes.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum LedgeTraversalPhase {
+    #[default]
+    Inactive,
+    Hanging {
+        anchor: Vec2,
+        direction: f32,
+        elapsed_secs: f32,
+    },
+    Climbing {
+        start: Vec2,
+        target: Vec2,
+        direction: f32,
+        elapsed_secs: f32,
+        duration_secs: f32,
+    },
+}
+
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct LedgeTraversal {
+    pub phase: LedgeTraversalPhase,
+    pub regrab_cooldown_secs: f32,
+}
+
+impl LedgeTraversal {
+    pub fn is_active(&self) -> bool {
+        !matches!(self.phase, LedgeTraversalPhase::Inactive)
+    }
+
+    pub fn is_hanging(&self) -> bool {
+        matches!(self.phase, LedgeTraversalPhase::Hanging { .. })
+    }
+
+    pub fn climb_progress(&self) -> Option<f32> {
+        let LedgeTraversalPhase::Climbing {
+            elapsed_secs,
+            duration_secs,
+            ..
+        } = self.phase
+        else {
+            return None;
+        };
+        Some((elapsed_secs / duration_secs.max(f32::EPSILON)).clamp(0.0, 1.0))
+    }
+
+    pub fn reset(&mut self) {
+        self.phase = LedgeTraversalPhase::Inactive;
+        self.regrab_cooldown_secs = 0.0;
+    }
+}
+
 /// 玩家状态组件
 ///
 /// 跟踪玩家的当前状态，用于控制动画和物理行为。

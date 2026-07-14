@@ -45,6 +45,12 @@ type UndecoratedGateQuery<'w, 's> = Query<
     (Entity, &'static SkyCombatGate, &'static GridCoords),
     (Without<SkyEntityDecorated>, With<SkyCombatGate>),
 >;
+type UndecoratedClimbAnchorQuery<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static SkyClimbAnchor),
+    (Without<SkyEntityDecorated>, With<SkyClimbAnchor>),
+>;
 type RuntimeGateQuery<'w, 's> = Query<
     'w,
     's,
@@ -316,6 +322,7 @@ pub fn decorate_sky_entities(
     checkpoints: UndecoratedCheckpointQuery,
     goals: UndecoratedGoalQuery,
     gates: UndecoratedGateQuery,
+    climb_anchors: UndecoratedClimbAnchorQuery,
 ) {
     let cloud_texture = asset_server.load("images/cloud/cloud_soft_01.png");
 
@@ -415,6 +422,32 @@ pub fn decorate_sky_entities(
             SkyGateVisual,
             SkyEntityDecorated,
         ));
+    }
+
+    // Catchable edges use a compact cyan/gold grip marker. It is bright
+    // enough to read during a fall without competing with combat telegraphs.
+    for (entity, anchor) in climb_anchors.iter() {
+        commands
+            .entity(entity)
+            .insert(SkyEntityDecorated)
+            .with_children(|parent| {
+                parent.spawn((
+                    Sprite {
+                        color: Color::srgba(0.38, 0.93, 1.0, 0.92),
+                        custom_size: Some(Vec2::new(22.0, 5.0)),
+                        ..default()
+                    },
+                    Transform::from_xyz(anchor.direction * 14.0, 14.0, 4.5),
+                ));
+                parent.spawn((
+                    Sprite {
+                        color: Color::srgba(1.0, 0.78, 0.28, 0.84),
+                        custom_size: Some(Vec2::new(5.0, 14.0)),
+                        ..default()
+                    },
+                    Transform::from_xyz(anchor.direction * 14.0, 8.0, 4.4),
+                ));
+            });
     }
 }
 

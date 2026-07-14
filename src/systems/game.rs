@@ -146,6 +146,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         crate::systems::collision::CollisionBox::new(GameConfig::PLAYER_SIZE),
         Health::default(),
         ShroudState::default(),
+        LedgeTraversal::default(),
     );
 
     if params.character_selection.selected_character == CharacterType::Shirou
@@ -169,6 +170,10 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
             Anchor(Vec2::new(0.0, PLAYER_VISUAL_BASELINE_ANCHOR_Y)),
             player_common,
             anim_component,
+            crate::systems::sprite_animation::SpriteAnimationVisual::new(
+                PLAYER_RENDER_SIZE,
+                Vec2::new(0.0, PLAYER_VISUAL_BASELINE_ANCHOR_Y),
+            ),
             sprite_sheets,
         ));
 

@@ -97,6 +97,36 @@ pub struct SkyPlayerStartBundle {
     pub grid_coords: GridCoords,
 }
 
+/// Explicit catch point beside a recovery platform.
+/// `direction` points from the hanging position toward solid ground.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SkyClimbAnchor {
+    pub direction: f32,
+}
+
+impl Default for SkyClimbAnchor {
+    fn default() -> Self {
+        Self { direction: 1.0 }
+    }
+}
+
+impl SkyClimbAnchor {
+    fn from_entity(entity: &EntityInstance) -> Self {
+        let direction = entity.get_int_field("direction").copied().unwrap_or(1);
+        Self {
+            direction: if direction < 0 { -1.0 } else { 1.0 },
+        }
+    }
+}
+
+#[derive(Default, Bundle, LdtkEntity)]
+pub struct SkyClimbAnchorBundle {
+    #[with(SkyClimbAnchor::from_entity)]
+    pub anchor: SkyClimbAnchor,
+    #[grid_coords]
+    pub grid_coords: GridCoords,
+}
+
 #[derive(Component, Debug, Default, Clone, Copy)]
 pub struct SkyCheckpoint {
     pub id: i32,

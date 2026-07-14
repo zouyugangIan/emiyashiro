@@ -11,9 +11,10 @@ use serde_json::Value;
 
 use crate::{
     components::{
-        Enemy, EnemyState, EnemyType, Ground, Player, PlayerState, SkyCheckpoint, SkyCombatGate,
-        SkyEncounterEnemy, SkyEncounterState, SkyEnemyKind, SkyEnemySpawn, SkyGateVisual,
-        SkyLevelRuntime, SkyPlayerStart, Velocity,
+        AttackAnimationState, Enemy, EnemyState, EnemyType, FacingDirection, Ground,
+        LedgeTraversal, LedgeTraversalPhase, Player, PlayerState, SkyCheckpoint, SkyClimbAnchor,
+        SkyCombatGate, SkyEncounterEnemy, SkyEncounterState, SkyEnemyKind, SkyEnemySpawn,
+        SkyGateVisual, SkyLevelRuntime, SkyPlayerStart, Velocity,
     },
     systems::{collision::CollisionBox, sky_level},
 };
@@ -114,6 +115,65 @@ fn sky_city_ldtk_contract_is_complete_and_batched() {
 }
 
 #[test]
+fn every_critical_path_pit_has_a_lower_recovery_route() {
+    let project = sky_project();
+    let collision = project["levels"][0]["layerInstances"]
+        .as_array()
+        .expect("layerInstances array")
+        .iter()
+        .find(|layer| layer["__identifier"] == "Collision")
+        .expect("Collision layer")["intGridCsv"]
+        .as_array()
+        .expect("IntGrid CSV");
+    let cell = |x: usize, y: usize| {
+        collision[(47 - y) * 384 + x]
+            .as_i64()
+            .expect("integer cell")
+    };
+
+    let islands = [
+        (0, 37, 9),
+        (41, 64, 10),
+        (68, 94, 11),
+        (98, 126, 9),
+        (130, 158, 12),
+        (162, 190, 11),
+        (194, 222, 13),
+        (226, 254, 10),
+        (258, 286, 12),
+        (290, 318, 11),
+        (322, 350, 13),
+        (354, 383, 10),
+    ];
+
+    for (index, pair) in islands.windows(2).enumerate() {
+        let (_, left_right, left_top) = pair[0];
+        let (right_left, _, right_top) = pair[1];
+        let gap_left = left_right + 1;
+        let gap_right = right_left - 1;
+        let route_top = left_top.min(right_top);
+        let rescue_top = route_top - 5;
+        let shelf_top = route_top - 2;
+
+        assert!(
+            (gap_left..=gap_right).all(|x| cell(x, route_top - 1) == 0),
+            "pit {index} must remain visibly open at critical-path height"
+        );
+        assert!(
+            (gap_left..=gap_right).all(|x| cell(x, rescue_top - 1) == 2),
+            "pit {index} needs a full-width cloud rescue floor"
+        );
+        assert_eq!(
+            (gap_left..=gap_right)
+                .filter(|&x| cell(x, shelf_top - 1) == 2)
+                .count(),
+            2,
+            "pit {index} needs a two-cell mantle shelf"
+        );
+    }
+}
+
+#[test]
 fn sky_city_gameplay_entities_obey_encounter_contract() {
     let project = sky_project();
     let gameplay = project["levels"][0]["layerInstances"]
@@ -137,6 +197,17 @@ fn sky_city_gameplay_entities_obey_encounter_contract() {
     assert_eq!(count("EnemySpawn"), 32);
     assert_eq!(count("CombatGate"), 6);
     assert_eq!(count("Goal"), 1);
+    assert_eq!(count("ClimbAnchor"), 33);
+
+    for anchor in entities
+        .iter()
+        .filter(|entity| entity["__identifier"] == "ClimbAnchor")
+    {
+        assert!(matches!(
+            field_value(anchor, "direction").as_i64(),
+            Some(-1 | 1)
+        ));
+    }
 
     let mut gates_per_arena = BTreeMap::<i64, usize>::new();
     for gate in entities
@@ -196,6 +267,83 @@ fn sky_city_tileset_png_matches_ldtk_definition() {
     assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");
     assert_eq!(u32::from_be_bytes(bytes[16..20].try_into().unwrap()), 256);
     assert_eq!(u32::from_be_bytes(bytes[20..24].try_into().unwrap()), 32);
+}
+
+#[test]
+fn authored_climb_anchor_catches_fall_and_mantles_to_safety() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(Time::<Fixed>::from_hz(60.0))
+        .init_resource::<crate::systems::input::GameInput>()
+        .add_systems(Update, crate::systems::player::player_ledge_traversal);
+
+    let coords = GridCoords::new(10, 5);
+    let anchor_position = bevy_ecs_ldtk::utils::grid_coords_to_translation(
+        coords,
+        IVec2::splat(crate::components::SKY_LEVEL_GRID),
+    );
+    app.world_mut()
+        .spawn((SkyClimbAnchor { direction: -1.0 }, coords));
+    let mut attack = AttackAnimationState::default();
+    attack.trigger(0.4);
+    let player = app
+        .world_mut()
+        .spawn((
+            Player,
+            Transform::from_xyz(anchor_position.x + 8.0, anchor_position.y + 8.0, 1.0),
+            Velocity { x: 80.0, y: -140.0 },
+            PlayerState::new(false, false),
+            LedgeTraversal::default(),
+            attack,
+            FacingDirection::Right,
+        ))
+        .id();
+
+    app.world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+    app.update();
+
+    let entity = app.world().entity(player);
+    assert!(matches!(
+        entity.get::<LedgeTraversal>().expect("traversal").phase,
+        LedgeTraversalPhase::Hanging { .. }
+    ));
+    assert_eq!(
+        entity.get::<FacingDirection>(),
+        Some(&FacingDirection::Left)
+    );
+    assert!(
+        !entity
+            .get::<AttackAnimationState>()
+            .expect("attack state")
+            .is_active()
+    );
+
+    app.world_mut()
+        .resource_mut::<crate::systems::input::GameInput>()
+        .jump = true;
+    for _ in 0..22 {
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+        app.update();
+    }
+
+    let entity = app.world().entity(player);
+    assert!(matches!(
+        entity.get::<LedgeTraversal>().expect("traversal").phase,
+        LedgeTraversalPhase::Inactive
+    ));
+    assert!(
+        entity
+            .get::<PlayerState>()
+            .expect("player state")
+            .is_grounded
+    );
+    let position = entity.get::<Transform>().expect("transform").translation;
+    assert!((position.x - (anchor_position.x - 42.0)).abs() < 0.01);
+    assert!((position.y - (anchor_position.y + 46.0)).abs() < 0.01);
 }
 
 fn gate_test_app(player_x: f32, active_arena: Option<i32>) -> App {

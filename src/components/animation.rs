@@ -76,6 +76,8 @@ pub enum AttackAnimationStyle {
 #[derive(Component, Debug, Clone, Default)]
 pub struct AttackAnimationState {
     pub remaining: f32,
+    /// Original action window used to pace all authored animation frames.
+    pub duration: f32,
     pub trigger_serial: u32,
     pub style: AttackAnimationStyle,
 }
@@ -86,7 +88,9 @@ impl AttackAnimationState {
     }
 
     pub fn trigger_with_style(&mut self, duration_secs: f32, style: AttackAnimationStyle) {
-        self.remaining = duration_secs.max(0.0);
+        let duration = duration_secs.max(0.0);
+        self.remaining = duration;
+        self.duration = duration;
         self.trigger_serial = self.trigger_serial.wrapping_add(1);
         self.style = style;
     }

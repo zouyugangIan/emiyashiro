@@ -626,6 +626,14 @@ mod tests {
                     is_released: true,
                     ..Default::default()
                 },
+                LedgeTraversal {
+                    phase: LedgeTraversalPhase::Hanging {
+                        anchor: Vec2::new(10.0, -999.0),
+                        direction: 1.0,
+                        elapsed_secs: 0.1,
+                    },
+                    regrab_cooldown_secs: 0.2,
+                },
             ))
             .id();
 
@@ -644,6 +652,7 @@ mod tests {
         let player_state = entity.get::<PlayerState>().expect("player state");
         let health = entity.get::<Health>().expect("player health");
         let shroud = entity.get::<ShroudState>().expect("player shroud");
+        let traversal = entity.get::<LedgeTraversal>().expect("player traversal");
 
         assert_eq!(
             transform.translation,
@@ -659,6 +668,8 @@ mod tests {
         assert!(!player_state.is_crouching);
         assert_eq!(health.current, health.max);
         assert!(!shroud.is_released);
+        assert!(matches!(traversal.phase, LedgeTraversalPhase::Inactive));
+        assert_eq!(traversal.regrab_cooldown_secs, 0.0);
     }
 
     #[test]

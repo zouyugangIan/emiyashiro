@@ -7,6 +7,18 @@ use bevy::prelude::*;
 
 type GroundCollisionQuery<'w, 's> =
     Query<'w, 's, (&'static Transform, &'static CollisionBox), (With<Ground>, Without<Player>)>;
+type PlayerCollisionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Transform,
+        &'static mut Velocity,
+        &'static mut PlayerState,
+        &'static CollisionBox,
+        Option<&'static LedgeTraversal>,
+    ),
+    With<Player>,
+>;
 
 /// 碰撞检测结果
 #[derive(Debug, Clone)]
@@ -83,21 +95,22 @@ impl CollisionBox {
 ///
 /// 检测玩家与地面和其他物体的碰撞。
 pub fn collision_detection_system(
-    mut player_query: Query<
-        (
-            &mut Transform,
-            &mut Velocity,
-            &mut PlayerState,
-            &CollisionBox,
-        ),
-        With<Player>,
-    >,
+    mut player_query: PlayerCollisionQuery,
     ground_query: GroundCollisionQuery,
     sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
-    if let Ok((mut player_transform, mut player_velocity, mut player_state, player_collision)) =
-        player_query.single_mut()
+    if let Ok((
+        mut player_transform,
+        mut player_velocity,
+        mut player_state,
+        player_collision,
+        traversal,
+    )) = player_query.single_mut()
     {
+        if traversal.is_some_and(LedgeTraversal::is_active) {
+            player_state.is_grounded = false;
+            return;
+        }
         let mut on_ground = false;
 
         // 获取玩家的碰撞盒

@@ -24,6 +24,7 @@ impl Plugin for SkyLevelPlugin {
             .register_ldtk_int_cell::<SkyHazardCellBundle>(3)
             .register_ldtk_int_cell::<SkyWindCellBundle>(4)
             .register_ldtk_entity::<SkyPlayerStartBundle>("PlayerStart")
+            .register_ldtk_entity::<SkyClimbAnchorBundle>("ClimbAnchor")
             .register_ldtk_entity::<SkyCheckpointBundle>("Checkpoint")
             .register_ldtk_entity::<SkyEnemySpawnBundle>("EnemySpawn")
             .register_ldtk_entity::<SkyCombatGateBundle>("CombatGate")

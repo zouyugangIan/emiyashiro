@@ -6,6 +6,7 @@ use crate::{
     },
 };
 use bevy::prelude::*;
+use bevy::sprite::Anchor;
 use std::collections::HashMap;
 
 const HF_SHIROU_PROFILE: &str = include_str!("../../assets/animations/hf_shirou.ron");
@@ -21,7 +22,26 @@ impl Default for AnimationRuntimeConfig {
     fn default() -> Self {
         Self {
             run_speed_threshold: 10.0,
-            airborne_vertical_threshold: 0.5,
+            airborne_vertical_threshold: 90.0,
+        }
+    }
+}
+
+/// Small presentation-only deformation that softens hard atlas changes while
+/// keeping the collision body and feet baseline untouched.
+#[derive(Component, Debug, Clone)]
+pub struct SpriteAnimationVisual {
+    pub base_size: Vec2,
+    pub base_anchor: Vec2,
+    pub current_scale: Vec2,
+}
+
+impl SpriteAnimationVisual {
+    pub fn new(base_size: Vec2, base_anchor: Vec2) -> Self {
+        Self {
+            base_size,
+            base_anchor,
+            current_scale: Vec2::ONE,
         }
     }
 }
@@ -63,6 +83,9 @@ type SpriteAnimationUpdateItem<'a> = (
     Option<&'a SpriteAnimationSheets>,
     Option<&'a ShroudState>,
     Option<&'a PlayerState>,
+    Option<&'a LedgeTraversal>,
+    Option<&'a mut SpriteAnimationVisual>,
+    Option<&'a mut Anchor>,
 );
 
 type PlayerAnimationStateItem<'a> = (
@@ -73,6 +96,7 @@ type PlayerAnimationStateItem<'a> = (
     &'a AttackAnimationState,
     Option<&'a SpriteAnimationSheets>,
     Option<&'a ShroudState>,
+    Option<&'a LedgeTraversal>,
 );
 
 /// 2026推荐：先给出最小可用品质，再给理想帧数。
@@ -132,6 +156,7 @@ fn resolve_target_animation(
     velocity: &Velocity,
     has_active_attack: bool,
     has_move_input: bool,
+    is_traversing: bool,
     runtime: &AnimationRuntimeConfig,
 ) -> AnimationType {
     let was_grounded = animation.previous_grounded;
@@ -139,7 +164,9 @@ fn resolve_target_animation(
 
     let just_landed = !was_grounded && player_state.is_grounded;
 
-    if has_active_attack && animation.animations.contains_key(&AnimationType::Attacking) {
+    if is_traversing {
+        AnimationType::Jumping
+    } else if has_active_attack && animation.animations.contains_key(&AnimationType::Attacking) {
         AnimationType::Attacking
     } else if !player_state.is_grounded {
         AnimationType::Jumping
@@ -432,8 +459,20 @@ fn apply_animation_change(
 
     let duration = new_clip.frame_duration_for_speed(horizontal_speed_abs);
 
+    let previous_animation = animation.current_animation.clone();
+    let entry_frame = match (&previous_animation, &new_animation) {
+        // A compressed passing pose avoids snapping straight from a tall idle
+        // silhouette into the widest stride in the run sheet.
+        (AnimationType::Idle | AnimationType::Crouching, AnimationType::Running)
+            if new_clip.frames.len() > 1 =>
+        {
+            1
+        }
+        _ => 0,
+    };
+
     animation.current_animation = new_animation;
-    animation.current_frame = 0;
+    animation.current_frame = entry_frame;
     animation.frame_direction = 1;
     animation
         .frame_timer
@@ -532,6 +571,128 @@ fn apply_animation_sheet(
     }
 }
 
+fn paced_frame_duration(
+    clip: &AnimationClipData,
+    horizontal_speed_abs: f32,
+    animation_type: &AnimationType,
+    attack_state: Option<&AttackAnimationState>,
+) -> f32 {
+    let fallback = clip.frame_duration_for_speed(horizontal_speed_abs);
+    if *animation_type != AnimationType::Attacking {
+        return fallback;
+    }
+
+    let Some(attack) = attack_state.filter(|state| state.duration > 0.0) else {
+        return fallback;
+    };
+
+    // Fast action sheets need to finish inside the gameplay lock window. The
+    // bounds preserve readability while still allowing eight-frame attacks to
+    // complete during a short Ninja-Gaiden-style cancel window.
+    (attack.duration / clip.frames.len().max(1) as f32).clamp(0.032, 0.12)
+}
+
+fn airborne_frame_position(
+    frame_count: usize,
+    vertical_speed: f32,
+    vertical_threshold: f32,
+    traversal: Option<&LedgeTraversal>,
+) -> usize {
+    if frame_count <= 1 {
+        return 0;
+    }
+
+    if let Some(traversal) = traversal.filter(|state| state.is_active()) {
+        if traversal.is_hanging() {
+            return 1.min(frame_count - 1);
+        }
+        return if traversal.climb_progress().unwrap_or_default() < 0.45 {
+            1.min(frame_count - 1)
+        } else {
+            0
+        };
+    }
+
+    let threshold = vertical_threshold.max(1.0);
+    if vertical_speed > threshold {
+        0
+    } else if vertical_speed < -threshold {
+        frame_count - 1
+    } else {
+        1.min(frame_count - 1)
+    }
+}
+
+fn animation_visual_target(
+    animation_type: &AnimationType,
+    frame_position: usize,
+    velocity: Option<&Velocity>,
+    traversal: Option<&LedgeTraversal>,
+) -> Vec2 {
+    if let Some(traversal) = traversal.filter(|state| state.is_active()) {
+        return if traversal.is_hanging() {
+            Vec2::new(1.015, 0.985)
+        } else {
+            Vec2::new(0.975, 1.03)
+        };
+    }
+
+    match animation_type {
+        AnimationType::Idle => {
+            if frame_position == 1 || frame_position == 2 {
+                Vec2::new(0.997, 1.006)
+            } else {
+                Vec2::ONE
+            }
+        }
+        AnimationType::Running => match frame_position % 5 {
+            0 | 3 => Vec2::new(1.018, 0.982),
+            1 | 4 => Vec2::new(0.988, 1.014),
+            _ => Vec2::ONE,
+        },
+        AnimationType::Jumping => {
+            let vertical_speed = velocity.map(|value| value.y).unwrap_or_default();
+            if vertical_speed > 90.0 {
+                Vec2::new(0.97, 1.035)
+            } else if vertical_speed < -90.0 {
+                Vec2::new(0.985, 1.02)
+            } else {
+                Vec2::new(1.025, 0.975)
+            }
+        }
+        AnimationType::Crouching => Vec2::new(1.018, 0.985),
+        AnimationType::Landing if frame_position == 0 => Vec2::new(1.045, 0.94),
+        AnimationType::Landing | AnimationType::Attacking => Vec2::ONE,
+    }
+}
+
+fn baseline_compensated_anchor_y(base_anchor_y: f32, scale_y: f32) -> f32 {
+    (0.5 + base_anchor_y) / scale_y.max(0.01) - 0.5
+}
+
+fn apply_animation_visual(
+    sprite: &mut Sprite,
+    visual: Option<&mut SpriteAnimationVisual>,
+    anchor: Option<&mut Anchor>,
+    target_scale: Vec2,
+    delta_secs: f32,
+) {
+    let Some(visual) = visual else {
+        return;
+    };
+
+    let blend = 1.0 - (-22.0 * delta_secs.max(0.0)).exp();
+    visual.current_scale = visual.current_scale.lerp(target_scale, blend);
+    sprite.custom_size = Some(visual.base_size * visual.current_scale);
+
+    if let Some(anchor) = anchor {
+        // Counter-scale the normalized anchor so the world-space foot line
+        // remains fixed while the sprite eases through squash/stretch.
+        anchor.0.x = visual.base_anchor.x;
+        anchor.0.y = baseline_compensated_anchor_y(visual.base_anchor.y, visual.current_scale.y);
+    }
+}
+
 /// 加载编译时内嵌的角色动画配置。
 ///
 /// 目前只有 HF 士郎使用图集主链。显式列出配置可以避免运行时工作目录不同导致
@@ -595,9 +756,26 @@ pub fn create_character_animation(
 }
 
 /// 更新精灵动画系统
-pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimationUpdateItem>) {
-    for (mut animation, mut sprite, velocity, attack_state, sprite_sheets, shroud, player_state) in
-        query.iter_mut()
+pub fn update_sprite_animations(
+    time: Res<Time>,
+    runtime_config: Option<Res<AnimationRuntimeConfig>>,
+    mut query: Query<SpriteAnimationUpdateItem>,
+) {
+    let default_runtime = AnimationRuntimeConfig::default();
+    let runtime = runtime_config.as_deref().unwrap_or(&default_runtime);
+
+    for (
+        mut animation,
+        mut sprite,
+        velocity,
+        attack_state,
+        sprite_sheets,
+        shroud,
+        player_state,
+        traversal,
+        mut visual,
+        mut anchor,
+    ) in query.iter_mut()
     {
         let current_key = animation.current_animation.clone();
         let attack_style = attack_state
@@ -628,7 +806,12 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
         apply_animation_sheet(&mut sprite, sprite_sheets, &current_key, sheet_attack_style);
 
         let horizontal_speed_abs = velocity.map(|v| v.x.abs()).unwrap_or(0.0);
-        let target_duration = current_clip.frame_duration_for_speed(horizontal_speed_abs);
+        let target_duration = paced_frame_duration(
+            &current_clip,
+            horizontal_speed_abs,
+            &current_key,
+            attack_state,
+        );
         let current_duration = animation.frame_timer.duration().as_secs_f32();
 
         if (current_duration - target_duration).abs() > 0.002 {
@@ -637,7 +820,19 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
                 .set_duration(std::time::Duration::from_secs_f32(target_duration));
         }
 
-        if animation.apply_immediate_frame {
+        if current_key == AnimationType::Jumping {
+            animation.current_frame = airborne_frame_position(
+                current_clip.frames.len(),
+                velocity.map(|value| value.y).unwrap_or_default(),
+                runtime.airborne_vertical_threshold,
+                traversal,
+            );
+            if let Some(atlas_idx) = current_clip.frames.get(animation.current_frame).copied() {
+                apply_atlas_frame(&mut sprite, atlas_idx);
+            }
+            animation.apply_immediate_frame = false;
+            animation.frame_timer.reset();
+        } else if animation.apply_immediate_frame {
             if let Some(first_atlas_idx) = current_clip.frames.get(animation.current_frame).copied()
             {
                 apply_atlas_frame(&mut sprite, first_atlas_idx);
@@ -645,22 +840,34 @@ pub fn update_sprite_animations(time: Res<Time>, mut query: Query<SpriteAnimatio
             animation.apply_immediate_frame = false;
         }
 
-        animation.frame_timer.tick(time.delta());
-        let completed_intervals = animation.frame_timer.times_finished_this_tick();
-        if completed_intervals > 0 {
-            let frame_count = current_clip.frames.len();
-            animation.current_frame = advance_frame_index(
-                animation.current_frame,
-                frame_count,
-                current_clip.playback_mode,
-                &mut animation.frame_direction,
-                completed_intervals,
-            );
+        if current_key != AnimationType::Jumping {
+            animation.frame_timer.tick(time.delta());
+            let completed_intervals = animation.frame_timer.times_finished_this_tick();
+            if completed_intervals > 0 {
+                let frame_count = current_clip.frames.len();
+                animation.current_frame = advance_frame_index(
+                    animation.current_frame,
+                    frame_count,
+                    current_clip.playback_mode,
+                    &mut animation.frame_direction,
+                    completed_intervals,
+                );
 
-            if let Some(atlas_idx) = current_clip.frames.get(animation.current_frame).copied() {
-                apply_atlas_frame(&mut sprite, atlas_idx);
+                if let Some(atlas_idx) = current_clip.frames.get(animation.current_frame).copied() {
+                    apply_atlas_frame(&mut sprite, atlas_idx);
+                }
             }
         }
+
+        let target_scale =
+            animation_visual_target(&current_key, animation.current_frame, velocity, traversal);
+        apply_animation_visual(
+            &mut sprite,
+            visual.as_deref_mut(),
+            anchor.as_deref_mut(),
+            target_scale,
+            time.delta_secs(),
+        );
     }
 }
 
@@ -686,9 +893,18 @@ pub fn update_character_animation_state(
         .map(|input| input.move_left || input.move_right)
         .unwrap_or(false);
 
-    for (mut animation, mut sprite, player_state, velocity, attack_state, sprite_sheets, shroud) in
-        query.iter_mut()
+    for (
+        mut animation,
+        mut sprite,
+        player_state,
+        velocity,
+        attack_state,
+        sprite_sheets,
+        shroud,
+        traversal,
+    ) in query.iter_mut()
     {
+        let is_traversing = traversal.is_some_and(LedgeTraversal::is_active);
         let attack_retriggered = attack_state.is_active()
             && attack_state.trigger_serial != animation.last_attack_trigger_serial;
         let new_animation = resolve_target_animation(
@@ -697,6 +913,7 @@ pub fn update_character_animation_state(
             velocity,
             attack_state.is_active(),
             has_move_input,
+            is_traversing,
             runtime,
         );
 
@@ -711,7 +928,13 @@ pub fn update_character_animation_state(
         .as_ref()
         .map(|clip| current_clip_is_blocking(&animation, clip))
         .unwrap_or(false);
-        if clip_blocks_switch && new_animation != animation.current_animation && !attack_retriggered
+        let landing_cancelled_into_run = animation.current_animation == AnimationType::Landing
+            && new_animation == AnimationType::Running;
+        if clip_blocks_switch
+            && new_animation != animation.current_animation
+            && !attack_retriggered
+            && !is_traversing
+            && !landing_cancelled_into_run
         {
             continue;
         }
@@ -737,8 +960,9 @@ pub fn update_character_animation_state(
                 attack_state.style,
                 Some(player_state),
             ) {
-                if let Some(first_atlas_idx) = new_clip.frames.first().copied() {
-                    apply_atlas_frame(&mut sprite, first_atlas_idx);
+                if let Some(entry_atlas_idx) = new_clip.frames.get(animation.current_frame).copied()
+                {
+                    apply_atlas_frame(&mut sprite, entry_atlas_idx);
                 }
                 info!(
                     "🎭 切换动画: {:?} ({}帧, 模式: {:?})",
@@ -874,6 +1098,58 @@ mod tests {
             let (minimum, ideal) = frame_count_guideline(&animation_type);
             assert!(minimum > 0);
             assert!(ideal >= minimum);
+        }
+    }
+
+    #[test]
+    fn test_airborne_pose_tracks_physics_and_traversal() {
+        assert_eq!(airborne_frame_position(3, 240.0, 90.0, None), 0);
+        assert_eq!(airborne_frame_position(3, 20.0, 90.0, None), 1);
+        assert_eq!(airborne_frame_position(3, -240.0, 90.0, None), 2);
+
+        let hanging = LedgeTraversal {
+            phase: LedgeTraversalPhase::Hanging {
+                anchor: Vec2::ZERO,
+                direction: 1.0,
+                elapsed_secs: 0.1,
+            },
+            ..default()
+        };
+        assert_eq!(
+            airborne_frame_position(3, -500.0, 90.0, Some(&hanging)),
+            1,
+            "ledge hang must use the authored overhead pose instead of the fall pose"
+        );
+    }
+
+    #[test]
+    fn test_attack_frames_fit_the_gameplay_action_window() {
+        let clip = AnimationClipData {
+            frames: (0..8).collect(),
+            frame_duration: 0.07,
+            playback_mode: PlaybackMode::Once,
+            speed_scale_by_velocity: false,
+            speed_reference: 150.0,
+            min_frame_duration: 0.05,
+        };
+        let mut attack = AttackAnimationState::default();
+        attack.trigger_with_style(0.32, AttackAnimationStyle::GroundLightRow(1));
+
+        let duration = paced_frame_duration(&clip, 0.0, &AnimationType::Attacking, Some(&attack));
+        assert!((duration - 0.04).abs() < f32::EPSILON);
+        assert!((duration * clip.frames.len() as f32 - attack.duration).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_visual_squash_preserves_sprite_baseline() {
+        let base_anchor = crate::systems::game::PLAYER_VISUAL_BASELINE_ANCHOR_Y;
+        let base_height = crate::systems::game::PLAYER_RENDER_SIZE.y;
+        let base_bottom = -(0.5 + base_anchor) * base_height;
+
+        for scale_y in [0.94, 0.975, 1.02, 1.035] {
+            let compensated = baseline_compensated_anchor_y(base_anchor, scale_y);
+            let scaled_bottom = -(0.5 + compensated) * base_height * scale_y;
+            assert!((scaled_bottom - base_bottom).abs() < 0.001);
         }
     }
 

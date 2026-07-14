@@ -34,6 +34,7 @@ export DATABASE_URL="postgresql://username:password@localhost/shirou_runner"
 
 - `A/D` 或 `←/→`: 移动
 - `W` 或 `Space`: 跳跃
+- 坑洞青金抓边标记：下落靠近时自动抓住，`W/Space` 上翻，`S/↓` 松手
 - `S` 或 `↓`: 蹲下
 - `J/Z/L`: 轻攻击；地面使用轻攻击表，空中使用空连表，蹲下使用机动表
 - `K`: 重攻击；蹲下 `K` 使用奥义表

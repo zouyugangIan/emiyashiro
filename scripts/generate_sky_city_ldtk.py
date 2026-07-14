@@ -23,6 +23,59 @@ TILESET_UID = 400
 TILESET_PATH = "../images/levels/sky_city_tiles.png"
 IID_NAMESPACE = uuid.UUID("783348c8-42ce-5c64-96e5-d55497e56f2d")
 
+# Twelve major districts form the critical path. Gaps intentionally remain
+# visible at route height; `recovery_routes()` adds a lower safety pocket and
+# alternating mantle shelf to each one.
+MAIN_ISLANDS = [
+    (0, 37, 9, 1),
+    (41, 64, 10, 1),
+    (68, 94, 11, 1),
+    (98, 126, 9, 1),
+    (130, 158, 12, 1),
+    (162, 190, 11, 1),
+    (194, 222, 13, 1),
+    (226, 254, 10, 2),
+    (258, 286, 12, 1),
+    (290, 318, 11, 1),
+    (322, 350, 13, 2),
+    (354, 383, 10, 1),
+]
+
+
+def recovery_routes() -> list[dict]:
+    routes = []
+    for index, (left_island, right_island) in enumerate(zip(MAIN_ISLANDS, MAIN_ISLANDS[1:])):
+        _, left_right, left_top, _ = left_island
+        right_left, _, right_top, _ = right_island
+        gap_left = left_right + 1
+        gap_right = right_left - 1
+        route_top = min(left_top, right_top)
+        rescue_top = route_top - 5
+        shelf_top = route_top - 2
+
+        if index % 2 == 0:
+            shelf_left, shelf_right = gap_left, gap_right - 1
+            shelf_anchor_x, shelf_direction = gap_right, -1
+        else:
+            shelf_left, shelf_right = gap_left + 1, gap_right
+            shelf_anchor_x, shelf_direction = gap_left, 1
+
+        routes.append(
+            {
+                "gap_left": gap_left,
+                "gap_right": gap_right,
+                "left_top": left_top,
+                "right_top": right_top,
+                "rescue_top": rescue_top,
+                "shelf_top": shelf_top,
+                "shelf_left": shelf_left,
+                "shelf_right": shelf_right,
+                "shelf_anchor_x": shelf_anchor_x,
+                "shelf_direction": shelf_direction,
+            }
+        )
+    return routes
+
 
 def iid(stable_key: str) -> str:
     """Return an editor-safe IID that does not churn on regeneration."""
@@ -183,6 +236,7 @@ ENTITY_UIDS = {
     "CombatGate": 203,
     "Goal": 204,
     "Backdrop": 205,
+    "ClimbAnchor": 206,
 }
 
 
@@ -264,22 +318,16 @@ def build_collision() -> list[list[int]]:
 
 
     # Twelve connected floating districts. Mandatory jumps are 3 cells or less.
-    main_islands = [
-        (0, 37, 9, 1),
-        (41, 64, 10, 1),
-        (68, 94, 11, 1),
-        (98, 126, 9, 1),
-        (130, 158, 12, 1),
-        (162, 190, 11, 1),
-        (194, 222, 13, 1),
-        (226, 254, 10, 2),
-        (258, 286, 12, 1),
-        (290, 318, 11, 1),
-        (322, 350, 13, 2),
-        (354, 383, 10, 1),
-    ]
-    for left, right, top, material in main_islands:
+    for left, right, top, material in MAIN_ISLANDS:
         platform(left, right, top, 4 if material == 1 else 3, material)
+
+    # Every critical-path pit has a cloud rescue floor 160 px below the route
+    # and a two-cell alternating shelf. The 96 px shelf jump and explicit
+    # mantle anchors create a readable fall-recovery loop instead of a death
+    # funnel, while the original upper gap remains intact.
+    for route in recovery_routes():
+        platform(route["gap_left"], route["gap_right"], route["rescue_top"], 1, 2)
+        platform(route["shelf_left"], route["shelf_right"], route["shelf_top"], 1, 2)
 
     # Layered garden routes and secret balconies.
     for args in [
@@ -367,6 +415,7 @@ def build_project() -> dict:
     backdrop_scale_field_uid = 306
     backdrop_depth_field_uid = 307
     enemy_patrol_field_uid = 308
+    climb_direction_field_uid = 309
 
     gameplay = layer_instance("Gameplay", "Entities", 10)
     decor = layer_instance("Decor", "Entities", 11)
@@ -389,6 +438,20 @@ def build_project() -> dict:
         )
 
     add_gameplay("PlayerStart", 4, surface_y(collision, 4), color="#4FE6FF")
+
+    for route in recovery_routes():
+        for x, y, direction in [
+            (route["gap_left"], route["left_top"] - 1, -1),
+            (route["gap_right"], route["right_top"] - 1, 1),
+            (route["shelf_anchor_x"], route["shelf_top"] - 1, route["shelf_direction"]),
+        ]:
+            add_gameplay(
+                "ClimbAnchor",
+                x,
+                y,
+                [field_instance("direction", climb_direction_field_uid, "Int", direction)],
+                "#6FE8FF",
+            )
 
     for checkpoint_id, x in [(0, 5), (1, 112), (2, 205), (3, 302), (4, 360)]:
         add_gameplay(
@@ -532,6 +595,9 @@ def build_project() -> dict:
         field_def("patrolRange", enemy_patrol_field_uid, "Float", "F_Float"),
     ]
     gate_fields = [field_def("arena", gate_arena_field_uid, "Int", "F_Int")]
+    climb_anchor_fields = [
+        field_def("direction", climb_direction_field_uid, "Int", "F_Int")
+    ]
     backdrop_fields = [
         field_def("kind", backdrop_kind_field_uid, "LocalEnum.BackdropKind", f"F_Enum({backdrop_kind_uid})"),
         field_def("scale", backdrop_scale_field_uid, "Float", "F_Float"),
@@ -593,6 +659,7 @@ def build_project() -> dict:
                 entity_def("CombatGate", 203, "#58E6FF", gate_fields, GRID, 288, False, True),
                 entity_def("Goal", 204, "#8FFFFF", max_count=1),
                 entity_def("Backdrop", 205, "#D8F3FF", backdrop_fields),
+                entity_def("ClimbAnchor", 206, "#6FE8FF", climb_anchor_fields),
             ],
             "tilesets": [
                 {

@@ -761,6 +761,79 @@
             "tilesetUid": null
           }
         ]
+      },
+      {
+        "identifier": "ClimbAnchor",
+        "uid": 206,
+        "tags": [],
+        "exportToToc": false,
+        "allowOutOfBounds": false,
+        "doc": null,
+        "width": 32,
+        "height": 32,
+        "resizableX": false,
+        "resizableY": false,
+        "minWidth": null,
+        "maxWidth": null,
+        "minHeight": null,
+        "maxHeight": null,
+        "keepAspectRatio": false,
+        "tileOpacity": 1,
+        "fillOpacity": 0.42,
+        "lineOpacity": 1,
+        "hollow": false,
+        "color": "#6FE8FF",
+        "renderMode": "Rectangle",
+        "showName": true,
+        "tilesetId": null,
+        "tileRenderMode": "Cover",
+        "tileRect": null,
+        "uiTileRect": null,
+        "nineSliceBorders": [],
+        "maxCount": 0,
+        "limitScope": "PerLevel",
+        "limitBehavior": "MoveLastOne",
+        "pivotX": 0,
+        "pivotY": 0,
+        "fieldDefs": [
+          {
+            "identifier": "direction",
+            "doc": null,
+            "__type": "Int",
+            "uid": 309,
+            "type": "F_Int",
+            "isArray": false,
+            "canBeNull": false,
+            "arrayMinLength": null,
+            "arrayMaxLength": null,
+            "editorDisplayMode": "NameAndValue",
+            "editorDisplayScale": 1,
+            "editorDisplayPos": "Above",
+            "editorLinkStyle": "StraightArrow",
+            "editorDisplayColor": null,
+            "editorAlwaysShow": false,
+            "editorShowInWorld": true,
+            "editorCutLongValues": true,
+            "editorTextSuffix": null,
+            "editorTextPrefix": null,
+            "useForSmartColor": false,
+            "exportToToc": false,
+            "searchable": false,
+            "min": null,
+            "max": null,
+            "regex": null,
+            "acceptFileTypes": null,
+            "defaultOverride": null,
+            "textLanguageMode": null,
+            "symmetricalRef": false,
+            "autoChainRef": true,
+            "allowOutOfLevelRef": true,
+            "allowedRefs": "Any",
+            "allowedRefsEntityUid": null,
+            "allowedRefTags": [],
+            "tilesetUid": null
+          }
+        ]
       }
     ],
     "tilesets": [
@@ -939,6 +1012,1359 @@
               "fieldInstances": [],
               "__worldX": 128,
               "__worldY": 1216
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                38,
+                39
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "9dcd6f0e-dfb4-5e86-aa77-111d8c93c9a8",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                1216,
+                1248
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 1216,
+              "__worldY": 1248
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                40,
+                38
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "8ee6695a-56c1-5400-95cb-6a8aaf329922",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                1280,
+                1216
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 1280,
+              "__worldY": 1216
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                40,
+                41
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "aef27a90-6bbe-5fd2-af32-04d9bd62474f",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                1280,
+                1312
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 1280,
+              "__worldY": 1312
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                65,
+                38
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "329d4dc9-51ac-5a2d-92ba-290188da7048",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                2080,
+                1216
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 2080,
+              "__worldY": 1216
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                67,
+                37
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "03fa71a6-99eb-5867-ae57-4e207f2078a8",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                2144,
+                1184
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 2144,
+              "__worldY": 1184
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                65,
+                40
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "fadf2260-748b-50ca-830f-54bf13962e3e",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                2080,
+                1280
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 2080,
+              "__worldY": 1280
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                95,
+                37
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "45d74cd0-c94a-5e4b-9e21-de84164b39c3",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                3040,
+                1184
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 3040,
+              "__worldY": 1184
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                97,
+                39
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "1bd92a79-f09e-5b2f-8d85-8c3a73034bd8",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                3104,
+                1248
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 3104,
+              "__worldY": 1248
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                97,
+                41
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "c72173f6-d5c4-5534-bdb0-054cce448857",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                3104,
+                1312
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 3104,
+              "__worldY": 1312
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                127,
+                39
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "2a074ab0-9988-57be-af1e-086795467bfb",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                4064,
+                1248
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 4064,
+              "__worldY": 1248
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                129,
+                36
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "332a7a03-3352-5988-b0e9-f00806a1681f",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                4128,
+                1152
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 4128,
+              "__worldY": 1152
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                127,
+                41
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "369687b9-0f85-5cb4-bacd-b39f5be2c121",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                4064,
+                1312
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 4064,
+              "__worldY": 1312
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                159,
+                36
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "0d17b831-0d9a-5796-8c6b-f3f1e28f70cd",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                5088,
+                1152
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 5088,
+              "__worldY": 1152
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                161,
+                37
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "92dc9081-34b7-5a42-ac9c-1709de92500e",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                5152,
+                1184
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 5152,
+              "__worldY": 1184
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                161,
+                39
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "42dd908b-05ad-5a72-812d-61c741728c68",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                5152,
+                1248
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 5152,
+              "__worldY": 1248
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                191,
+                37
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "06bf0a00-0af5-5bbe-bd30-91ebd45eacd3",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                6112,
+                1184
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 6112,
+              "__worldY": 1184
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                193,
+                35
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "24f71d2b-98fa-5b76-8911-ae017bb8362c",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                6176,
+                1120
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 6176,
+              "__worldY": 1120
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                191,
+                39
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "a43ccb30-0df6-5ca3-8e83-9bbf9dc53b44",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                6112,
+                1248
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 6112,
+              "__worldY": 1248
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                223,
+                35
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "62d5a9d0-691c-53ef-9707-b2db7c44aca9",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                7136,
+                1120
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 7136,
+              "__worldY": 1120
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                225,
+                38
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "ebd13338-7978-50a6-973c-bb0a88139a4c",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                7200,
+                1216
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 7200,
+              "__worldY": 1216
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                225,
+                40
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "2714da5e-278b-5eb6-a55f-a5e85cfb0ad3",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                7200,
+                1280
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 7200,
+              "__worldY": 1280
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                255,
+                38
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "487bc08c-210c-51fd-81fa-cb7aa3f25e85",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                8160,
+                1216
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 8160,
+              "__worldY": 1216
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                257,
+                36
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "e474af4b-7900-5c31-af44-1322b0eec871",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                8224,
+                1152
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 8224,
+              "__worldY": 1152
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                255,
+                40
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "57c89373-6bf6-52ba-812f-73166be3ce0a",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                8160,
+                1280
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 8160,
+              "__worldY": 1280
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                287,
+                36
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "c1a47167-b6ed-5fe3-9594-3365e2a58b06",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                9184,
+                1152
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 9184,
+              "__worldY": 1152
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                289,
+                37
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "ae9893da-1bd8-588d-8f28-4b8bb4f6bf0f",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                9248,
+                1184
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 9248,
+              "__worldY": 1184
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                289,
+                39
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "61f688d8-723d-567c-b79a-565ee0326455",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                9248,
+                1248
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 9248,
+              "__worldY": 1248
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                319,
+                37
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "2a8a8288-c8e1-582f-9641-183f9a9cb298",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                10208,
+                1184
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 10208,
+              "__worldY": 1184
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                321,
+                35
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "92180c64-162b-5766-a117-d62bbedae85c",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                10272,
+                1120
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 10272,
+              "__worldY": 1120
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                319,
+                39
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "c44cc3fe-f218-5fb8-b746-33c20303cb52",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                10208,
+                1248
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 10208,
+              "__worldY": 1248
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                351,
+                35
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "cadff9eb-9a62-55d5-ad31-8a31a14bd40e",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                11232,
+                1120
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 11232,
+              "__worldY": 1120
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                353,
+                38
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "9408e175-dbbf-5173-987c-1c633c7f4280",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                11296,
+                1216
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": 1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 11296,
+              "__worldY": 1216
+            },
+            {
+              "__identifier": "ClimbAnchor",
+              "__grid": [
+                353,
+                40
+              ],
+              "__pivot": [
+                0,
+                0
+              ],
+              "__tags": [],
+              "__tile": null,
+              "__smartColor": "#6FE8FF",
+              "iid": "bc7c4388-2a16-5cfa-b329-197f783aed7c",
+              "width": 32,
+              "height": 32,
+              "defUid": 206,
+              "px": [
+                11296,
+                1280
+              ],
+              "fieldInstances": [
+                {
+                  "__identifier": "direction",
+                  "__type": "Int",
+                  "__value": -1,
+                  "__tile": null,
+                  "defUid": 309,
+                  "realEditorValues": [
+                    {
+                      "id": "V_Int",
+                      "params": [
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "__worldX": 11296,
+              "__worldY": 1280
             },
             {
               "__identifier": "Checkpoint",
@@ -29665,6 +31091,38 @@
             },
             {
               "px": [
+                5088,
+                1248
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15135
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                5120,
+                1248
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15136
+              ],
+              "a": 1
+            },
+            {
+              "px": [
                 5184,
                 1248
               ],
@@ -30124,6 +31582,38 @@
               "t": 2,
               "d": [
                 15166
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                6144,
+                1248
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15168
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                6176,
+                1248
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15169
               ],
               "a": 1
             },
@@ -31057,6 +32547,38 @@
             },
             {
               "px": [
+                9184,
+                1248
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15263
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                9216,
+                1248
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15264
+              ],
+              "a": 1
+            },
+            {
+              "px": [
                 9280,
                 1248
               ],
@@ -31516,6 +33038,38 @@
               "t": 2,
               "d": [
                 15294
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                10240,
+                1248
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15296
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                10272,
+                1248
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15297
               ],
               "a": 1
             },
@@ -32993,6 +34547,38 @@
             },
             {
               "px": [
+                2112,
+                1280
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15426
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                2144,
+                1280
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15427
+              ],
+              "a": 1
+            },
+            {
+              "px": [
                 2176,
                 1280
               ],
@@ -34353,6 +35939,38 @@
             },
             {
               "px": [
+                7136,
+                1280
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15583
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                7168,
+                1280
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15584
+              ],
+              "a": 1
+            },
+            {
+              "px": [
                 7232,
                 1280
               ],
@@ -34817,6 +36435,38 @@
             },
             {
               "px": [
+                8192,
+                1280
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15616
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                8224,
+                1280
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15617
+              ],
+              "a": 1
+            },
+            {
+              "px": [
                 9280,
                 1280
               ],
@@ -35276,6 +36926,38 @@
               "t": 1,
               "d": [
                 15678
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                11232,
+                1280
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15711
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                11264,
+                1280
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15712
               ],
               "a": 1
             },
@@ -36369,6 +38051,38 @@
             },
             {
               "px": [
+                1216,
+                1312
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15782
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                1248,
+                1312
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15783
+              ],
+              "a": 1
+            },
+            {
+              "px": [
                 1312,
                 1312
               ],
@@ -36748,6 +38462,38 @@
               "t": 2,
               "d": [
                 15808
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                3040,
+                1312
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15839
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                3072,
+                1312
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15840
               ],
               "a": 1
             },
@@ -37212,6 +38958,38 @@
               "t": 0,
               "d": [
                 15870
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                4096,
+                1312
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                15872
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                4128,
+                1312
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                15873
               ],
               "a": 1
             },
@@ -38764,6 +40542,534 @@
               "t": 3,
               "d": [
                 16254
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                5088,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16287
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                5120,
+                1344
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16288
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                5152,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16289
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                6112,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16319
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                6144,
+                1344
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16320
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                6176,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16321
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                9184,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16415
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                9216,
+                1344
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16416
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                9248,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16417
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                10208,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16447
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                10240,
+                1344
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16448
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                10272,
+                1344
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16449
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                2080,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16577
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                2112,
+                1376
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16578
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                2144,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16579
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                7136,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16735
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                7168,
+                1376
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16736
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                7200,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16737
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                8160,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16767
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                8192,
+                1376
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16768
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                8224,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16769
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                11232,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16863
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                11264,
+                1376
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16864
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                11296,
+                1376
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16865
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                1216,
+                1408
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16934
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                1248,
+                1408
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16935
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                1280,
+                1408
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16936
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                3040,
+                1408
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16991
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                3072,
+                1408
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                16992
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                3104,
+                1408
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                16993
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                4064,
+                1408
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                17023
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                4096,
+                1408
+              ],
+              "src": [
+                160,
+                0
+              ],
+              "f": 0,
+              "t": 5,
+              "d": [
+                17024
+              ],
+              "a": 1
+            },
+            {
+              "px": [
+                4128,
+                1408
+              ],
+              "src": [
+                128,
+                0
+              ],
+              "f": 0,
+              "t": 4,
+              "d": [
+                17025
               ],
               "a": 1
             }
@@ -53924,9 +56230,9 @@
             1,
             1,
             1,
+            2,
+            2,
             0,
-            0,
-            0,
             1,
             1,
             1,
@@ -53957,8 +56263,8 @@
             1,
             1,
             0,
-            0,
-            0,
+            2,
+            2,
             0,
             0,
             0,
@@ -54052,9 +56358,9 @@
             1,
             1,
             1,
+            2,
+            2,
             0,
-            0,
-            0,
             1,
             1,
             1,
@@ -54084,9 +56390,9 @@
             1,
             1,
             1,
-            0,
-            0,
             0,
+            2,
+            2,
             0,
             0,
             0,
@@ -54189,7 +56495,37 @@
             1,
             0,
             0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
             0,
+            2,
+            2,
+            1,
+            1,
+            1,
             1,
             1,
             1,
@@ -54244,9 +56580,43 @@
             1,
             1,
             1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
+            0,
+            0,
             1,
             1,
             1,
@@ -54276,10 +56646,135 @@
             1,
             1,
             1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            0,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
             0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
             0,
             0,
             0,
@@ -54311,6 +56806,42 @@
             0,
             0,
             0,
+            2,
+            2,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
             1,
             1,
             1,
@@ -54337,9 +56868,613 @@
             1,
             1,
             1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
             1,
             1,
             1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -54378,1443 +57513,614 @@
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             2,
             2,
             2,
-            2,
-            2,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0,

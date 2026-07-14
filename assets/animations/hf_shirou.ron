@@ -3,17 +3,17 @@
     "Idle": (
         // core sheet row 0 (4x2 atlas)
         frames: [0, 1, 2, 3],
-        frame_duration: 0.15,
+        frame_duration: 0.14,
         playback_mode: "PingPong",
     ),
     "Running": (
         // run sheet row 0 (5x1 atlas)
         frames: [0, 1, 2, 3, 4],
-        frame_duration: 0.09,
+        frame_duration: 0.08,
         playback_mode: "Loop",
         speed_scale_by_velocity: true,
-        speed_reference: 180.0,
-        min_frame_duration: 0.05,
+        speed_reference: 250.0,
+        min_frame_duration: 0.052,
     ),
     "Attacking": (
         // attack sheet row 0 (windup -> slash -> recovery)
@@ -36,7 +36,7 @@
     "Landing": (
         // short landing settle
         frames: [7, 0],
-        frame_duration: 0.1,
+        frame_duration: 0.075,
         playback_mode: "Once",
     )
 }

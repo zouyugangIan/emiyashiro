@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     components::{
-        DamageInvulnerability, FacingDirection, Health, Player, PlayerState, ShroudState, Velocity,
+        DamageInvulnerability, FacingDirection, Health, LedgeTraversal, Player, PlayerState,
+        ShroudState, Velocity,
     },
     events::{DamageEvent, DamageSource},
     resources::{GameAssets, GameConfig, GameStats},
@@ -21,6 +22,7 @@ type RevivePlayerItem<'a> = (
     &'a mut ShroudState,
     Option<&'a mut FacingDirection>,
     Option<&'a mut DamageInvulnerability>,
+    Option<&'a mut LedgeTraversal>,
 );
 
 #[derive(Component)]
@@ -132,6 +134,7 @@ pub fn revive_player(
         mut shroud,
         mut facing,
         mut invulnerability,
+        mut traversal,
     )) = player_query.iter_mut().next()
     {
         let is_sky_level = sky_level.as_deref().is_some_and(|level| level.active);
@@ -157,6 +160,9 @@ pub fn revive_player(
         shroud.disable_release();
         if let Some(invulnerability) = invulnerability.as_deref_mut() {
             invulnerability.remaining = 0.0;
+        }
+        if let Some(traversal) = traversal.as_deref_mut() {
+            traversal.reset();
         }
 
         game_stats.distance_traveled = 0.0;
