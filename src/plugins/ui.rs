@@ -16,6 +16,7 @@ impl Plugin for UiPlugin {
                 systems::game::cleanup_game,
                 systems::ui::cleanup_game_hud,
                 systems::scene_decoration::cleanup_scene_decorations,
+                systems::sky_level::cleanup_sky_level,
                 systems::audio::stop_game_music,
                 systems::settings_ui::cleanup_settings_overlay,
                 systems::menu::setup_menu,

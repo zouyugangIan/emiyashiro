@@ -93,6 +93,7 @@ pub fn collision_detection_system(
         With<Player>,
     >,
     ground_query: GroundCollisionQuery,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
     if let Ok((mut player_transform, mut player_velocity, mut player_state, player_collision)) =
         player_query.single_mut()
@@ -100,7 +101,7 @@ pub fn collision_detection_system(
         let mut on_ground = false;
 
         // 获取玩家的碰撞盒
-        let player_bounds = player_collision.world_bounds(player_transform.translation);
+        let mut player_bounds = player_collision.world_bounds(player_transform.translation);
 
         // 检测与地面的碰撞
         for (ground_transform, ground_collision) in ground_query.iter() {
@@ -111,6 +112,7 @@ pub fn collision_detection_system(
             if collision.collided && !ground_collision.is_trigger {
                 // 解决碰撞
                 resolve_collision(&mut player_transform, &mut player_velocity, &collision);
+                player_bounds = player_collision.world_bounds(player_transform.translation);
 
                 // 检查是否在地面上
                 if collision.normal.y > 0.5 {
@@ -120,7 +122,8 @@ pub fn collision_detection_system(
         }
 
         // 与基于 GROUND_LEVEL 的主玩法逻辑保持一致，避免贴地时被误判为离地。
-        let near_ground = player_transform.translation.y <= GameConfig::GROUND_LEVEL + 2.0;
+        let near_ground = !sky_level.as_deref().is_some_and(|level| level.active)
+            && player_transform.translation.y <= GameConfig::GROUND_LEVEL + 2.0;
         player_state.is_grounded = on_ground || near_ground;
     }
 }

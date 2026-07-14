@@ -12,6 +12,7 @@ pub enum GameState {
     RenameDialog, // 重命名对话框
     GameOver,     // 游戏失败
     Reviving,     // 复活中
+    Victory,      // 完成关卡
 }
 
 /// 角色选择状态

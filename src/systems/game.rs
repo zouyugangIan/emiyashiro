@@ -28,11 +28,16 @@ pub struct SetupGameParams<'w, 's> {
     pub player_query: Query<'w, 's, (Entity, &'static Transform), With<Player>>,
     pub ground_query: Query<'w, 's, Entity, With<Ground>>,
     pub loaded_game_state: Res<'w, crate::systems::ui::LoadedGameState>,
+    pub sky_level: Option<ResMut<'w, crate::components::SkyLevelRuntime>>,
 }
 
 /// Sets up gameplay entities for a fresh start or loaded run.
 pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
-    if params.ground_query.is_empty() {
+    let sky_level_active = params
+        .sky_level
+        .as_deref()
+        .is_some_and(|level| level.active);
+    if params.ground_query.is_empty() && !sky_level_active {
         commands.spawn((
             Sprite {
                 color: GameConfig::GROUND_COLOR,
@@ -50,6 +55,14 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         && let Some(state) = &params.loaded_game_state.state
     {
         params.character_selection.selected_character = state.selected_character.clone();
+        if let Some(level) = params.sky_level.as_deref_mut().filter(|level| level.active) {
+            // The LDtk start initializer runs asynchronously after the save
+            // handoff. Marking this position initialized prevents it from
+            // overwriting a successfully restored player on a later frame.
+            level.player_initialized = true;
+            level.checkpoint_position = state.player_position;
+            level.checkpoint_needs_reconciliation = true;
+        }
         should_rebuild_player = true;
     }
 
@@ -76,13 +89,20 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
         }
     }
 
+    let player_start = params
+        .sky_level
+        .as_deref()
+        .filter(|level| level.active)
+        .map(|level| level.checkpoint_position)
+        .unwrap_or(GameConfig::PLAYER_START_POS);
+
     let camera_position = params
         .loaded_game_state
         .state
         .as_ref()
         .filter(|_| params.loaded_game_state.should_restore)
         .map(|state| state.camera_position)
-        .unwrap_or_else(|| initial_gameplay_camera_position(GameConfig::PLAYER_START_POS));
+        .unwrap_or_else(|| initial_gameplay_camera_position(player_start));
 
     if params.camera_query.is_empty() {
         commands.spawn((Camera2d, Transform::from_translation(camera_position)));
@@ -114,7 +134,7 @@ pub fn setup_game(mut commands: Commands, mut params: SetupGameParams) {
     };
 
     let player_common = (
-        Transform::from_translation(GameConfig::PLAYER_START_POS),
+        Transform::from_translation(player_start),
         Player,
         crate::systems::network::LocalPlayer,
         crate::components::network::NetworkId(0),

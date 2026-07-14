@@ -3,6 +3,7 @@
 //! 为游戏场景添加更丰富的视觉层次：多层天空、远景轮廓、云层与地面装饰。
 
 use crate::{asset_paths, resources::GameConfig};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -155,7 +156,11 @@ pub fn setup_parallax_background(
     asset_server: Res<AssetServer>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     existing_decorations: Query<Entity, With<SceneDecoration>>,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
+    if sky_level.as_deref().is_some_and(|level| level.active) {
+        return;
+    }
     // Keep this setup idempotent when re-entering Playing from pause/load flows.
     if !existing_decorations.is_empty() {
         return;
@@ -323,7 +328,11 @@ pub fn spawn_ground_decorations(
     window_query: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut spawn_timer: Local<f32>,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
+    if sky_level.as_deref().is_some_and(|level| level.active) {
+        return;
+    }
     let Some(window) = window_query.iter().next() else {
         return;
     };
@@ -407,47 +416,57 @@ pub fn cleanup_offscreen_decorations(
 }
 
 /// 增强云彩系统 - 添加更多变化
-pub fn spawn_enhanced_clouds(
-    mut commands: Commands,
-    window_query: Query<&Window, With<PrimaryWindow>>,
-    time: Res<Time>,
-    mut spawn_timer: Local<f32>,
-    mut lane_cursor: Local<u8>,
-    asset_server: Res<AssetServer>,
-    active_clouds: Query<&CloudStrata>,
-) {
-    let Some(window) = window_query.iter().next() else {
+#[derive(SystemParam)]
+pub struct EnhancedCloudParams<'w, 's> {
+    window_query: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
+    time: Res<'w, Time>,
+    spawn_timer: Local<'s, f32>,
+    lane_cursor: Local<'s, u8>,
+    asset_server: Res<'w, AssetServer>,
+    active_clouds: Query<'w, 's, &'static CloudStrata>,
+    sky_level: Option<Res<'w, crate::components::SkyLevelRuntime>>,
+}
+
+pub fn spawn_enhanced_clouds(mut commands: Commands, mut params: EnhancedCloudParams) {
+    if params
+        .sky_level
+        .as_deref()
+        .is_some_and(|level| level.active)
+    {
+        return;
+    }
+    let Some(window) = params.window_query.iter().next() else {
         return;
     };
 
-    *spawn_timer += time.delta_secs();
+    *params.spawn_timer += params.time.delta_secs();
 
     // 分层云带：低密度、低透明、避开角色与攻击特效判读区。
     let mut lane_counts = [0usize; 3];
     let mut active_count = 0usize;
-    for strata in active_clouds.iter() {
+    for strata in params.active_clouds.iter() {
         lane_counts[strata.lane.min(2) as usize] += 1;
         active_count += 1;
     }
 
-    if *spawn_timer > CLOUD_SPAWN_INTERVAL_SECS && active_count < MAX_ACTIVE_CLOUDS {
-        *spawn_timer = 0.0;
+    if *params.spawn_timer > CLOUD_SPAWN_INTERVAL_SECS && active_count < MAX_ACTIVE_CLOUDS {
+        *params.spawn_timer = 0.0;
 
-        let seed = time.elapsed_secs() * 9.17;
+        let seed = params.time.elapsed_secs() * 9.17;
         let lane = (0..3)
-            .map(|offset| ((*lane_cursor as usize + offset) % 3) as u8)
+            .map(|offset| ((*params.lane_cursor as usize + offset) % 3) as u8)
             .min_by_key(|lane| lane_counts[*lane as usize])
             .unwrap_or(0);
         if lane_counts[lane as usize] >= MAX_ACTIVE_CLOUDS.div_ceil(3) {
             return;
         }
 
-        *lane_cursor = (lane + 1) % 3;
+        *params.lane_cursor = (lane + 1) % 3;
         let profile = cloud_profile_for_lane(lane, seed, window.height());
         let image_path = CLOUD_IMAGES
             [(pseudo01(seed + 1.4) * CLOUD_IMAGES.len() as f32) as usize % CLOUD_IMAGES.len()];
         let x = window.width() + 150.0 + pseudo01(seed + 2.6) * 240.0;
-        spawn_stratified_cloud(&mut commands, &asset_server, image_path, x, profile);
+        spawn_stratified_cloud(&mut commands, &params.asset_server, image_path, x, profile);
     }
 }
 
@@ -466,6 +485,30 @@ pub fn loop_far_background(
             if transform.translation.x < -window.width() {
                 transform.translation.x += window.width() * 3.0;
             }
+        }
+    }
+}
+
+/// 添加动态光照效果（天空呼吸 + 星点闪烁）
+pub fn dynamic_lighting(
+    mut decoration_query: Query<(&mut Sprite, Option<&SkyPulse>, Option<&StarPulse>)>,
+    time: Res<Time>,
+) {
+    let t = time.elapsed_secs();
+
+    for (mut sprite, sky_pulse, star_pulse) in decoration_query.iter_mut() {
+        if let Some(sky) = sky_pulse {
+            let wave = (t * sky.pulse_speed).sin() * sky.pulse_amplitude;
+            let r = (sky.base_rgb.x + wave * 0.7).clamp(0.0, 1.0);
+            let g = (sky.base_rgb.y + wave * 0.85).clamp(0.0, 1.0);
+            let b = (sky.base_rgb.z + wave).clamp(0.0, 1.0);
+            sprite.color = Color::srgba(r, g, b, sky.alpha);
+        }
+
+        if let Some(star) = star_pulse {
+            let twinkle = 0.62 + 0.38 * (t * star.pulse_speed + star.phase).sin().abs();
+            let alpha = (star.base_alpha * twinkle).clamp(0.08, 0.95);
+            sprite.color = Color::srgba(1.0, 1.0, 1.0, alpha);
         }
     }
 }
@@ -521,29 +564,5 @@ mod tests {
             [low.lane, mid.lane, high.lane].iter().all(|lane| *lane < 3),
             "cloud lanes should stay in the controlled three-band layout"
         );
-    }
-}
-
-/// 添加动态光照效果（天空呼吸 + 星点闪烁）
-pub fn dynamic_lighting(
-    mut decoration_query: Query<(&mut Sprite, Option<&SkyPulse>, Option<&StarPulse>)>,
-    time: Res<Time>,
-) {
-    let t = time.elapsed_secs();
-
-    for (mut sprite, sky_pulse, star_pulse) in decoration_query.iter_mut() {
-        if let Some(sky) = sky_pulse {
-            let wave = (t * sky.pulse_speed).sin() * sky.pulse_amplitude;
-            let r = (sky.base_rgb.x + wave * 0.7).clamp(0.0, 1.0);
-            let g = (sky.base_rgb.y + wave * 0.85).clamp(0.0, 1.0);
-            let b = (sky.base_rgb.z + wave).clamp(0.0, 1.0);
-            sprite.color = Color::srgba(r, g, b, sky.alpha);
-        }
-
-        if let Some(star) = star_pulse {
-            let twinkle = 0.62 + 0.38 * (t * star.pulse_speed + star.phase).sin().abs();
-            let alpha = (star.base_alpha * twinkle).clamp(0.08, 0.95);
-            sprite.color = Color::srgba(1.0, 1.0, 1.0, alpha);
-        }
     }
 }

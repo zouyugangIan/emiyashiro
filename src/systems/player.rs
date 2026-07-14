@@ -40,7 +40,15 @@ pub fn player_movement(
     mut player_query: Query<PlayerMovementItem, With<Player>>,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
+    if sky_level
+        .as_deref()
+        .is_some_and(|level| level.active && !level.level_ready)
+    {
+        return;
+    }
+
     if let Ok((entity, mut transform, mut velocity, player_state, attack_momentum)) =
         player_query.single_mut()
     {
@@ -120,9 +128,16 @@ pub fn player_movement(
         }
 
         // 边界检查（防止玩家移动到屏幕外太远）
-        let max_distance = 10000.0; // 最大允许距离
-        if transform.translation.x.abs() > max_distance {
-            transform.translation.x = transform.translation.x.signum() * max_distance;
+        if let Some(level) = sky_level.as_deref().filter(|level| level.active) {
+            transform.translation.x = transform
+                .translation
+                .x
+                .clamp(level.bounds.min.x + 20.0, level.bounds.max.x - 20.0);
+        } else {
+            let max_distance = 10000.0;
+            if transform.translation.x.abs() > max_distance {
+                transform.translation.x = transform.translation.x.signum() * max_distance;
+            }
         }
     }
 }
@@ -170,13 +185,23 @@ pub fn player_jump(
     mut player_query: Query<PlayerJumpItem, With<Player>>,
     time: Res<Time<Fixed>>,
     mut game_stats: ResMut<GameStats>,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
+    if sky_level
+        .as_deref()
+        .is_some_and(|level| level.active && !level.level_ready)
+    {
+        return;
+    }
+
     if let Ok((mut transform, mut velocity, mut player_state, mut collision_box, attack_momentum)) =
         player_query.single_mut()
     {
         let was_grounded = player_state.is_grounded;
         let delta_time = time.delta_secs();
-        let near_ground = transform.translation.y <= GameConfig::GROUND_LEVEL + 2.0;
+        let sky_level_active = sky_level.as_deref().is_some_and(|level| level.active);
+        let near_ground =
+            !sky_level_active && transform.translation.y <= GameConfig::GROUND_LEVEL + 2.0;
 
         // 同时读取实时按键与输入资源，避免 Update/FixedUpdate 时序导致丢跳
         let direct_jump_pressed = keyboard_input.pressed(KeyCode::KeyW)
@@ -237,6 +262,10 @@ pub fn player_jump(
 
         // 终端速度限制（防止无限加速下落）
         velocity.y = velocity.y.max(-GameConfig::GRAVITY * 2.0);
+
+        if sky_level_active {
+            return;
+        }
 
         // 死亡检测 - 如果掉到地面以下太远
         if transform.translation.y < GameConfig::GROUND_LEVEL - 200.0 {

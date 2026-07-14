@@ -4,4 +4,5 @@ pub mod components_tests;
 pub mod integration_tests;
 pub mod menu_ui_tests;
 pub mod reference_attack_assets_tests;
+pub mod sky_level_tests;
 pub mod systems_tests;

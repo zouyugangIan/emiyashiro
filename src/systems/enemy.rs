@@ -17,6 +17,30 @@ const HEROIC_SPIRIT_RENDER_SIZE: Vec2 = Vec2::new(52.0, 110.0);
 const HEROIC_SPIRIT_COLLISION_SIZE: Vec2 = Vec2::new(40.0, 78.0);
 const ENEMY_RETIRE_BEHIND_DISTANCE: f32 = 96.0;
 
+type EnemyPatrolQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static EnemyType,
+        &'static mut Transform,
+        &'static mut EnemyState,
+        &'static mut Velocity,
+        Option<&'static crate::components::SkyEncounterEnemy>,
+    ),
+    With<Enemy>,
+>;
+type EnemyRangedQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static EnemyType,
+        &'static Transform,
+        &'static mut EnemyState,
+        Option<&'static crate::components::SkyEncounterEnemy>,
+    ),
+    With<Enemy>,
+>;
+
 #[derive(Clone, Copy)]
 struct EnemyArchetype {
     enemy_type: EnemyType,
@@ -102,7 +126,7 @@ fn spawn_slime(
     spawn_x: f32,
     spawn_y: f32,
     enemy_state: EnemyState,
-) {
+) -> Entity {
     let slime_texture = asset_server.load(asset_paths::IMAGE_CLOUD_01);
 
     commands
@@ -153,7 +177,8 @@ fn spawn_slime(
                 },
                 Transform::from_xyz(-1.0, -5.0, 0.2),
             ));
-        });
+        })
+        .id()
 }
 
 fn spawn_familiar(
@@ -162,7 +187,7 @@ fn spawn_familiar(
     spawn_x: f32,
     spawn_y: f32,
     enemy_state: EnemyState,
-) {
+) -> Entity {
     let familiar_texture = asset_server.load(asset_paths::IMAGE_CLOUD_02);
 
     commands
@@ -213,7 +238,8 @@ fn spawn_familiar(
                 },
                 Transform::from_xyz(8.0, -2.0, 0.3),
             ));
-        });
+        })
+        .id()
 }
 
 fn spawn_enemy_heroic_spirit(
@@ -221,7 +247,7 @@ fn spawn_enemy_heroic_spirit(
     spawn_x: f32,
     spawn_y: f32,
     enemy_state: EnemyState,
-) {
+) -> Entity {
     commands
         .spawn((
             Sprite {
@@ -253,7 +279,46 @@ fn spawn_enemy_heroic_spirit(
                 },
                 Transform::from_xyz(26.0, -6.0, 0.2).with_rotation(Quat::from_rotation_z(0.28)),
             ));
-        });
+        })
+        .id()
+}
+
+/// Spawns an enemy from an authored LDtk placement instead of the endless runner director.
+pub fn spawn_authored_enemy(
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    position: Vec3,
+    kind: crate::components::SkyEnemyKind,
+    health_multiplier: f32,
+    patrol_range: f32,
+    tuning: &GameplayTuning,
+) -> Entity {
+    let enemy_type = match kind {
+        crate::components::SkyEnemyKind::Slime => EnemyType::Slime,
+        crate::components::SkyEnemyKind::Familiar => EnemyType::Familiar,
+        crate::components::SkyEnemyKind::HeroicSpirit => EnemyType::EnemyHeroicSpirit,
+    };
+    let archetype = enemy_archetype(enemy_type, &tuning.enemies);
+    let health = ((archetype.health as f32 * health_multiplier.max(0.25)).round() as i32).max(1);
+    let enemy_state = EnemyState::new(health, patrol_range.max(0.0))
+        .with_spawn_origin(position.x)
+        .with_movement(
+            archetype.base_speed,
+            archetype.contact_damage,
+            position.x * 0.013,
+        );
+
+    match enemy_type {
+        EnemyType::Slime => {
+            spawn_slime(commands, asset_server, position.x, position.y, enemy_state)
+        }
+        EnemyType::Familiar => {
+            spawn_familiar(commands, asset_server, position.x, position.y, enemy_state)
+        }
+        EnemyType::EnemyHeroicSpirit => {
+            spawn_enemy_heroic_spirit(commands, position.x, position.y, enemy_state)
+        }
+    }
 }
 
 /// 根据导演配置生成敌人。
@@ -267,9 +332,17 @@ pub struct EnemySpawnParams<'w, 's> {
     time: Res<'w, Time>,
     spawn_cooldown: Local<'s, f32>,
     rng_state: Local<'s, Option<StdRng>>,
+    sky_level: Option<Res<'w, crate::components::SkyLevelRuntime>>,
 }
 
 pub fn spawn_enemies(mut commands: Commands, mut params: EnemySpawnParams) {
+    if params
+        .sky_level
+        .as_deref()
+        .is_some_and(|level| level.active)
+    {
+        return;
+    }
     let default_tuning = GameplayTuning::default();
     let enemy_tuning = &params.tuning.as_deref().unwrap_or(&default_tuning).enemies;
 
@@ -346,10 +419,7 @@ pub fn spawn_enemies(mut commands: Commands, mut params: EnemySpawnParams) {
 
 /// 敌人 AI - 巡逻与战斗行为。
 pub fn enemy_patrol_ai(
-    mut enemy_query: Query<
-        (&EnemyType, &mut Transform, &mut EnemyState, &mut Velocity),
-        With<Enemy>,
-    >,
+    mut enemy_query: EnemyPatrolQuery,
     player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
     tuning: Option<Res<GameplayTuning>>,
     time: Res<Time>,
@@ -367,7 +437,7 @@ pub fn enemy_patrol_ai(
     let elapsed = time.elapsed_secs();
     let delta = time.delta_secs();
 
-    for (enemy_type, mut transform, mut state, mut velocity) in enemy_query.iter_mut() {
+    for (enemy_type, mut transform, mut state, mut velocity, authored) in enemy_query.iter_mut() {
         if !state.is_alive {
             velocity.x = 0.0;
             velocity.y = 0.0;
@@ -376,6 +446,7 @@ pub fn enemy_patrol_ai(
 
         let was_charging = state.dash_charge_timer > 0.0;
         state.tick_timers(delta);
+        let authored_bounds = authored.map(|_| state.patrol_world_bounds());
 
         if was_charging && state.dash_charge_timer <= f32::EPSILON {
             state.dash_active_timer = heroic_behavior.dash_active_secs.max(0.08);
@@ -388,6 +459,9 @@ pub fn enemy_patrol_ai(
         if state.hit_stun_timer > 0.0 {
             transform.translation.x += velocity.x * delta;
             transform.translation.y += velocity.y * delta;
+            if let Some((left, right)) = authored_bounds {
+                transform.translation.x = transform.translation.x.clamp(left, right);
+            }
             velocity.x *= 0.84;
             velocity.y *= 0.80;
             continue;
@@ -395,7 +469,8 @@ pub fn enemy_patrol_ai(
 
         match enemy_type {
             EnemyType::Slime => {
-                if enemy_has_passed_player(transform.translation.x, player_x) {
+                if authored.is_none() && enemy_has_passed_player(transform.translation.x, player_x)
+                {
                     retire_passed_enemy_state(&mut state);
                     velocity.x = -state.base_speed.max(20.0);
                     velocity.y = 0.0;
@@ -427,15 +502,21 @@ pub fn enemy_patrol_ai(
                 }
 
                 transform.translation.x += velocity.x * delta;
-                transform.translation.y =
-                    GameConfig::GROUND_LEVEL + enemy_tuning.slime.spawn_y_offset;
+                if let Some((left, right)) = authored_bounds {
+                    transform.translation.x = transform.translation.x.clamp(left, right);
+                }
+                transform.translation.y = authored
+                    .map(|enemy| enemy.anchor_y)
+                    .unwrap_or(GameConfig::GROUND_LEVEL + enemy_tuning.slime.spawn_y_offset);
             }
             EnemyType::Familiar => {
-                if enemy_has_passed_player(transform.translation.x, player_x) {
+                if authored.is_none() && enemy_has_passed_player(transform.translation.x, player_x)
+                {
                     retire_passed_enemy_state(&mut state);
                     velocity.x = -state.base_speed.max(20.0);
-                    let target_y = GameConfig::GROUND_LEVEL
-                        + enemy_tuning.familiar.spawn_y_offset
+                    let target_y = authored
+                        .map(|enemy| enemy.anchor_y)
+                        .unwrap_or(GameConfig::GROUND_LEVEL + enemy_tuning.familiar.spawn_y_offset)
                         + (elapsed * 2.7 + state.hover_phase).sin() * 22.0;
                     velocity.y = ((target_y - transform.translation.y) * 3.2).clamp(-110.0, 110.0);
                     transform.translation.x += velocity.x * delta;
@@ -457,8 +538,9 @@ pub fn enemy_patrol_ai(
                     velocity.x *= 0.22;
                 }
 
-                let target_y = GameConfig::GROUND_LEVEL
-                    + enemy_tuning.familiar.spawn_y_offset
+                let target_y = authored
+                    .map(|enemy| enemy.anchor_y)
+                    .unwrap_or(GameConfig::GROUND_LEVEL + enemy_tuning.familiar.spawn_y_offset)
                     + (elapsed * 2.7 + state.hover_phase).sin() * 30.0;
                 velocity.y = ((target_y - transform.translation.y) * 4.2).clamp(-140.0, 140.0);
                 if state.pending_ranged_shot {
@@ -467,14 +549,21 @@ pub fn enemy_patrol_ai(
 
                 transform.translation.x += velocity.x * delta;
                 transform.translation.y += velocity.y * delta;
+                if let Some((left, right)) = authored_bounds {
+                    transform.translation.x = transform.translation.x.clamp(left, right);
+                }
             }
             EnemyType::EnemyHeroicSpirit => {
-                let player_delta = player_x - transform.translation.x;
-                let base_y = GameConfig::GROUND_LEVEL
-                    + enemy_tuning.heroic_spirit.spawn_y_offset
-                    + (elapsed * 8.0 + state.hover_phase).sin() * 3.0;
+                let target_x = authored_bounds
+                    .map(|(left, right)| player_x.clamp(left, right))
+                    .unwrap_or(player_x);
+                let player_delta = target_x - transform.translation.x;
+                let base_y = authored.map(|enemy| enemy.anchor_y).unwrap_or(
+                    GameConfig::GROUND_LEVEL + enemy_tuning.heroic_spirit.spawn_y_offset,
+                ) + (elapsed * 8.0 + state.hover_phase).sin() * 3.0;
 
-                if enemy_has_passed_player(transform.translation.x, player_x) {
+                if authored.is_none() && enemy_has_passed_player(transform.translation.x, player_x)
+                {
                     retire_passed_enemy_state(&mut state);
                     velocity.x = -state.base_speed.max(20.0);
                     velocity.y = 0.0;
@@ -491,6 +580,9 @@ pub fn enemy_patrol_ai(
 
                 if state.dash_active_timer > 0.0 {
                     transform.translation.x += velocity.x * delta;
+                    if let Some((left, right)) = authored_bounds {
+                        transform.translation.x = transform.translation.x.clamp(left, right);
+                    }
                     transform.translation.y = base_y;
                     continue;
                 }
@@ -507,6 +599,9 @@ pub fn enemy_patrol_ai(
                 velocity.x = chase_speed * state.move_direction;
 
                 transform.translation.x += velocity.x * delta;
+                if let Some((left, right)) = authored_bounds {
+                    transform.translation.x = transform.translation.x.clamp(left, right);
+                }
                 transform.translation.y = base_y;
 
                 if state.attack_cooldown <= 0.0
@@ -526,7 +621,7 @@ pub fn enemy_ranged_attack(
     mut commands: Commands,
     player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
     tuning: Option<Res<GameplayTuning>>,
-    mut enemy_query: Query<(&EnemyType, &Transform, &mut EnemyState), With<Enemy>>,
+    mut enemy_query: EnemyRangedQuery,
 ) {
     let default_tuning = GameplayTuning::default();
     let familiar_tuning = &tuning
@@ -539,15 +634,17 @@ pub fn enemy_ranged_attack(
         return;
     };
 
-    for (enemy_type, enemy_transform, mut enemy_state) in enemy_query.iter_mut() {
+    for (enemy_type, enemy_transform, mut enemy_state, authored) in enemy_query.iter_mut() {
         if *enemy_type != EnemyType::Familiar || !enemy_state.is_alive {
             continue;
         }
 
-        if enemy_has_passed_player(
-            enemy_transform.translation.x,
-            player_transform.translation.x,
-        ) {
+        if authored.is_none()
+            && enemy_has_passed_player(
+                enemy_transform.translation.x,
+                player_transform.translation.x,
+            )
+        {
             enemy_state.pending_ranged_shot = false;
             enemy_state.ranged_windup_timer = 0.0;
             enemy_state.ranged_shot_direction = Vec2::ZERO;

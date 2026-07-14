@@ -13,20 +13,6 @@ mod tests {
     use std::marker::PhantomData;
     use std::time::Duration;
 
-    fn create_test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<GameStats>()
-            .init_resource::<CharacterSelection>()
-            .init_resource::<AudioSettings>()
-            .init_resource::<SaveFileManager>()
-            .init_resource::<PauseManager>()
-            .init_resource::<text_input::TextInputState>()
-            .init_resource::<text_input::KeyboardInputHandler>()
-            .init_resource::<error_handling::ErrorRecoveryManager>();
-        app
-    }
-
     fn advance_fixed_time(app: &mut App, secs: f32) {
         app.world_mut()
             .resource_mut::<Time<Fixed>>()
@@ -1146,7 +1132,7 @@ mod tests {
             .add_systems(
                 Update,
                 pause_save::handle_pause_input
-                    .run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
+                    .run_if(in_state(GameState::Playing).or_else(in_state(GameState::Paused))),
             );
 
         app.world_mut().spawn((
@@ -1210,7 +1196,7 @@ mod tests {
             .add_systems(
                 Update,
                 pause_save::handle_pause_input
-                    .run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
+                    .run_if(in_state(GameState::Playing).or_else(in_state(GameState::Paused))),
             );
 
         app.world_mut().spawn((

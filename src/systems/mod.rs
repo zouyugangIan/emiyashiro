@@ -8,6 +8,7 @@ pub mod interfaces;
 // 核心游戏系统
 pub mod game;
 pub mod setup;
+pub mod sky_level;
 
 // 玩家相关系统
 pub mod input;

@@ -22,6 +22,7 @@ path = "src/bin/architecture_metrics.rs"
 
 [dependencies]
 bevy = { version = "0.19", default-features = false, features = ["2d", "ui", "audio", "jpeg"] }
+bevy_ecs_ldtk = "0.15"
 tokio = { version = "1.52", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"], optional = true }
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-ring-webpki", "postgres", "chrono", "uuid", "json", "migrate", "macros"], optional = true }
 serde = { version = "1.0", features = ["derive"] }

@@ -30,9 +30,15 @@ pub struct GameOverUiRoot;
 pub fn check_player_fall_death(
     player_query: Query<(Entity, &Transform), With<Player>>,
     mut damage_writer: MessageWriter<DamageEvent>,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
+    let death_zone_y = sky_level
+        .as_deref()
+        .filter(|level| level.active)
+        .map(|_| crate::components::SKY_LEVEL_KILL_Y)
+        .unwrap_or(DEATH_ZONE_Y);
     if let Some((player_entity, transform)) = player_query.iter().next()
-        && transform.translation.y < DEATH_ZONE_Y
+        && transform.translation.y < death_zone_y
     {
         damage_writer.write(DamageEvent {
             target: player_entity,
@@ -116,6 +122,7 @@ pub fn revive_player(
     mut player_query: Query<RevivePlayerItem, With<Player>>,
     mut game_stats: ResMut<GameStats>,
     mut next_state: ResMut<NextState<GameState>>,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
     if let Some((
         mut transform,
@@ -127,14 +134,21 @@ pub fn revive_player(
         mut invulnerability,
     )) = player_query.iter_mut().next()
     {
-        transform.translation = Vec3::new(
-            transform.translation.x,
-            transform.translation.y.max(GameConfig::GROUND_LEVEL),
-            GameConfig::PLAYER_START_POS.z,
-        );
+        let is_sky_level = sky_level.as_deref().is_some_and(|level| level.active);
+        transform.translation = sky_level
+            .as_deref()
+            .filter(|level| level.active)
+            .map(|level| level.checkpoint_position)
+            .unwrap_or_else(|| {
+                Vec3::new(
+                    transform.translation.x,
+                    transform.translation.y.max(GameConfig::GROUND_LEVEL),
+                    GameConfig::PLAYER_START_POS.z,
+                )
+            });
         velocity.x = 0.0;
         velocity.y = 0.0;
-        player_state.is_grounded = true;
+        player_state.is_grounded = !is_sky_level;
         player_state.is_crouching = false;
         if let Some(facing) = facing.as_deref_mut() {
             *facing = FacingDirection::Right;

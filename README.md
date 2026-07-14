@@ -75,6 +75,7 @@ src/
 - `docs/2026-upgrade-status.md`: 2026 升级状态总览（文档完成状态 SSOT）
 - `docs/ubuntu-dev-workflow.md`: Ubuntu 开发期构建与调试基线
 - `docs/hf-shirou-attack-module-design.md`: HF 士郎攻击模组与资源对应
+- `docs/sky-city-level.md`: LDtk 浮空都市长关卡、实体约定与再生成流程
 
 ## CI 门禁
 

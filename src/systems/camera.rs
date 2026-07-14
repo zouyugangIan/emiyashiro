@@ -237,6 +237,7 @@ pub fn camera_follow(
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     player_query: PlayerMotionQuery,
     time: Res<Time>,
+    sky_level: Option<Res<crate::components::SkyLevelRuntime>>,
 ) {
     let delta_time = time.delta_secs();
 
@@ -288,16 +289,33 @@ pub fn camera_follow(
             camera_transform.translation.x += clamped_movement_x;
 
             // 垂直跟随 - 更平滑的垂直移动
-            let target_y = (player_transform.translation.y * 0.2).clamp(-80.0, 80.0);
+            let target_y = if sky_level.as_deref().is_some_and(|level| level.active) {
+                player_transform.translation.y + 105.0
+            } else {
+                (player_transform.translation.y * 0.2).clamp(-80.0, 80.0)
+            };
             let distance_y = target_y - camera_transform.translation.y;
             let movement_y = distance_y * follow_speed * 0.3;
             camera_transform.translation.y += movement_y;
 
             // 摄像机边界限制 - 扩展边界范围
-            let left_boundary = -800.0;
-            let right_boundary = player_transform.translation.x.max(2000.0);
-            let bottom_boundary = -300.0;
-            let top_boundary = 200.0;
+            let (left_boundary, right_boundary, bottom_boundary, top_boundary) = sky_level
+                .as_deref()
+                .filter(|level| level.active)
+                .map(|level| {
+                    (
+                        level.bounds.min.x + 512.0,
+                        level.bounds.max.x - 512.0,
+                        level.bounds.min.y + 384.0,
+                        level.bounds.max.y - 384.0,
+                    )
+                })
+                .unwrap_or((
+                    -800.0,
+                    player_transform.translation.x.max(2000.0),
+                    -300.0,
+                    200.0,
+                ));
 
             camera_transform.translation.x = camera_transform
                 .translation

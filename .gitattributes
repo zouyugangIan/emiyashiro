@@ -8,6 +8,7 @@
 *.ron text eol=lf
 *.sql text eol=lf
 *.json text eol=lf
+*.ldtk text eol=lf
 *.py text eol=lf
 
 *.png binary

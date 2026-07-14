@@ -6,6 +6,7 @@ pub mod netcode;
 pub mod persistence;
 pub mod presentation;
 pub mod server;
+pub mod sky_level;
 pub mod ui;
 
 /// Aggregated client-side plugin entrypoint.
@@ -17,6 +18,7 @@ impl Plugin for EmiyaShiroClientPlugin {
         app.add_plugins((
             core::CorePlugin,
             netcode::NetcodePlugin,
+            sky_level::SkyLevelPlugin,
             gameplay::GameplayPlugin,
             persistence::PersistencePlugin,
             presentation::PresentationPlugin,
