@@ -273,6 +273,7 @@ fn sakura_attack_plan_has_all_standalone_runtime_images() {
     .expect("valid Sakura standalone frame manifest");
 
     assert_eq!(manifest["runtime_facing"].as_str(), Some("right"));
+    assert_eq!(manifest["base_source_facing"].as_str(), Some("right"));
     let base_frames = manifest["base_frames"]
         .as_array()
         .expect("dedicated Sakura base frames");
@@ -304,6 +305,14 @@ fn sakura_attack_plan_has_all_standalone_runtime_images() {
         .as_array()
         .expect("runtime sheets")
         .iter()
+        .inspect(|sheet| {
+            assert_eq!(
+                sheet["source_facing"].as_str(),
+                Some("right"),
+                "every Sakura source sheet must use canonical right-facing artwork"
+            );
+            assert_eq!(sheet["runtime_facing"].as_str(), Some("right"));
+        })
         .flat_map(|sheet| sheet["frames"].as_array().expect("runtime frames"));
     let mut manifest_frame_total = 0;
     for frame in runtime_frames {

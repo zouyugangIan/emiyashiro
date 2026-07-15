@@ -8,9 +8,12 @@ a Bevy `TextureAtlas` component.
 
 Base movement is independent from combat: `../sakura_jk/base_movement_v3.png`
 builds eight dedicated idle/run/jump/crouch images under
-`../sakura_jk/base_frames/`. The build records each sheet's source direction,
-normalizes it once into the runtime's canonical right-facing orientation, and
-locks every base pose to the same foot baseline so state changes do not jump.
+`../sakura_jk/base_frames/`. All module and base source sheets are normalized to
+the runtime's canonical right-facing orientation, and their animation stages
+read from left to right in row-major order. Every source cell has a transparent
+gutter; the build now rejects source artwork touching a cell edge instead of
+silently producing a cut frame. Base poses are locked to the same foot baseline
+so state changes do not jump.
 
 ## Legacy source sheets and runtime groups
 

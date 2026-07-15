@@ -26,17 +26,16 @@ class Module:
     columns: int
     source_rows: int
     runtime_rows: int
-    flip_source: bool
 
 
 MODULES = (
-    Module("ground_light", 4, 2, 5, True),
-    Module("heavy", 4, 2, 5, False),
-    Module("air_combo", 4, 2, 5, False),
-    Module("mobility", 3, 2, 4, False),
-    Module("ninjutsu_projectiles", 4, 2, 4, False),
-    Module("ultimate", 4, 2, 3, True),
-    Module("weapon_projection", 3, 2, 4, True),
+    Module("ground_light", 4, 2, 5),
+    Module("heavy", 4, 2, 5),
+    Module("air_combo", 4, 2, 5),
+    Module("mobility", 3, 2, 4),
+    Module("ninjutsu_projectiles", 4, 2, 4),
+    Module("ultimate", 4, 2, 3),
+    Module("weapon_projection", 3, 2, 4),
 )
 
 
@@ -140,12 +139,8 @@ def remove_chroma_residue(frame: Image.Image) -> Image.Image:
     return cleaned
 
 
-def fit_runtime_cell(frame: Image.Image, flip_source: bool) -> Image.Image:
-    bleed_side = "right" if flip_source else "left"
-    frame = remove_neighbor_cell_bleed(frame, bleed_side)
+def fit_runtime_cell(frame: Image.Image) -> Image.Image:
     frame = remove_chroma_residue(frame)
-    if flip_source:
-        frame = frame.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     frame.thumbnail((INNER_CELL, INNER_CELL), Image.Resampling.LANCZOS)
     output = Image.new("RGBA", (OUTPUT_CELL, OUTPUT_CELL), (0, 0, 0, 0))
     inset_x = (OUTPUT_CELL - frame.width) // 2
@@ -169,19 +164,17 @@ def align_alpha_bottom(frame: Image.Image, target_bottom: int) -> Image.Image:
     return aligned
 
 
-def split_source_cells(
-    source: Path, columns: int, source_rows: int, flip_source: bool
-) -> list[Image.Image]:
+def split_source_cells(source: Path, columns: int, source_rows: int) -> list[Image.Image]:
     with Image.open(source) as opened:
         image = opened.convert("RGBA")
 
-    crop_width = image.width - image.width % columns
-    crop_height = image.height - image.height % source_rows
-    left = (image.width - crop_width) // 2
-    top = (image.height - crop_height) // 2
-    image = image.crop((left, top, left + crop_width, top + crop_height))
-    cell_width = crop_width // columns
-    cell_height = crop_height // source_rows
+    if image.width % columns or image.height % source_rows:
+        raise ValueError(
+            f"{source} must be an exact {columns}x{source_rows} source grid, "
+            f"got {image.size}"
+        )
+    cell_width = image.width // columns
+    cell_height = image.height // source_rows
 
     frames = []
     for frame_index in range(columns * source_rows):
@@ -195,15 +188,18 @@ def split_source_cells(
                 (row + 1) * cell_height,
             )
         )
-        frames.append(fit_runtime_cell(frame, flip_source))
+        if alpha_border_pixels(frame) > 0:
+            raise ValueError(
+                f"{source} frame {frame_index + 1} touches a source-cell edge; "
+                "the source sheet would produce a cut animation frame"
+            )
+        frames.append(fit_runtime_cell(frame))
     return frames
 
 
 def split_module(module: Module) -> dict[str, object]:
     source = MODULE_ROOT / f"{module.name}.png"
-    source_frames = split_source_cells(
-        source, module.columns, module.source_rows, module.flip_source
-    )
+    source_frames = split_source_cells(source, module.columns, module.source_rows)
 
     module_dir = FRAME_ROOT / module.name
     module_dir.mkdir(parents=True, exist_ok=True)
@@ -228,7 +224,7 @@ def split_module(module: Module) -> dict[str, object]:
     return {
         "id": module.name,
         "source": str(source.relative_to(ROOT)),
-        "source_facing": "left" if module.flip_source else "right",
+        "source_facing": "right",
         "runtime_facing": "right",
         "columns": len(source_frames),
         "rows": module.runtime_rows,
@@ -238,9 +234,7 @@ def split_module(module: Module) -> dict[str, object]:
 
 
 def build_base_frames() -> list[dict[str, object]]:
-    frames = split_source_cells(
-        BASE_SOURCE, columns=4, source_rows=2, flip_source=True
-    )
+    frames = split_source_cells(BASE_SOURCE, columns=4, source_rows=2)
     BASE_FRAME_ROOT.mkdir(parents=True, exist_ok=True)
     entries = []
     for frame_number, frame in enumerate(frames, start=1):
@@ -267,6 +261,7 @@ def main() -> None:
         "generation": "standalone-image-sequence",
         "runtime_facing": "right",
         "base_source": str(BASE_SOURCE.relative_to(ROOT)),
+        "base_source_facing": "right",
         "base_frames": build_base_frames(),
         "sheets": [split_module(module) for module in MODULES],
     }
