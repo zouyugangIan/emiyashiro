@@ -1,4 +1,4 @@
-//! Shared utility functions for file operations, compression, and checksums.
+//! Save payload compression, checksums, and atomic writes.
 
 use atomicwrites::{AtomicFile, OverwriteBehavior};
 use std::fs;

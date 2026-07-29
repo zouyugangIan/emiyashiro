@@ -10,7 +10,7 @@ const DEFAULT_RABBITMQ_URL: &str = "amqp://guest:guest@127.0.0.1:5672/%2f";
 
 type WorkerResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
-/// 存档任务消息。
+/// RabbitMQ 存档任务消息。
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SaveGameTask {
     pub player_id: Uuid,

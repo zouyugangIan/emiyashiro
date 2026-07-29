@@ -1142,7 +1142,7 @@ mod tests {
             .init_resource::<crate::systems::settings_ui::VolumeControlState>()
             .add_systems(
                 Update,
-                pause_save::handle_pause_input
+                pause::handle_pause_input
                     .run_if(in_state(GameState::Playing).or_else(in_state(GameState::Paused))),
             );
 
@@ -1206,7 +1206,7 @@ mod tests {
             .init_resource::<PauseManager>()
             .add_systems(
                 Update,
-                pause_save::handle_pause_input
+                pause::handle_pause_input
                     .run_if(in_state(GameState::Playing).or_else(in_state(GameState::Paused))),
             );
 

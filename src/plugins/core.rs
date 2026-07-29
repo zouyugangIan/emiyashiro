@@ -47,8 +47,6 @@ impl Plugin for CorePlugin {
             .insert_resource(systems::text_input::TextInputState::new(25))
             .init_resource::<systems::text_input::KeyboardInputHandler>()
             .init_resource::<systems::error_handling::ErrorRecoveryManager>()
-            .init_resource::<systems::async_file_ops::AsyncFileManager>()
-            .init_resource::<systems::async_file_ops::OperationProgress>()
             .init_resource::<systems::sprite_animation::AnimationRuntimeConfig>()
             .init_resource::<systems::camera::CameraShakeState>()
             .init_resource::<systems::combat::HitStopState>()

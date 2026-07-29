@@ -393,7 +393,7 @@ impl SaveFileData {
     }
 
     fn calculate_checksum_for(data: &SaveFileData) -> String {
-        use crate::systems::shared_utils::calculate_checksum;
+        use crate::systems::save::calculate_checksum;
 
         let mut temp_data = data.clone();
         temp_data.checksum = String::new();
@@ -424,7 +424,7 @@ impl SaveFileData {
         let Some(payload) = serialized_with_blank_checksum(serialized, &self.checksum) else {
             return false;
         };
-        crate::systems::shared_utils::calculate_checksum(payload.as_bytes()) == self.checksum
+        crate::systems::save::calculate_checksum(payload.as_bytes()) == self.checksum
     }
 }
 
@@ -447,7 +447,7 @@ fn serialized_with_blank_checksum(serialized: &str, expected: &str) -> Option<St
 }
 
 /// 存档管理资源
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct SaveManager {
     pub current_save: Option<SaveFileData>,
     pub save_file_path: String,
@@ -459,6 +459,12 @@ impl SaveManager {
             current_save: None,
             save_file_path: "save_data.json".to_string(),
         }
+    }
+}
+
+impl Default for SaveManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

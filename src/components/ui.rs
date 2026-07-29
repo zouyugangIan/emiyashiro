@@ -17,12 +17,6 @@ pub struct MenuUI;
 #[derive(Component, Debug)]
 pub struct StartButton;
 
-/// 存档按钮组件
-///
-/// 标识主菜单中的存档相关按钮。
-#[derive(Component, Debug)]
-pub struct SaveButton;
-
 /// 角色选择按钮组件
 ///
 /// 包含角色类型信息的按钮组件。

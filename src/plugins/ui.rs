@@ -33,7 +33,6 @@ impl Plugin for UiPlugin {
                     .chain(),
                 systems::menu::handle_load_button,
                 systems::menu::handle_menu_settings_button,
-                systems::save::handle_save_button_click,
                 systems::menu::cover_fade_animation,
                 systems::menu::update_menu_cover_layout.after(systems::menu::cover_fade_animation),
                 systems::visual_effects::button_hover_effect,
@@ -72,7 +71,7 @@ impl Plugin for UiPlugin {
         .add_systems(
             OnEnter(GameState::Paused),
             (
-                systems::pause_save::scan_save_files,
+                systems::save::scan_save_files,
                 systems::ui::setup_pause_menu,
             )
                 .chain(),
@@ -115,7 +114,7 @@ impl Plugin for UiPlugin {
         .add_systems(
             OnEnter(GameState::LoadTable),
             (
-                systems::pause_save::scan_save_files,
+                systems::save::scan_save_files,
                 systems::ui::setup_load_table,
             )
                 .chain(),

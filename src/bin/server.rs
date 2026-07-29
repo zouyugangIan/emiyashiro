@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         let pool = database.pool.clone();
 
         tokio::spawn(async move {
-            emiyashiro::systems::save_worker::run_save_worker(pool).await;
+            emiyashiro::database::worker::run_save_worker(pool).await;
         });
     }
 

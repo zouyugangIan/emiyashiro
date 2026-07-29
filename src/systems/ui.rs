@@ -1806,10 +1806,6 @@ pub fn handle_load_table_interactions(
             ev_load.write(StartLoadGame {
                 file_path: save_file.file_path.clone(),
             });
-            // The UI will now wait for the async task to finish.
-            // We could transition to a "Loading" state here, but for now,
-            // we'll just stay on the load screen. The progress bar from
-            // async_file_ops should appear.
         }
     }
     // 婢跺嫮镇婇柌宥呮嚒锟?
@@ -1839,7 +1835,7 @@ pub fn handle_load_table_interactions(
 
         if index < save_file_manager.save_files.len() {
             let save_name = save_file_manager.save_files[index].name.clone();
-            match crate::systems::pause_save::delete_save_file(&save_name, &mut save_file_manager) {
+            match crate::systems::save::delete_save_file(&save_name, &mut save_file_manager) {
                 Ok(_) => {
                     save_load_ui_state.pending_load_index = None;
                     save_load_ui_state.error_message.clear();
@@ -1877,7 +1873,7 @@ pub fn handle_load_table_interactions(
         save_load_ui_state.status_message = "Save list refreshed".to_string();
 
         // 鐟欙箑褰傜€涙ɑ銆傞弬锲︽阉殿偅寮块狝鍫曞櫢閺傛澘濮炴潪绲孖
-        crate::systems::pause_save::scan_save_files(save_file_manager);
+        crate::systems::save::scan_save_files(save_file_manager);
         NextState::set_if_neq(&mut next_state, GameState::LoadTable);
         crate::debug_log!("Refreshing save list and reloading UI");
     }
@@ -2003,7 +1999,7 @@ pub fn handle_rename_dialog_interactions(
         };
 
         if rename_input.save_index < save_file_manager.save_files.len() {
-            match crate::systems::pause_save::rename_save_file(
+            match crate::systems::save::rename_save_file(
                 &rename_input.original_name,
                 &new_name,
                 save_file_manager.as_mut(),

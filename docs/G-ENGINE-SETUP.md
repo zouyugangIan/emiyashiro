@@ -25,12 +25,12 @@ G-Engine 基于 `Bevy 0.19`，当前提供：
 ### RabbitMQ（消息队列）
 
 - 已实现队列：`q_save_game`（存档任务）
-- 代码位置：`src/systems/save_worker.rs`
+- 代码位置：`src/database/worker.rs`
 
 ### PostgreSQL（数据持久化）
 
 - 用途：存档与游戏数据
-- 代码位置：`src/database/mod.rs`、`src/systems/save_worker.rs`
+- 代码位置：`src/database/mod.rs`、`src/database/worker.rs`
 - 迁移位置：`migrations/`，服务端启动时由 SQLx 自动执行
 
 ## 快速启动

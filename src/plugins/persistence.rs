@@ -5,7 +5,7 @@ use crate::{
     systems::{self, interfaces::GameSystemSet},
 };
 
-/// Persistence systems: save/load IO, async tasks, pause snapshot and DB hooks.
+/// Persistence systems: local save/load tasks and pause snapshots.
 pub struct PersistencePlugin;
 
 impl Plugin for PersistencePlugin {
@@ -18,11 +18,7 @@ impl Plugin for PersistencePlugin {
         )
         .add_systems(
             Update,
-            (
-                systems::async_file_ops::update_operation_progress,
-                systems::async_file_ops::display_progress_indicator,
-                systems::ui::update_save_load_status_text,
-            )
+            systems::ui::update_save_load_status_text
                 .in_set(GameSystemSet::Persistence)
                 .run_if(
                     in_state(GameState::Playing)
@@ -34,21 +30,21 @@ impl Plugin for PersistencePlugin {
         .add_systems(
             Update,
             (
-                systems::async_tasks::handle_save_requests,
-                systems::async_tasks::handle_load_requests,
-                systems::async_tasks::poll_async_tasks,
+                systems::save::handle_save_requests,
+                systems::save::handle_load_requests,
+                systems::save::poll_save_tasks,
             )
                 .in_set(GameSystemSet::Persistence),
         )
         .add_systems(
             Update,
-            systems::pause_save::handle_pause_input
+            systems::pause::handle_pause_input
                 .in_set(GameSystemSet::Input)
                 .run_if(in_state(GameState::Playing).or_else(in_state(GameState::Paused))),
         )
         .add_systems(
             Update,
-            systems::pause_save::restore_paused_state
+            systems::pause::restore_paused_state
                 .in_set(GameSystemSet::Persistence)
                 .run_if(in_state(GameState::Playing)),
         );

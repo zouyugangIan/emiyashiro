@@ -8,6 +8,8 @@ pub mod operations;
 
 #[cfg(feature = "server")]
 pub mod redis;
+#[cfg(feature = "server")]
+pub mod worker;
 
 #[cfg(feature = "server")]
 pub struct Database {
