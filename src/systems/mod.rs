@@ -17,6 +17,7 @@ pub mod shirou;
 
 // 渲染和视觉系统
 pub mod attack_modules;
+pub mod authored_sprite;
 pub mod camera;
 pub mod image_sequence_animation;
 pub mod scene_decoration;

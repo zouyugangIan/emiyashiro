@@ -1,19 +1,19 @@
 // assets/animations/hf_shirou.ron
 {
     "Idle": (
-        // core sheet row 0 (4x2 atlas)
+        // Authored locomotion atlas; bounds and origins live in locomotion.json.
         frames: [0, 1, 2, 3],
         frame_duration: 0.14,
         playback_mode: "PingPong",
     ),
     "Running": (
-        // run sheet row 0 (5x1 atlas)
-        frames: [0, 1, 2, 3, 4],
-        frame_duration: 0.08,
+        // Eight poses spanning both halves of the stride.
+        frames: [4, 5, 6, 7, 8, 9, 10, 11],
+        frame_duration: 0.055,
         playback_mode: "Loop",
         speed_scale_by_velocity: true,
         speed_reference: 250.0,
-        min_frame_duration: 0.052,
+        min_frame_duration: 0.035,
     ),
     "Attacking": (
         // attack sheet row 0 (windup -> slash -> recovery)
@@ -22,21 +22,21 @@
         playback_mode: "Once",
     ),
     "Jumping": (
-        // core sheet row 1 (jump start -> apex -> descend)
-        frames: [4, 5, 6],
+        // Takeoff -> tucked apex -> feet prepared for landing.
+        frames: [12, 13, 14],
         frame_duration: 0.12,
         playback_mode: "Once",
     ),
     "Crouching": (
-        // core sheet row 1 crouch settle: enter -> guarded crouch
-        frames: [6, 7],
-        frame_duration: 0.11,
+        // Settle on the intact grounded crouch, never show the airborne fall pose.
+        frames: [15, 15],
+        frame_duration: 0.07,
         playback_mode: "Once",
     ),
     "Landing": (
         // short landing settle
-        frames: [7, 0],
-        frame_duration: 0.075,
+        frames: [15, 0],
+        frame_duration: 0.055,
         playback_mode: "Once",
     )
 }

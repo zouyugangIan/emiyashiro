@@ -6,7 +6,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
-pub const PLAYER_RENDER_SIZE: Vec2 = Vec2::new(96.0, 144.0);
+pub const PLAYER_RENDER_SIZE: Vec2 = Vec2::splat(144.0);
 pub const SAKURA_RENDER_SIZE: Vec2 = Vec2::splat(192.0);
 pub const PLAYER_VISUAL_BASELINE_ANCHOR_Y: f32 = -0.22;
 

@@ -72,7 +72,7 @@ mod tests {
             .get(&AnimationType::Crouching)
             .expect("Crouching clip should exist");
 
-        assert_eq!(crouch.frames, vec![6, 7]);
+        assert_eq!(crouch.frames, vec![15, 15]);
         assert_eq!(crouch.playback_mode, PlaybackMode::Once);
     }
 }

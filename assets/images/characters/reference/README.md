@@ -1,6 +1,6 @@
 # HF Shirou Attack Atlases
 
-These images are production attack atlases for the HF Shirou action module. Runtime combat uses the Codex/model-generated v2 ground-light row atlases, while the other attack modules continue to use their full multi-row reference boards.
+These images are the original attack atlases for the HF Shirou action module. Runtime combat uses the v2 ground-light row atlases for rows 1, 2 and 5. Rows 3 (thrust) and 4 (low sweep) are replaced by the complete frames in [`../shirou_repaired`](../shirou_repaired/README.md). Other modules retain their multi-row boards, with damaged dash/slide exposures omitted by the animation frame sequence.
 
 ## Runtime Sheets
 
@@ -11,7 +11,7 @@ These images are production attack atlases for the HF Shirou action module. Runt
 
 - `v2_generated/rows/ground_light_v2_r01.png` through `v2_generated/rows/ground_light_v2_r05.png`: Codex/model-generated 8-frame ground-light row atlases.
 - Heavy, air combo, mobility, ninjutsu, ultimate, and weapon projection runtime animation is selected from the multi-row reference boards below.
-- The repaired ground-light finisher and heavy rows are assembled only from visually approved, complete HF Shirou frames. This intentionally favors clean silhouettes and stable cell boundaries over retaining damaged generated in-betweens.
+- These source boards retain historical damage and are not sufficient to audit the final player output. In particular, the v2 thrust and low-sweep rows contain detached/clipped fragments; the runtime overrides above replace them. Run `scripts/audit_shirou_repaired.py` to check the replacement frame boundaries.
 
 ## Source And Preview Boards
 
@@ -45,7 +45,7 @@ python3 scripts/audit_hf_shirou_attack_atlases.py --out tmp/hf_shirou_attack_aud
 
 ## Runtime Mapping
 
-- `Shift+V`: enables the reference module mode and shows the overview board.
+- `Shift+V` / `Ctrl+V`: enables the Overedge body upgrade; normal mode uses the reference attacks by default.
 - `J/Z/L`: light attack; airborne uses air combo rows; crouching cycles the stable dash/slide mobility rows.
 - `K`: heavy attack; crouch+K cycles ultimate rows; Overedge release still uses the Nanobanana heavy combo sheet.
 - `X`: cycles fire/wind/lightning ninjutsu rows; `Shift+X` casts the shadow clone semantic using a stable player-body row plus clone afterimages; crouch+X cycles weapon projection rows.

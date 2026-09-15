@@ -125,14 +125,15 @@ pub fn sakura_attack_frame_path(group: &str, row: u8, frame: usize) -> String {
     format!("{SAKURA_ATTACK_FRAME_ROOT}/{group}/r{row:02}_f{frame:02}.png")
 }
 
-pub const IMAGE_HF_SHIROU_CORE_SHEET: &str = "images/characters/hf_shirou_core_sheet.png";
-pub const IMAGE_HF_SHIROU_RUN_SHEET: &str = "images/characters/hf_shirou_run_sheet.png";
+pub const IMAGE_HF_SHIROU_CORE_SHEET: &str = "images/characters/shirou_repaired/locomotion.png";
+pub const IMAGE_HF_SHIROU_RUN_SHEET: &str = IMAGE_HF_SHIROU_CORE_SHEET;
+pub const IMAGE_HF_SHIROU_REPAIRED_GROUND_ATTACKS: &str =
+    "images/characters/shirou_repaired/ground_attacks.png";
 pub const IMAGE_HF_SHIROU_ATTACK_SHEET: &str = "images/characters/hf_shirou_attack_sheet.png";
 pub const HF_SHIROU_CORE_COLS: u32 = 4;
-pub const HF_SHIROU_CORE_ROWS: u32 = 2;
+pub const HF_SHIROU_CORE_ROWS: u32 = 4;
 pub const HF_SHIROU_CORE_FRAME_COUNT: usize = (HF_SHIROU_CORE_COLS * HF_SHIROU_CORE_ROWS) as usize;
-pub const HF_SHIROU_RUN_COLS: u32 = 5;
-pub const HF_SHIROU_RUN_FRAME_COUNT: usize = HF_SHIROU_RUN_COLS as usize;
+pub const HF_SHIROU_RUN_FRAME_COUNT: usize = HF_SHIROU_CORE_FRAME_COUNT;
 pub const HF_SHIROU_ATTACK_COLS: u32 = 4;
 pub const HF_SHIROU_ATTACK_FRAME_COUNT: usize = HF_SHIROU_ATTACK_COLS as usize;
 pub const IMAGE_HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SHEET: &str =

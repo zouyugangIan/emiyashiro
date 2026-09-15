@@ -318,12 +318,23 @@ fn overedge_attack_frames(
             asset_paths::REFERENCE_BOARD_ULTIMATE_ROWS,
             available_frame_count,
         ),
-        AttackAnimationStyle::MobilityRefRow(row) => reference_board_row_frames(
-            row,
-            asset_paths::REFERENCE_BOARD_MOBILITY_COLS,
-            asset_paths::REFERENCE_BOARD_MOBILITY_ROWS,
-            available_frame_count,
-        ),
+        AttackAnimationStyle::MobilityRefRow(row) => {
+            let frames = reference_board_row_frames(
+                row,
+                asset_paths::REFERENCE_BOARD_MOBILITY_COLS,
+                asset_paths::REFERENCE_BOARD_MOBILITY_ROWS,
+                available_frame_count,
+            )?;
+            // The fifth dash pose has a severed forearm; the third slide pose
+            // cuts off its leading hand. Replace those exposures with complete
+            // neighboring poses while retaining the six-frame action timing.
+            let sequence = match row {
+                1 => [0, 1, 2, 3, 3, 5],
+                2 => [0, 1, 1, 3, 4, 5],
+                _ => [0, 1, 2, 3, 4, 5],
+            };
+            Some(sequence.into_iter().map(|index| frames[index]).collect())
+        }
         AttackAnimationStyle::NinjutsuRefRow(row) => reference_board_row_frames(
             row,
             asset_paths::REFERENCE_BOARD_NINJUTSU_COLS,
@@ -442,10 +453,19 @@ fn resolved_animation_clip(
     Some(clip)
 }
 
-fn current_clip_is_blocking(animation: &SpriteAnimation, clip: &AnimationClipData) -> bool {
-    let is_once = clip.playback_mode == PlaybackMode::Once;
-    let not_finished = animation.current_frame + 1 < clip.frames.len();
-    is_once && not_finished
+fn current_clip_is_blocking(
+    animation: &SpriteAnimation,
+    clip: &AnimationClipData,
+    target: &AnimationType,
+) -> bool {
+    // Only an idle landing settle needs to finish. Jump poses follow physics
+    // and may never reach their last frame on a short hop; crouching must also
+    // release immediately. Active attacks already take priority in the state
+    // resolver, so their final artwork must not extend the gameplay lock.
+    animation.current_animation == AnimationType::Landing
+        && *target == AnimationType::Idle
+        && clip.playback_mode == PlaybackMode::Once
+        && animation.current_frame + 1 < clip.frames.len()
 }
 
 fn apply_animation_change(
@@ -586,10 +606,9 @@ fn paced_frame_duration(
         return fallback;
     };
 
-    // Fast action sheets need to finish inside the gameplay lock window. The
-    // bounds preserve readability while still allowing eight-frame attacks to
-    // complete during a short Ninja-Gaiden-style cancel window.
-    (attack.duration / clip.frames.len().max(1) as f32).clamp(0.032, 0.12)
+    // A minimum of 32ms per frame stretched eight-frame jabs beyond their
+    // 220ms combo window. Fit the actual action window, including quick jabs.
+    (attack.duration / clip.frames.len().max(1) as f32).max(0.001)
 }
 
 fn airborne_frame_position(
@@ -645,9 +664,9 @@ fn animation_visual_target(
                 Vec2::ONE
             }
         }
-        AnimationType::Running => match frame_position % 5 {
-            0 | 3 => Vec2::new(1.018, 0.982),
-            1 | 4 => Vec2::new(0.988, 1.014),
+        AnimationType::Running => match frame_position % 8 {
+            0 | 4 => Vec2::new(1.012, 0.99),
+            3 | 7 => Vec2::new(0.995, 1.008),
             _ => Vec2::ONE,
         },
         AnimationType::Jumping => {
@@ -759,6 +778,7 @@ pub fn create_character_animation(
 pub fn update_sprite_animations(
     time: Res<Time>,
     runtime_config: Option<Res<AnimationRuntimeConfig>>,
+    repaired: Option<Res<super::authored_sprite::ShirouSpriteOverrides>>,
     mut query: Query<SpriteAnimationUpdateItem>,
 ) {
     let default_runtime = AnimationRuntimeConfig::default();
@@ -868,6 +888,20 @@ pub fn update_sprite_animations(
             target_scale,
             time.delta_secs(),
         );
+        if let (Some(repaired), Some(visual), Some(anchor)) = (
+            repaired.as_deref(),
+            visual.as_deref(),
+            anchor.as_deref_mut(),
+        ) && let Some(atlas_index) = current_clip.frames.get(animation.current_frame)
+            && let Some(pose) = repaired.pose(&current_key, sheet_attack_style, *atlas_index)
+        {
+            pose.apply(
+                &mut sprite,
+                anchor,
+                visual.current_scale,
+                visual.base_size.y,
+            );
+        }
     }
 }
 
@@ -926,15 +960,12 @@ pub fn update_character_animation_state(
             Some(player_state),
         )
         .as_ref()
-        .map(|clip| current_clip_is_blocking(&animation, clip))
+        .map(|clip| current_clip_is_blocking(&animation, clip, &new_animation))
         .unwrap_or(false);
-        let landing_cancelled_into_run = animation.current_animation == AnimationType::Landing
-            && new_animation == AnimationType::Running;
         if clip_blocks_switch
             && new_animation != animation.current_animation
             && !attack_retriggered
             && !is_traversing
-            && !landing_cancelled_into_run
         {
             continue;
         }
@@ -1138,6 +1169,171 @@ mod tests {
         let duration = paced_frame_duration(&clip, 0.0, &AnimationType::Attacking, Some(&attack));
         assert!((duration - 0.04).abs() < f32::EPSILON);
         assert!((duration * clip.frames.len() as f32 - attack.duration).abs() < 0.001);
+
+        attack.trigger_with_style(0.22, AttackAnimationStyle::GroundLightRow(1));
+        let duration = paced_frame_duration(&clip, 0.0, &AnimationType::Attacking, Some(&attack));
+        assert!(duration * clip.frames.len() as f32 <= attack.duration + 0.0001);
+    }
+
+    #[test]
+    fn physics_and_input_interrupt_unfinished_jump_and_crouch_poses() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, update_character_animation_state);
+        let profiles = load_animation_data();
+        let mut animation = create_character_animation(&profiles, "hf_shirou");
+        animation.current_animation = AnimationType::Jumping;
+        animation.current_frame = 1; // Land from an apex without ever showing fall.
+        animation.previous_grounded = false;
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Sprite::default(),
+                PlayerState::default(),
+                Velocity::default(),
+                AttackAnimationState::default(),
+                animation,
+            ))
+            .id();
+
+        app.update();
+        assert_eq!(
+            app.world()
+                .get::<SpriteAnimation>(player)
+                .unwrap()
+                .current_animation,
+            AnimationType::Landing
+        );
+
+        // A new jump must immediately cancel even the first landing frame.
+        app.world_mut()
+            .get_mut::<PlayerState>(player)
+            .unwrap()
+            .is_grounded = false;
+        app.world_mut().get_mut::<Velocity>(player).unwrap().y = 250.0;
+        app.update();
+        assert_eq!(
+            app.world()
+                .get::<SpriteAnimation>(player)
+                .unwrap()
+                .current_animation,
+            AnimationType::Jumping
+        );
+
+        {
+            let mut animation = app.world_mut().get_mut::<SpriteAnimation>(player).unwrap();
+            animation.current_animation = AnimationType::Crouching;
+            animation.current_frame = 0;
+            animation.previous_grounded = true;
+        }
+        *app.world_mut().get_mut::<PlayerState>(player).unwrap() = PlayerState::default();
+        *app.world_mut().get_mut::<Velocity>(player).unwrap() = Velocity::default();
+        app.update();
+        assert_eq!(
+            app.world()
+                .get::<SpriteAnimation>(player)
+                .unwrap()
+                .current_animation,
+            AnimationType::Idle
+        );
+    }
+
+    #[test]
+    fn mobility_clips_exclude_visually_severed_limbs_in_both_atlas_formats() {
+        for total in [6, 24] {
+            let dash =
+                overedge_attack_frames(AttackAnimationStyle::MobilityRefRow(1), total).unwrap();
+            assert!(!dash.contains(&4));
+            let slide =
+                overedge_attack_frames(AttackAnimationStyle::MobilityRefRow(2), total).unwrap();
+            let start = if total == 6 { 0 } else { 6 };
+            assert!(!slide.contains(&(start + 2)));
+            assert_eq!(slide.last(), Some(&(start + 5)));
+        }
+    }
+
+    #[test]
+    fn buffered_shirou_jab_shows_strike_and_recovery_before_next_attack() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_secs_f32(1.0 / 60.0),
+            ))
+            .init_resource::<ButtonInput<KeyCode>>()
+            .add_systems(
+                Update,
+                (
+                    super::super::combat::player_knife_attack,
+                    tick_attack_animation_states,
+                    update_character_animation_state,
+                    update_sprite_animations,
+                )
+                    .chain(),
+            );
+        let profiles = load_animation_data();
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Transform::default(),
+                Sprite::default(),
+                Velocity::default(),
+                PlayerState::default(),
+                FacingDirection::Right,
+                ShroudState::default(),
+                AttackAnimationState::default(),
+                distinct_test_sheets(),
+                create_character_animation(&profiles, "hf_shirou"),
+            ))
+            .id();
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyL);
+        app.update();
+        let duration = app
+            .world()
+            .get::<AttackAnimationState>(player)
+            .unwrap()
+            .duration;
+        assert!(
+            duration <= 0.23,
+            "jab uses its input window, not a 630ms sheet duration"
+        );
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        let mut frames = Vec::new();
+        let mut chained = false;
+        for tick in 0..20 {
+            if tick == 3 {
+                app.world_mut()
+                    .resource_mut::<ButtonInput<KeyCode>>()
+                    .press(KeyCode::KeyL);
+            }
+            app.update();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .reset_all();
+            let attack = app.world().get::<AttackAnimationState>(player).unwrap();
+            if attack.style == AttackAnimationStyle::GroundLightRow(2) {
+                chained = true;
+                break;
+            }
+            frames.push(
+                app.world()
+                    .get::<SpriteAnimation>(player)
+                    .unwrap()
+                    .current_frame,
+            );
+        }
+        assert!(frames.contains(&2), "strike pose must be visible");
+        assert!(
+            frames.contains(&7),
+            "recovery must be visible before the next jab"
+        );
+        assert!(chained, "buffered follow-up must execute");
     }
 
     #[test]

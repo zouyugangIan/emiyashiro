@@ -91,28 +91,18 @@ fn setup_game_resources(
         background_music: asset_server.load(asset_paths::SOUND_BACKGROUND_MUSIC),
     };
 
-    let core_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_CORE_SHEET);
-    let run_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_RUN_SHEET);
+    let repaired =
+        systems::authored_sprite::ShirouSpriteOverrides::load(&asset_server, &mut texture_atlases);
+    let core_texture_handle = repaired.locomotion.image.clone();
+    let run_texture_handle = core_texture_handle.clone();
     let attack_texture_handle = asset_server.load(asset_paths::IMAGE_HF_SHIROU_ATTACK_SHEET);
     let overedge_light_attack_texture_handle =
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_OVEREDGE_LIGHT_ATTACK_SHEET);
     let overedge_heavy_attack_texture_handle =
         asset_server.load(asset_paths::IMAGE_HF_SHIROU_OVEREDGE_HEAVY_ATTACK_SHEET);
 
-    let core_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(256, 256),
-        asset_paths::HF_SHIROU_CORE_COLS,
-        asset_paths::HF_SHIROU_CORE_ROWS,
-        None,
-        None,
-    );
-    let run_layout = TextureAtlasLayout::from_grid(
-        UVec2::new(256, 256),
-        asset_paths::HF_SHIROU_RUN_COLS,
-        1,
-        None,
-        None,
-    );
+    let core_layout = repaired.locomotion.layout.clone();
+    let run_layout = core_layout.clone();
     let attack_layout = TextureAtlasLayout::from_grid(
         UVec2::new(256, 256),
         asset_paths::HF_SHIROU_ATTACK_COLS,
@@ -210,9 +200,9 @@ fn setup_game_resources(
 
     game_assets.hf_shirou_animation = Some(SpriteAnimationSheets {
         core_texture: core_texture_handle,
-        core_layout: texture_atlases.add(core_layout),
+        core_layout,
         running_texture: run_texture_handle,
-        running_layout: texture_atlases.add(run_layout),
+        running_layout: run_layout,
         attacking_texture: attack_texture_handle,
         attacking_layout: texture_atlases.add(attack_layout),
         overedge_light_attacking_texture: Some(overedge_light_attack_texture_handle),
@@ -271,6 +261,7 @@ fn setup_game_resources(
     });
 
     commands.insert_resource(game_assets);
+    commands.insert_resource(repaired);
 }
 
 /// Load Animation Data.

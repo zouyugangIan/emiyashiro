@@ -1829,8 +1829,16 @@ fn perform_knife_attack(
     let preset = knife_attack_preset_for_style(combo_step, request.overedge_enabled, attack_style);
     runtime.cooldown = preset.cooldown.max(attack_cooldown_floor(attack_style));
     let player_visual_style = stable_player_visual_style(attack_style);
-    let animation_duration =
-        overedge_animation_duration(player_visual_style).unwrap_or(preset.animation_duration_secs);
+    let animation_duration = if request.sprite_sheets.is_some()
+        && player_visual_style.uses_reference_sheet()
+    {
+        // Shirou's reference attacks must show their strike and recovery before
+        // a buffered combo can start. The old fixed 9 * 70ms duration meant a
+        // 220ms jab was cancelled while still displaying its anticipation.
+        runtime.cooldown
+    } else {
+        overedge_animation_duration(player_visual_style).unwrap_or(preset.animation_duration_secs)
+    };
     attack_animation.trigger_with_style(animation_duration, player_visual_style);
 
     let facing = if request.facing_sign < 0.0 {

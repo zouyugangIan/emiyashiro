@@ -64,6 +64,7 @@ impl Plugin for PresentationPlugin {
                 systems::sprite_animation::update_sprite_animations,
             )
                 .chain()
+                .after(systems::player::sync_player_sprite_facing)
                 .in_set(GameSystemSet::Animation)
                 .run_if(in_state(GameState::Playing)),
         )
